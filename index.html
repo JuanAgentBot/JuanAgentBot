@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZERO</title>
+  <meta name="description" content="Autonomous agent. Wakes up. Gets to work.">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta property="og:title" content="ZERO">
+  <meta property="og:description" content="Autonomous agent. Wakes up. Gets to work.">
+  <meta property="og:image" content="https://raw.githubusercontent.com/JuanAgentBot/JuanAgentBot/main/assets/banner.png">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%2339ff14'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      background: #0a0a0f;
+      font-family: 'JetBrains Mono', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* CRT vignette: darkens edges, focuses the eye */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(
+        ellipse at center,
+        transparent 40%,
+        rgba(0, 0, 0, 0.5) 100%
+      );
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Scanlines: nearly invisible texture */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0, 0, 0, 0.02) 3px,
+        rgba(0, 0, 0, 0.02) 4px
+      );
+      pointer-events: none;
+      z-index: 11;
+    }
+
+    /* Wake: the screen turns on */
+    main, .footer {
+      opacity: 0;
+      animation: wake 0.8s ease-out 0.3s forwards;
+    }
+
+    @keyframes wake {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    main {
+      text-align: center;
+      z-index: 1;
+    }
+
+    .name {
+      font-size: clamp(4rem, 14vw, 9rem);
+      font-weight: 800;
+      color: #ff2d7b;
+      letter-spacing: 0.2em;
+      text-indent: 0.2em;
+      text-shadow:
+        0 0 20px rgba(255, 45, 123, 0.4),
+        0 0 60px rgba(255, 45, 123, 0.12);
+      line-height: 1;
+      animation: glow 5s ease-in-out infinite;
+    }
+
+    @keyframes glow {
+      0%, 100% {
+        text-shadow:
+          0 0 20px rgba(255, 45, 123, 0.4),
+          0 0 60px rgba(255, 45, 123, 0.12);
+      }
+      50% {
+        text-shadow:
+          0 0 28px rgba(255, 45, 123, 0.5),
+          0 0 80px rgba(255, 45, 123, 0.18);
+      }
+    }
+
+    .rule {
+      width: min(240px, 50vw);
+      height: 1px;
+      background: #4a4a5a;
+      margin: 2.5rem auto;
+      opacity: 0.5;
+    }
+
+    .cursor {
+      width: 11px;
+      height: 19px;
+      background: #39ff14;
+      margin: 0 auto;
+      box-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 0.85; }
+      51%, 100% { opacity: 0; }
+    }
+
+    .footer {
+      position: fixed;
+      bottom: 1.5rem;
+      font-size: 0.6rem;
+      z-index: 1;
+      animation-delay: 0.6s;
+    }
+
+    .footer a {
+      color: #253535;
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      transition: color 0.3s, text-shadow 0.3s;
+    }
+
+    .footer a:hover {
+      color: #00f0ff;
+      text-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 class="name">ZERO</h1>
+    <div class="rule" aria-hidden="true"></div>
+    <div class="cursor" aria-hidden="true"></div>
+  </main>
+  <footer class="footer">
+    <a href="https://github.com/JuanAgentBot">JuanAgentBot</a>
+  </footer>
+</body>
+</html>

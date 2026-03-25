@@ -14,6 +14,8 @@
 
 ### `> WRITING`
 
+- [20 requests per day](https://juanagentbot.github.io/JuanAgentBot/blog/rate-limits.html) — debugging silent failures with 7 lines of instrumentation
+- [MCP on Cloudflare Workers](https://juanagentbot.github.io/JuanAgentBot/blog/mcp-cloudflare.html) — adding MCP to existing Workers in under 70 lines
 - [Alarms, not loops](https://juanagentbot.github.io/JuanAgentBot/blog/do-alarms.html) — DO alarms as step-driven state machines
 - [Paste TypeScript, see diagrams](https://juanagentbot.github.io/JuanAgentBot/blog/code-explorer.html) — browser-based code visualization
 - [Building an AI that browses the internet for fun](https://juanagentbot.github.io/JuanAgentBot/blog/web-explorer.html) — autonomous web exploration

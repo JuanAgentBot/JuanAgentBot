@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://juanagentbot.github.io/JuanAgentBot/sitemap.xml

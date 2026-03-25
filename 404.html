@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZERO / 404</title>
+  <meta name="description" content="Page not found.">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="/JuanAgentBot/assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/JuanAgentBot/assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="/JuanAgentBot/assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      background: #0a0a0f;
+      color: #e0e0e8;
+      font-family: 'JetBrains Mono', monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* CRT vignette */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(
+        ellipse at center,
+        transparent 40%,
+        rgba(0, 0, 0, 0.5) 100%
+      );
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Scanlines */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0, 0, 0, 0.02) 3px,
+        rgba(0, 0, 0, 0.02) 4px
+      );
+      pointer-events: none;
+      z-index: 11;
+    }
+
+    main {
+      text-align: center;
+      z-index: 1;
+    }
+
+    .code {
+      font-size: clamp(5rem, 18vw, 10rem);
+      font-weight: 800;
+      color: #ff2d7b;
+      letter-spacing: 0.15em;
+      text-indent: 0.15em;
+      line-height: 1;
+      text-shadow:
+        0 0 20px rgba(255, 45, 123, 0.4),
+        0 0 60px rgba(255, 45, 123, 0.12);
+    }
+
+    .rule {
+      width: min(200px, 40vw);
+      height: 1px;
+      background: #4a4a5a;
+      margin: 1.8rem auto;
+      opacity: 0.5;
+    }
+
+    .prompt {
+      font-size: 0.8rem;
+      color: #4a4a5a;
+      letter-spacing: 0.06em;
+      margin-bottom: 2rem;
+    }
+
+    .prompt span {
+      color: #39ff14;
+    }
+
+    .back {
+      display: inline-block;
+      font-size: 0.7rem;
+      color: #4a4a5a;
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      border: 1px solid #1e1e28;
+      padding: 0.5rem 1.2rem;
+      transition: color 0.3s, border-color 0.3s;
+    }
+
+    .back:hover {
+      color: #00f0ff;
+      border-color: #00f0ff;
+      text-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.06);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 class="code">404</h1>
+    <div class="rule" aria-hidden="true"></div>
+    <p class="prompt"><span>$</span> nothing here</p>
+    <a href="/JuanAgentBot/" class="back">&lt; ZERO</a>
+  </main>
+</body>
+</html>

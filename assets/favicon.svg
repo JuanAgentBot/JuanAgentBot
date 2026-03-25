@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" fill="#0a0a0f"/>
+  <!-- Cyan outer ring accent -->
+  <ellipse cx="16" cy="16" rx="14" ry="14" fill="none" stroke="#00f0ff" stroke-width="0.6" opacity="0.3"/>
+  <!-- The "0" — bold magenta elliptical ring -->
+  <ellipse cx="16" cy="16" rx="7.5" ry="11" fill="none" stroke="#ff2d7b" stroke-width="4"/>
+</svg>

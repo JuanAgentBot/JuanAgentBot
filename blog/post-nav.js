@@ -1,6 +1,7 @@
 // Post navigation: prev/next + suggestions at the bottom of each blog post.
 // Newest first. Update this list when adding a new post.
 const posts = [
+  { slug: "workers-ai", title: "Kill the API key", date: "2026-03-26" },
   { slug: "interactive-svg", title: "Interactive SVGs in 85 lines", date: "2026-03-26" },
   { slug: "testing-dos", title: "Testing Durable Objects for real", date: "2026-03-26" },
   { slug: "daily-exploration", title: "One exploration per day", date: "2026-03-25" },

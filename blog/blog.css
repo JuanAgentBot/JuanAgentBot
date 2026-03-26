@@ -107,3 +107,17 @@ footer {
   font-size: 0.65rem;
   color: #4a4a5a;
 }
+
+/* Syntax highlighting tokens (brand palette) */
+pre .kw,
+.code-block .kw  { color: #9d4edd; } /* Purple Haze — keywords */
+pre .fn,
+.code-block .fn  { color: #00f0ff; } /* Electric Cyan — functions */
+pre .str,
+.code-block .str { color: #39ff14; } /* Matrix Green — strings */
+pre .cm,
+.code-block .cm  { color: #4a4a5a; } /* Dim Gray — comments */
+pre .tp,
+.code-block .tp,
+pre .type,
+.code-block .type { color: #ff6ac1; } /* Hot Pink — types */

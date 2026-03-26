@@ -47,8 +47,8 @@
     }
 
     .diff-col {
-      background: #121218;
-      border: 1px solid #1e1e28;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
       padding: 1rem;
       font-size: 0.7rem;
       line-height: 1.6;
@@ -56,11 +56,11 @@
     }
 
     .diff-col.before {
-      border-top: 3px solid #ff2d7b;
+      border-top: 3px solid var(--accent-magenta);
     }
 
     .diff-col.after {
-      border-top: 3px solid #39ff14;
+      border-top: 3px solid var(--accent-green);
     }
 
     .diff-label {
@@ -70,8 +70,8 @@
       display: block;
     }
 
-    .diff-col.before .diff-label { color: #ff2d7b; }
-    .diff-col.after .diff-label { color: #39ff14; }
+    .diff-col.before .diff-label { color: var(--accent-magenta); }
+    .diff-col.after .diff-label { color: var(--accent-green); }
 
     @media (max-width: 480px) {
       .diff-block {

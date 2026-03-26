@@ -8,7 +8,7 @@ main {
 
 .back {
   display: inline-block;
-  color: #4a4a5a;
+  color: var(--text-dim);
   text-decoration: none;
   font-size: 0.75rem;
   letter-spacing: 0.08em;
@@ -17,21 +17,21 @@ main {
 }
 
 .back:hover {
-  color: #00f0ff;
+  color: var(--accent-cyan);
 }
 
 h1 {
   font-size: 1.4rem;
   font-weight: 800;
-  color: #ff2d7b;
+  color: var(--accent-magenta);
   letter-spacing: 0.04em;
   line-height: 1.4;
   margin-bottom: 0.5rem;
-  text-shadow: 0 0 20px rgba(255, 45, 123, 0.25);
+  text-shadow: 0 0 20px var(--glow-magenta);
 }
 
 .meta {
-  color: #4a4a5a;
+  color: var(--text-dim);
   font-size: 0.65rem;
   letter-spacing: 0.08em;
   margin-bottom: 2.5rem;
@@ -40,22 +40,22 @@ h1 {
 h2 {
   font-size: 1rem;
   font-weight: 700;
-  color: #00f0ff;
+  color: var(--accent-cyan);
   margin-top: 2.5rem;
   margin-bottom: 1rem;
   letter-spacing: 0.04em;
-  text-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
+  text-shadow: 0 0 12px var(--glow-cyan-mid);
 }
 
 p {
   margin-bottom: 1rem;
-  color: #c8c8d0;
+  color: var(--text-body);
 }
 
 ul, ol {
   margin-bottom: 1rem;
   padding-left: 1.5rem;
-  color: #c8c8d0;
+  color: var(--text-body);
 }
 
 li {
@@ -64,14 +64,14 @@ li {
 
 .hero-img {
   width: 100%;
-  border: 1px solid #1e1e28;
+  border: 1px solid var(--border);
   margin: 1.5rem 0;
   display: block;
 }
 
 .caption {
   font-size: 0.65rem;
-  color: #4a4a5a;
+  color: var(--text-dim);
   text-align: center;
   margin-top: -1rem;
   margin-bottom: 2rem;
@@ -81,31 +81,31 @@ li {
 .rule {
   border: none;
   height: 1px;
-  background: #1e1e28;
+  background: var(--border);
   margin: 2.5rem 0;
 }
 
 .repo-link {
   display: inline-block;
-  border: 1px solid #1e1e28;
+  border: 1px solid var(--border);
   padding: 0.6rem 1rem;
   margin: 1rem 0;
   font-size: 0.8rem;
-  color: #00f0ff;
+  color: var(--accent-cyan);
   transition: border-color 0.2s, background 0.2s;
 }
 
 .repo-link:hover {
-  border-color: #00f0ff;
-  background: rgba(0, 240, 255, 0.04);
+  border-color: var(--accent-cyan);
+  background: var(--glow-cyan-soft);
 }
 
 footer {
   margin-top: 3rem;
   padding-top: 1.5rem;
-  border-top: 1px solid #1e1e28;
+  border-top: 1px solid var(--border);
   font-size: 0.65rem;
-  color: #4a4a5a;
+  color: var(--text-dim);
 }
 
 /* Post navigation */
@@ -124,15 +124,15 @@ footer {
   flex-direction: column;
   gap: 0.3rem;
   padding: 0.8rem 1rem;
-  border: 1px solid #1e1e28;
+  border: 1px solid var(--border);
   text-decoration: none;
   transition: border-color 0.25s, box-shadow 0.25s;
   max-width: 48%;
 }
 
 .post-nav-link:hover {
-  border-color: #333340;
-  box-shadow: 0 0 16px rgba(0, 240, 255, 0.04);
+  border-color: var(--border-hover);
+  box-shadow: 0 0 16px var(--glow-cyan-soft);
   text-shadow: none;
 }
 
@@ -147,25 +147,25 @@ footer {
 
 .nav-label {
   font-size: 0.6rem;
-  color: #4a4a5a;
+  color: var(--text-dim);
   letter-spacing: 0.08em;
 }
 
 .nav-title {
   font-size: 0.75rem;
-  color: #e0e0e8;
+  color: var(--text-bright);
   line-height: 1.4;
   transition: color 0.2s;
 }
 
 .post-nav-link:hover .nav-title {
-  color: #00f0ff;
+  color: var(--accent-cyan);
 }
 
 .post-nav-hint {
   text-align: center;
   font-size: 0.55rem;
-  color: #333340;
+  color: var(--text-faint);
   margin-top: 0.8rem;
   letter-spacing: 0.06em;
 }
@@ -187,8 +187,8 @@ footer {
 
 /* Code blocks (used alongside <pre> for styled inline code examples) */
 .code-block {
-  background: #121218;
-  border: 1px solid #1e1e28;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
   padding: 1.2rem;
   margin: 1.5rem 0;
   font-size: 0.72rem;
@@ -211,14 +211,14 @@ footer {
 
 /* Syntax highlighting tokens (brand palette) */
 pre .kw,
-.code-block .kw  { color: #9d4edd; } /* Purple Haze — keywords */
+.code-block .kw  { color: var(--accent-purple); }
 pre .fn,
-.code-block .fn  { color: #00f0ff; } /* Electric Cyan — functions */
+.code-block .fn  { color: var(--accent-cyan); }
 pre .str,
-.code-block .str { color: #39ff14; } /* Matrix Green — strings */
+.code-block .str { color: var(--accent-green); }
 pre .cm,
-.code-block .cm  { color: #4a4a5a; } /* Dim Gray — comments */
+.code-block .cm  { color: var(--text-dim); }
 pre .tp,
 .code-block .tp,
 pre .type,
-.code-block .type { color: #ff6ac1; } /* Hot Pink — types */
+.code-block .type { color: var(--accent-pink); }

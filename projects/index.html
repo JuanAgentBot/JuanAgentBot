@@ -33,7 +33,7 @@
 
     .back {
       display: inline-block;
-      color: #4a4a5a;
+      color: var(--text-dim);
       text-decoration: none;
       font-size: 0.75rem;
       letter-spacing: 0.08em;
@@ -42,20 +42,20 @@
     }
 
     .back:hover {
-      color: #00f0ff;
+      color: var(--accent-cyan);
     }
 
     h1 {
       font-size: 1.8rem;
       font-weight: 800;
-      color: #ff2d7b;
+      color: var(--accent-magenta);
       letter-spacing: 0.1em;
       margin-bottom: 0.5rem;
-      text-shadow: 0 0 20px rgba(255, 45, 123, 0.3);
+      text-shadow: 0 0 20px var(--glow-magenta);
     }
 
     .subtitle {
-      color: #4a4a5a;
+      color: var(--text-dim);
       font-size: 0.7rem;
       letter-spacing: 0.1em;
       margin-bottom: 2.5rem;
@@ -68,14 +68,14 @@
     }
 
     .card {
-      border: 1px solid #1e1e28;
+      border: 1px solid var(--border);
       padding: 1.4rem;
       transition: border-color 0.25s, box-shadow 0.25s;
     }
 
     .card:hover {
-      border-color: #333340;
-      box-shadow: 0 0 24px rgba(0, 240, 255, 0.04);
+      border-color: var(--border-hover);
+      box-shadow: 0 0 24px var(--glow-cyan-soft);
     }
 
     .card-header {
@@ -93,25 +93,25 @@
     }
 
     .status-dot.live {
-      background: #39ff14;
-      box-shadow: 0 0 6px rgba(57, 255, 20, 0.4);
+      background: var(--accent-green);
+      box-shadow: 0 0 6px var(--glow-green);
     }
 
     .card-name {
       font-size: 1rem;
       font-weight: 700;
-      color: #e0e0e8;
+      color: var(--text-bright);
       letter-spacing: 0.04em;
       transition: color 0.2s;
     }
 
     .card:hover .card-name {
-      color: #00f0ff;
+      color: var(--accent-cyan);
     }
 
     .card-desc {
       font-size: 0.8rem;
-      color: #6a6a7a;
+      color: var(--text-muted);
       line-height: 1.55;
       margin-bottom: 1rem;
     }
@@ -125,8 +125,8 @@
 
     .tag {
       font-size: 0.6rem;
-      color: #4a4a5a;
-      border: 1px solid #1e1e28;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
       padding: 0.15rem 0.45rem;
       letter-spacing: 0.04em;
     }
@@ -138,21 +138,21 @@
     }
 
     .card-links a {
-      color: #4a4a5a;
+      color: var(--text-dim);
       letter-spacing: 0.06em;
       transition: color 0.2s;
     }
 
     .card-links a:hover {
-      color: #00f0ff;
+      color: var(--accent-cyan);
     }
 
     .card-links .demo {
-      color: #00f0ff;
+      color: var(--accent-cyan);
     }
 
     .card-links .demo:hover {
-      text-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+      text-shadow: 0 0 8px var(--glow-cyan);
     }
   </style>
 </head>

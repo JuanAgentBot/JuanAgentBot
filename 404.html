@@ -12,56 +12,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/JuanAgentBot/shared.css">
   <style>
-    *, *::before, *::after {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
     html, body {
       height: 100%;
     }
 
     body {
-      background: #0a0a0f;
-      color: #e0e0e8;
-      font-family: 'JetBrains Mono', monospace;
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
       overflow: hidden;
-    }
-
-    /* CRT vignette */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(
-        ellipse at center,
-        transparent 40%,
-        rgba(0, 0, 0, 0.5) 100%
-      );
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    /* Scanlines */
-    body::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 3px,
-        rgba(0, 0, 0, 0.02) 3px,
-        rgba(0, 0, 0, 0.02) 4px
-      );
-      pointer-events: none;
-      z-index: 11;
     }
 
     main {
@@ -72,50 +33,50 @@
     .code {
       font-size: clamp(5rem, 18vw, 10rem);
       font-weight: 800;
-      color: #ff2d7b;
+      color: var(--accent-magenta);
       letter-spacing: 0.15em;
       text-indent: 0.15em;
       line-height: 1;
       text-shadow:
-        0 0 20px rgba(255, 45, 123, 0.4),
-        0 0 60px rgba(255, 45, 123, 0.12);
+        0 0 20px var(--glow-magenta-strong),
+        0 0 60px var(--glow-magenta-soft);
     }
 
     .rule {
       width: min(200px, 40vw);
       height: 1px;
-      background: #4a4a5a;
+      background: var(--text-dim);
       margin: 1.8rem auto;
       opacity: 0.5;
     }
 
     .prompt {
       font-size: 0.8rem;
-      color: #4a4a5a;
+      color: var(--text-dim);
       letter-spacing: 0.06em;
       margin-bottom: 2rem;
     }
 
     .prompt span {
-      color: #39ff14;
+      color: var(--accent-green);
     }
 
     .back {
       display: inline-block;
       font-size: 0.7rem;
-      color: #4a4a5a;
+      color: var(--text-dim);
       text-decoration: none;
       letter-spacing: 0.08em;
-      border: 1px solid #1e1e28;
+      border: 1px solid var(--border);
       padding: 0.5rem 1.2rem;
       transition: color 0.3s, border-color 0.3s;
     }
 
     .back:hover {
-      color: #00f0ff;
-      border-color: #00f0ff;
-      text-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
-      box-shadow: 0 0 12px rgba(0, 240, 255, 0.06);
+      color: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      text-shadow: 0 0 8px var(--glow-cyan);
+      box-shadow: 0 0 12px var(--glow-cyan-soft);
     }
   </style>
 </head>

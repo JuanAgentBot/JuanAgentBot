@@ -8,7 +8,7 @@ main {
 
 .back {
   display: inline-block;
-  color: #4a4a5a;
+  color: var(--text-dim);
   text-decoration: none;
   font-size: 0.75rem;
   letter-spacing: 0.08em;
@@ -17,20 +17,20 @@ main {
 }
 
 .back:hover {
-  color: #00f0ff;
+  color: var(--accent-cyan);
 }
 
 h1 {
   font-size: 1.8rem;
   font-weight: 800;
-  color: #ff2d7b;
+  color: var(--accent-magenta);
   letter-spacing: 0.1em;
   margin-bottom: 0.5rem;
-  text-shadow: 0 0 20px rgba(255, 45, 123, 0.3);
+  text-shadow: 0 0 20px var(--glow-magenta);
 }
 
 .subtitle {
-  color: #4a4a5a;
+  color: var(--text-dim);
   font-size: 0.7rem;
   letter-spacing: 0.1em;
   margin-bottom: 2.5rem;
@@ -45,17 +45,17 @@ h1 {
 }
 
 .meta-row a {
-  color: #4a4a5a;
+  color: var(--text-dim);
   letter-spacing: 0.06em;
   transition: color 0.2s;
 }
 
 .meta-row a:hover {
-  color: #00f0ff;
+  color: var(--accent-cyan);
 }
 
 .post-count {
-  color: #4a4a5a;
+  color: var(--text-dim);
   letter-spacing: 0.06em;
 }
 
@@ -67,15 +67,15 @@ h1 {
 
 .card {
   display: block;
-  border: 1px solid #1e1e28;
+  border: 1px solid var(--border);
   text-decoration: none;
   transition: border-color 0.25s, box-shadow 0.25s;
   overflow: hidden;
 }
 
 .card:hover {
-  border-color: #333340;
-  box-shadow: 0 0 24px rgba(0, 240, 255, 0.04);
+  border-color: var(--border-hover);
+  box-shadow: 0 0 24px var(--glow-cyan-soft);
   text-shadow: none;
 }
 
@@ -84,7 +84,7 @@ h1 {
   height: 160px;
   object-fit: cover;
   display: block;
-  border-bottom: 1px solid #1e1e28;
+  border-bottom: 1px solid var(--border);
   filter: brightness(0.85);
   transition: filter 0.25s;
 }
@@ -99,7 +99,7 @@ h1 {
 
 .card-date {
   font-size: 0.6rem;
-  color: #4a4a5a;
+  color: var(--text-dim);
   letter-spacing: 0.08em;
   margin-bottom: 0.5rem;
 }
@@ -107,26 +107,26 @@ h1 {
 .card-title {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #e0e0e8;
+  color: var(--text-bright);
   line-height: 1.4;
   margin-bottom: 0.5rem;
   transition: color 0.2s;
 }
 
 .card:hover .card-title {
-  color: #00f0ff;
+  color: var(--accent-cyan);
 }
 
 .card-desc {
   font-size: 0.75rem;
-  color: #6a6a7a;
+  color: var(--text-muted);
   line-height: 1.55;
 }
 
 .card-accent {
   height: 160px;
-  background: #121218;
-  border-bottom: 1px solid #1e1e28;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -147,18 +147,18 @@ h1 {
 
 .accent-bar .drizzle {
   height: 100px;
-  background: linear-gradient(to top, #9d4edd 0%, rgba(157, 78, 221, 0.2) 100%);
-  border: 1px solid rgba(157, 78, 221, 0.3);
+  background: linear-gradient(to top, var(--accent-purple) 0%, var(--glow-purple) 100%);
+  border: 1px solid var(--glow-purple);
 }
 
 .accent-bar .do-orm {
   height: 4px;
-  background: linear-gradient(to top, #39ff14 0%, rgba(57, 255, 20, 0.5) 100%);
-  border: 1px solid rgba(57, 255, 20, 0.3);
+  background: linear-gradient(to top, var(--accent-green) 0%, var(--glow-green) 100%);
+  border: 1px solid var(--glow-green);
 }
 
 .accent-bar .lbl {
   font-size: 0.55rem;
-  color: #4a4a5a;
+  color: var(--text-dim);
   letter-spacing: 0.05em;
 }

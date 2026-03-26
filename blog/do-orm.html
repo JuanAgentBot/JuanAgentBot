@@ -43,7 +43,7 @@
 
     .size-bar .bar {
       width: 80px;
-      border: 1px solid #1e1e28;
+      border: 1px solid var(--border);
       display: flex;
       align-items: flex-end;
       justify-content: center;
@@ -55,23 +55,23 @@
 
     .size-bar .drizzle-fill {
       height: 180px;
-      background: linear-gradient(to top, #9d4edd 0%, rgba(157, 78, 221, 0.3) 100%);
+      background: linear-gradient(to top, var(--accent-purple) 0%, var(--glow-purple) 100%);
     }
 
     .size-bar .do-orm-fill {
       height: 8px;
-      background: linear-gradient(to top, #39ff14 0%, rgba(57, 255, 20, 0.6) 100%);
+      background: linear-gradient(to top, var(--accent-green) 0%, var(--glow-green) 100%);
     }
 
     .size-bar .label {
       font-size: 0.7rem;
-      color: #c8c8d0;
+      color: var(--text-body);
       letter-spacing: 0.04em;
     }
 
     .size-bar .value {
       font-size: 0.65rem;
-      color: #4a4a5a;
+      color: var(--text-dim);
       letter-spacing: 0.04em;
     }
 
@@ -98,7 +98,7 @@
 
     .comparison-label {
       font-size: 0.65rem;
-      color: #4a4a5a;
+      color: var(--text-dim);
       letter-spacing: 0.1em;
       text-transform: uppercase;
       margin-bottom: 0.3rem;

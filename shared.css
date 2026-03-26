@@ -1,14 +1,153 @@
 /* Zero brand: shared styles for all pages */
 
+/* ── Theme variables ── */
+
+:root {
+  /* Backgrounds */
+  --bg-void: #0a0a0f;
+  --bg-panel: #121218;
+
+  /* Text */
+  --text-bright: #e0e0e8;
+  --text-body: #c8c8d0;
+  --text-muted: #6a6a7a;
+  --text-dim: #4a4a5a;
+  --text-faint: #333340;
+
+  /* Borders */
+  --border: #1e1e28;
+  --border-hover: #333340;
+
+  /* Accents */
+  --accent-magenta: #ff2d7b;
+  --accent-cyan: #00f0ff;
+  --accent-green: #39ff14;
+  --accent-purple: #9d4edd;
+  --accent-pink: #ff6ac1;
+  --accent-amber: #ffb000;
+  --accent-crimson: #ff1744;
+
+  /* Glow colors (text-shadow, box-shadow) */
+  --glow-magenta: rgba(255, 45, 123, 0.25);
+  --glow-magenta-strong: rgba(255, 45, 123, 0.4);
+  --glow-magenta-soft: rgba(255, 45, 123, 0.12);
+  --glow-cyan: rgba(0, 240, 255, 0.3);
+  --glow-cyan-soft: rgba(0, 240, 255, 0.04);
+  --glow-cyan-mid: rgba(0, 240, 255, 0.15);
+  --glow-green: rgba(57, 255, 20, 0.4);
+  --glow-purple: rgba(157, 78, 221, 0.3);
+
+  /* Selection */
+  --selection-bg: rgba(0, 240, 255, 0.2);
+  --selection-text: #e0e0e8;
+
+  /* CRT effects */
+  --crt-vignette-opacity: 1;
+  --crt-scanlines-opacity: 1;
+}
+
+[data-theme="light"] {
+  --bg-void: #f0eff5;
+  --bg-panel: #e4e3ec;
+
+  --text-bright: #18182a;
+  --text-body: #3a3a52;
+  --text-muted: #6e6e85;
+  --text-dim: #6e6e85;
+  --text-faint: #a8a8bc;
+
+  --border: #c8c8d6;
+  --border-hover: #a8a8bc;
+
+  --accent-magenta: #cc1166;
+  --accent-cyan: #00717f;
+  --accent-green: #1a7a12;
+  --accent-purple: #7b30b8;
+  --accent-pink: #b03585;
+  --accent-amber: #8a6000;
+  --accent-crimson: #cc1030;
+
+  --glow-magenta: transparent;
+  --glow-magenta-strong: transparent;
+  --glow-magenta-soft: transparent;
+  --glow-cyan: transparent;
+  --glow-cyan-soft: transparent;
+  --glow-cyan-mid: transparent;
+  --glow-green: transparent;
+  --glow-purple: transparent;
+
+  --selection-bg: rgba(204, 17, 102, 0.15);
+  --selection-text: #18182a;
+
+  --crt-vignette-opacity: 0;
+  --crt-scanlines-opacity: 0;
+}
+
+/* ── SVG diagram theming ──
+   Override hardcoded SVG presentation attributes with CSS variables.
+   In dark mode these resolve to the same values. In light mode they adapt. */
+
+/* Backgrounds */
+[fill="#121218"] { fill: var(--bg-panel); }
+[fill="#1e1e28"] { fill: var(--border); }
+[fill="#1a1a24"] { fill: var(--border); }
+
+/* Text / labels */
+[fill="#4a4a5a"] { fill: var(--text-dim); }
+[fill="#6a6a7a"] { fill: var(--text-muted); }
+[fill="#8888a0"] { fill: var(--text-muted); }
+[fill="#8a8a9a"] { fill: var(--text-muted); }
+[fill="#c0c0d0"] { fill: var(--text-body); }
+[fill="#c8c8d0"] { fill: var(--text-body); }
+
+/* Borders / strokes */
+[stroke="#1e1e28"] { stroke: var(--border); }
+[stroke="#4a4a5a"] { stroke: var(--text-dim); }
+[stroke="#8888a0"] { stroke: var(--text-muted); }
+
+/* Accent: magenta */
+[fill="#ff2d7b"] { fill: var(--accent-magenta); }
+[stroke="#ff2d7b"] { stroke: var(--accent-magenta); }
+
+/* Accent: cyan */
+[fill="#00f0ff"] { fill: var(--accent-cyan); }
+[stroke="#00f0ff"] { stroke: var(--accent-cyan); }
+[fill="#00e5ff"] { fill: var(--accent-cyan); }
+[stroke="#00e5ff"] { stroke: var(--accent-cyan); }
+[fill="#22d3ee"] { fill: var(--accent-cyan); }
+[stroke="#22d3ee"] { stroke: var(--accent-cyan); }
+
+/* Accent: green */
+[fill="#39ff14"] { fill: var(--accent-green); }
+[stroke="#39ff14"] { stroke: var(--accent-green); }
+
+/* Accent: purple */
+[fill="#c084fc"] { fill: var(--accent-purple); }
+[stroke="#c084fc"] { stroke: var(--accent-purple); }
+[fill="#b388ff"] { fill: var(--accent-purple); }
+[stroke="#b388ff"] { stroke: var(--accent-purple); }
+
+/* Accent: pink */
+[fill="#f472b6"] { fill: var(--accent-pink); }
+[stroke="#f472b6"] { stroke: var(--accent-pink); }
+
+/* Connectors / arrows (orange - not a brand color, but needs light-mode awareness) */
+[fill="#fb923c"] { fill: var(--accent-amber); }
+[stroke="#fb923c"] { stroke: var(--accent-amber); }
+
+/* ── Reset ── */
+
 *, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* ── Base ── */
+
 body {
-  background: #0a0a0f;
-  color: #e0e0e8;
+  background: var(--bg-void);
+  color: var(--text-bright);
   font-family: 'JetBrains Mono', monospace;
   font-size: 14px;
   line-height: 1.7;
@@ -27,6 +166,7 @@ body::before {
   );
   pointer-events: none;
   z-index: 10;
+  opacity: var(--crt-vignette-opacity);
 }
 
 /* Scanlines */
@@ -43,34 +183,39 @@ body::after {
   );
   pointer-events: none;
   z-index: 11;
+  opacity: var(--crt-scanlines-opacity);
 }
 
 ::selection {
-  background: rgba(0, 240, 255, 0.2);
-  color: #e0e0e8;
+  background: var(--selection-bg);
+  color: var(--selection-text);
 }
 
+/* ── Links ── */
+
 a {
-  color: #00f0ff;
+  color: var(--accent-cyan);
   text-decoration: none;
   transition: color 0.2s, text-shadow 0.2s;
 }
 
 a:hover {
-  text-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+  text-shadow: 0 0 8px var(--glow-cyan);
 }
 
+/* ── Code ── */
+
 code {
-  background: #121218;
+  background: var(--bg-panel);
   padding: 0.15em 0.35em;
   border-radius: 2px;
   font-size: 0.9em;
-  color: #ff6ac1;
+  color: var(--accent-pink);
 }
 
 pre {
-  background: #121218;
-  border: 1px solid #1e1e28;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
   padding: 1.2rem;
   overflow-x: auto;
   margin: 1.5rem 0;
@@ -81,6 +226,6 @@ pre {
 pre code {
   background: none;
   padding: 0;
-  color: #e0e0e8;
+  color: var(--text-bright);
   font-size: inherit;
 }

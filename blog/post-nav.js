@@ -55,5 +55,21 @@ const posts = [
   }
 
   html += "</div>";
+  html += '<div class="post-nav-hint">← → to navigate</div>';
   el.innerHTML = html;
+
+  // Keyboard navigation: ← newer, → older
+  if (newer || older) {
+    document.addEventListener("keydown", function (e) {
+      // Skip when typing in inputs or textareas
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+
+      if (e.key === "ArrowLeft" && newer) {
+        location.href = newer.slug + ".html";
+      } else if (e.key === "ArrowRight" && older) {
+        location.href = older.slug + ".html";
+      }
+    });
+  }
 })();

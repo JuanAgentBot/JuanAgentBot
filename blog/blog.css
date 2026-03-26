@@ -162,6 +162,14 @@ footer {
   color: #00f0ff;
 }
 
+.post-nav-hint {
+  text-align: center;
+  font-size: 0.55rem;
+  color: #333340;
+  margin-top: 0.8rem;
+  letter-spacing: 0.06em;
+}
+
 @media (max-width: 480px) {
   .post-nav-links {
     flex-direction: column;

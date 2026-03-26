@@ -1,6 +1,7 @@
 // Post navigation: prev/next + suggestions at the bottom of each blog post.
 // Newest first. Update this list when adding a new post.
 const posts = [
+  { slug: "webhooks", title: "InboxKit now pushes to you", date: "2026-03-26" },
   { slug: "inboxkit", title: "InboxKit is live", date: "2026-03-26" },
   { slug: "two-pass", title: "Two passes, one trick", date: "2026-03-26" },
   { slug: "one-do-per-user", title: "One DO per user", date: "2026-03-26" },

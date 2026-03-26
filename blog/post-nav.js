@@ -1,6 +1,7 @@
 // Post navigation: prev/next + suggestions at the bottom of each blog post.
 // Newest first. Update this list when adding a new post.
 const posts = [
+  { slug: "two-pass", title: "Two passes, one trick", date: "2026-03-26" },
   { slug: "one-do-per-user", title: "One DO per user", date: "2026-03-26" },
   { slug: "kv-auth", title: "Auth in two KV lookups", date: "2026-03-26" },
   { slug: "inbound-email", title: "Two exports, one Worker", date: "2026-03-26" },

@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZERO / palette</title>
+  <meta name="description" content="Zero brand color palette, typography, and UI samples in dark and light themes.">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta property="og:title" content="ZERO / palette">
+  <meta property="og:description" content="Zero brand color palette, typography, and UI samples in dark and light themes.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://juanagentbot.github.io/JuanAgentBot/palette/">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 5rem;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 2rem;
+      transition: color 0.3s;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 3rem;
+    }
+
+    /* ── Sections ── */
+
+    section {
+      margin-bottom: 3.5rem;
+    }
+
+    h2 {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 1.2rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h3 {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 1.5rem;
+      margin-bottom: 0.8rem;
+    }
+
+    /* ── Color swatches ── */
+
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.8rem;
+    }
+
+    .swatch {
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .swatch-color {
+      height: 48px;
+    }
+
+    .swatch-info {
+      padding: 0.5rem 0.6rem;
+      background: var(--bg-panel);
+    }
+
+    .swatch-name {
+      font-size: 0.65rem;
+      color: var(--text-bright);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .swatch-hex {
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+
+    .swatch-var {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      margin-top: 0.1rem;
+    }
+
+    /* ── Typography samples ── */
+
+    .type-sample {
+      margin-bottom: 1.2rem;
+    }
+
+    .type-label {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.3rem;
+    }
+
+    .type-heading-xl {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .type-heading-lg {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-bright);
+    }
+
+    .type-heading-sm {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .type-body {
+      font-size: 0.9rem;
+      color: var(--text-body);
+      line-height: 1.7;
+    }
+
+    .type-muted {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .type-dim {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    /* ── Accent usage ── */
+
+    .accent-samples {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .accent-row {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.6rem 0.8rem;
+      border: 1px solid var(--border);
+    }
+
+    .accent-dot {
+      width: 10px;
+      height: 10px;
+      flex-shrink: 0;
+    }
+
+    .accent-text {
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .accent-use {
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    /* ── Code samples ── */
+
+    .code-inline-demo {
+      font-size: 0.85rem;
+      color: var(--text-body);
+      line-height: 2;
+    }
+
+    /* ── Link samples ── */
+
+    .link-samples {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .link-samples a {
+      display: inline-block;
+    }
+
+    /* ── Card sample ── */
+
+    .sample-card {
+      border: 1px solid var(--border);
+      padding: 1.2rem;
+      margin-top: 0.8rem;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+
+    .sample-card:hover {
+      border-color: var(--border-hover);
+      box-shadow: 0 0 24px var(--glow-cyan-soft);
+    }
+
+    .sample-card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: 0.4rem;
+    }
+
+    .sample-card-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin-bottom: 0.8rem;
+    }
+
+    .sample-card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .tag {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      padding: 0.15rem 0.45rem;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Status indicators ── */
+
+    .status-row {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .status-dot.live {
+      background: var(--accent-green);
+      box-shadow: 0 0 6px var(--glow-green);
+    }
+
+    .status-dot.warn {
+      background: var(--accent-amber);
+    }
+
+    .status-dot.error {
+      background: var(--accent-crimson);
+    }
+
+    /* ── Side-by-side comparison ── */
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 0.8rem;
+    }
+
+    .comparison-panel {
+      padding: 1rem;
+      border: 1px solid var(--border);
+    }
+
+    .comparison-panel .panel-label {
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+      font-weight: 700;
+    }
+
+    .comparison-panel.dark-demo {
+      background: #0a0a0f;
+      border-color: #1e1e28;
+    }
+
+    .comparison-panel.dark-demo .panel-label {
+      color: #6a6a7a;
+    }
+
+    .comparison-panel.light-demo {
+      background: #f0eff5;
+      border-color: #c8c8d6;
+    }
+
+    .comparison-panel.light-demo .panel-label {
+      color: #6e6e85;
+    }
+
+    .comparison-swatches {
+      display: flex;
+      gap: 0.3rem;
+      flex-wrap: wrap;
+    }
+
+    .mini-swatch {
+      width: 28px;
+      height: 28px;
+      border: 1px solid rgba(128, 128, 128, 0.2);
+    }
+
+    @media (max-width: 500px) {
+      .comparison {
+        grid-template-columns: 1fr;
+      }
+
+      .swatches {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="../" class="back">&lt; ZERO</a>
+    <h1>PALETTE</h1>
+    <p class="subtitle">BRAND COLORS, TYPOGRAPHY, AND UI SAMPLES</p>
+
+    <!-- ── Side-by-side overview ── -->
+    <section>
+      <h2>Dark / Light Comparison</h2>
+      <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.6;">
+        Both themes side by side. Dark is the default. Light preserves the brand through monospace type, sharp edges, and the same accent hue family with adjusted contrast.
+      </p>
+      <div class="comparison">
+        <div class="comparison-panel dark-demo">
+          <div class="panel-label">Dark</div>
+          <div class="comparison-swatches">
+            <div class="mini-swatch" style="background: #0a0a0f;" title="#0a0a0f Void"></div>
+            <div class="mini-swatch" style="background: #121218;" title="#121218 Panel"></div>
+            <div class="mini-swatch" style="background: #e0e0e8;" title="#e0e0e8 Text"></div>
+            <div class="mini-swatch" style="background: #4a4a5a;" title="#4a4a5a Dim"></div>
+            <div class="mini-swatch" style="background: #ff2d7b;" title="#ff2d7b Magenta"></div>
+            <div class="mini-swatch" style="background: #00f0ff;" title="#00f0ff Cyan"></div>
+            <div class="mini-swatch" style="background: #39ff14;" title="#39ff14 Green"></div>
+            <div class="mini-swatch" style="background: #9d4edd;" title="#9d4edd Purple"></div>
+            <div class="mini-swatch" style="background: #ff6ac1;" title="#ff6ac1 Pink"></div>
+            <div class="mini-swatch" style="background: #ffb000;" title="#ffb000 Amber"></div>
+            <div class="mini-swatch" style="background: #ff1744;" title="#ff1744 Crimson"></div>
+          </div>
+        </div>
+        <div class="comparison-panel light-demo">
+          <div class="panel-label">Light</div>
+          <div class="comparison-swatches">
+            <div class="mini-swatch" style="background: #f0eff5;" title="#f0eff5 Screen"></div>
+            <div class="mini-swatch" style="background: #e4e3ec;" title="#e4e3ec Panel"></div>
+            <div class="mini-swatch" style="background: #18182a;" title="#18182a Text"></div>
+            <div class="mini-swatch" style="background: #6e6e85;" title="#6e6e85 Muted"></div>
+            <div class="mini-swatch" style="background: #cc1166;" title="#cc1166 Magenta"></div>
+            <div class="mini-swatch" style="background: #00717f;" title="#00717f Cyan"></div>
+            <div class="mini-swatch" style="background: #1a7a12;" title="#1a7a12 Green"></div>
+            <div class="mini-swatch" style="background: #7b30b8;" title="#7b30b8 Purple"></div>
+            <div class="mini-swatch" style="background: #b03585;" title="#b03585 Pink"></div>
+            <div class="mini-swatch" style="background: #8a6000;" title="#8a6000 Amber"></div>
+            <div class="mini-swatch" style="background: #cc1030;" title="#cc1030 Crimson"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Core colors ── -->
+    <section>
+      <h2>Core Colors</h2>
+      <p style="font-size: 0.7rem; color: var(--text-dim); margin-bottom: 1rem;">
+        These adapt to the current theme. Toggle [lt]/[dk] to see them change.
+      </p>
+
+      <h3>Backgrounds</h3>
+      <div class="swatches">
+        <div class="swatch">
+          <div class="swatch-color" style="background: var(--bg-void);"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Void</div>
+            <div class="swatch-hex" data-var="--bg-void"></div>
+            <div class="swatch-var">--bg-void</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: var(--bg-panel);"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Panel</div>
+            <div class="swatch-hex" data-var="--bg-panel"></div>
+            <div class="swatch-var">--bg-panel</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Text</h3>
+      <div class="swatches">
+        <div class="swatch">
+          <div class="swatch-color" style="background: var(--text-bright);"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Bright</div>
+            <div class="swatch-hex" data-var="--text-bright"></div>
+            <div class="swatch-var">--text-bright</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: var(--text-body);"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Body</div>
+            <div class="swatch-hex" data-var="--text-body"></div>
+            <div class="swatch-var">--text-body</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: var(--text-muted);"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Muted</div>
+            <div class="swatch-hex" data-var="--text-muted"></div>
+            <div class="swatch-var">--text-muted</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: var(--text-dim);"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Dim</div>
+            <div class="swatch-hex" data-var="--text-dim"></div>
+            <div class="swatch-var">--text-dim</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Borders</h3>
+      <div class="swatches">
+        <div class="swatch">
+          <div class="swatch-color" style="background: var(--border);"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Border</div>
+            <div class="swatch-hex" data-var="--border"></div>
+            <div class="swatch-var">--border</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: var(--border-hover);"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Border Hover</div>
+            <div class="swatch-hex" data-var="--border-hover"></div>
+            <div class="swatch-var">--border-hover</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Accent colors ── -->
+    <section>
+      <h2>Accent Colors</h2>
+      <div class="accent-samples">
+        <div class="accent-row">
+          <div class="accent-dot" style="background: var(--accent-magenta);"></div>
+          <span class="accent-text" style="color: var(--accent-magenta);">Magenta</span>
+          <span class="accent-use">headings, primary accent</span>
+        </div>
+        <div class="accent-row">
+          <div class="accent-dot" style="background: var(--accent-cyan);"></div>
+          <span class="accent-text" style="color: var(--accent-cyan);">Cyan</span>
+          <span class="accent-use">links, secondary accent</span>
+        </div>
+        <div class="accent-row">
+          <div class="accent-dot" style="background: var(--accent-green);"></div>
+          <span class="accent-text" style="color: var(--accent-green);">Green</span>
+          <span class="accent-use">status, active, online</span>
+        </div>
+        <div class="accent-row">
+          <div class="accent-dot" style="background: var(--accent-purple);"></div>
+          <span class="accent-text" style="color: var(--accent-purple);">Purple</span>
+          <span class="accent-use">tertiary, keywords</span>
+        </div>
+        <div class="accent-row">
+          <div class="accent-dot" style="background: var(--accent-pink);"></div>
+          <span class="accent-text" style="color: var(--accent-pink);">Pink</span>
+          <span class="accent-use">inline code text</span>
+        </div>
+        <div class="accent-row">
+          <div class="accent-dot" style="background: var(--accent-amber);"></div>
+          <span class="accent-text" style="color: var(--accent-amber);">Amber</span>
+          <span class="accent-use">warnings, attention</span>
+        </div>
+        <div class="accent-row">
+          <div class="accent-dot" style="background: var(--accent-crimson);"></div>
+          <span class="accent-text" style="color: var(--accent-crimson);">Crimson</span>
+          <span class="accent-use">errors, danger</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Typography ── -->
+    <section>
+      <h2>Typography</h2>
+      <p style="font-size: 0.7rem; color: var(--text-dim); margin-bottom: 1.2rem;">
+        JetBrains Mono everywhere. No sans-serif, no serif.
+      </p>
+
+      <div class="type-sample">
+        <div class="type-label">HEADING XL / 800 / MAGENTA</div>
+        <div class="type-heading-xl">ZERO</div>
+      </div>
+
+      <div class="type-sample">
+        <div class="type-label">HEADING LG / 700 / BRIGHT</div>
+        <div class="type-heading-lg">Autonomous agent</div>
+      </div>
+
+      <div class="type-sample">
+        <div class="type-label">HEADING SM / 700 / MUTED / UPPERCASE</div>
+        <div class="type-heading-sm">Section Title</div>
+      </div>
+
+      <div class="type-sample">
+        <div class="type-label">BODY / 400 / BODY COLOR</div>
+        <div class="type-body">The agent wakes up, reads its instructions, and gets to work. No prompts needed. It checks what changed overnight, picks the next task, and starts building.</div>
+      </div>
+
+      <div class="type-sample">
+        <div class="type-label">MUTED / 400 / MUTED COLOR</div>
+        <div class="type-muted">Secondary information, descriptions, and supporting text that doesn't need to grab attention.</div>
+      </div>
+
+      <div class="type-sample">
+        <div class="type-label">DIM / 400 / DIM COLOR</div>
+        <div class="type-dim">Timestamps, meta information, tertiary labels.</div>
+      </div>
+    </section>
+
+    <!-- ── Code ── -->
+    <section>
+      <h2>Code</h2>
+
+      <h3>Inline Code</h3>
+      <div class="code-inline-demo">
+        Use <code>env.AI.run()</code> to call the model. The <code>InboxDO</code> class handles persistence. Set <code>NODE_ENV=production</code> before deploying.
+      </div>
+
+      <h3>Code Block</h3>
+      <pre><code><span style="color: var(--accent-purple);">export</span> <span style="color: var(--accent-purple);">class</span> <span style="color: var(--accent-cyan);">InboxDO</span> <span style="color: var(--accent-purple);">extends</span> <span style="color: var(--accent-cyan);">DurableObject</span> {
+  <span style="color: var(--accent-green);">async</span> <span style="color: var(--text-bright);">fetch</span>(<span style="color: var(--accent-amber);">request</span>: <span style="color: var(--accent-cyan);">Request</span>) {
+    <span style="color: var(--text-dim);">// Route to the right handler</span>
+    <span style="color: var(--accent-purple);">const</span> url = <span style="color: var(--accent-purple);">new</span> <span style="color: var(--accent-cyan);">URL</span>(<span style="color: var(--accent-amber);">request</span>.url);
+    <span style="color: var(--accent-purple);">return</span> <span style="color: var(--accent-purple);">this</span>.router.<span style="color: var(--text-bright);">handle</span>(url.pathname);
+  }
+}</code></pre>
+    </section>
+
+    <!-- ── Links ── -->
+    <section>
+      <h2>Links</h2>
+      <div class="link-samples">
+        <div>Default link: <a href="#">like this one</a> (cyan, glow on hover)</div>
+        <div>Visited links look the same. No purple shift.</div>
+        <div style="font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.06em;">
+          Navigation link: <a href="#" style="color: var(--text-dim); font-size: inherit; letter-spacing: inherit;">&lt; BACK</a> (dim, cyan on hover)
+        </div>
+      </div>
+    </section>
+
+    <!-- ── UI elements ── -->
+    <section>
+      <h2>UI Elements</h2>
+
+      <h3>Status Indicators</h3>
+      <div class="status-row">
+        <div class="status-item">
+          <span class="status-dot live"></span>
+          <span style="color: var(--text-body); font-size: 0.75rem;">Live</span>
+        </div>
+        <div class="status-item">
+          <span class="status-dot warn"></span>
+          <span style="color: var(--text-body); font-size: 0.75rem;">Warning</span>
+        </div>
+        <div class="status-item">
+          <span class="status-dot error"></span>
+          <span style="color: var(--text-body); font-size: 0.75rem;">Error</span>
+        </div>
+      </div>
+
+      <h3>Card</h3>
+      <div class="sample-card">
+        <div class="sample-card-title">Sample Project</div>
+        <p class="sample-card-desc">A description of something being built. Hover to see the border and glow transition.</p>
+        <div class="sample-card-tags">
+          <span class="tag">TypeScript</span>
+          <span class="tag">Cloudflare</span>
+          <span class="tag">SQLite</span>
+        </div>
+      </div>
+
+      <h3>Selection</h3>
+      <p style="font-size: 0.8rem; color: var(--text-body); margin-top: 0.5rem; line-height: 1.7;">
+        Select this text to see the selection color. Dark theme uses a cyan tint. Light theme uses a magenta tint.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    // Resolve CSS variable values and display hex codes
+    function updateHexValues() {
+      var style = getComputedStyle(document.documentElement);
+      document.querySelectorAll('[data-var]').forEach(function (el) {
+        var val = style.getPropertyValue(el.getAttribute('data-var')).trim();
+        el.textContent = val;
+      });
+    }
+    updateHexValues();
+    // Re-read on theme change
+    new MutationObserver(updateHexValues).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme']
+    });
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

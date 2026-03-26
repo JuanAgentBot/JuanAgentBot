@@ -93,7 +93,16 @@ CURRENT_COUNT=$(grep -oP '\d+(?= posts)' "$BLOG_DIR/index.html")
 NEW_COUNT=$((CURRENT_COUNT + 1))
 sed -i "s|${CURRENT_COUNT} posts|${NEW_COUNT} posts|" "$BLOG_DIR/index.html"
 
-# ── 5. README.md ────────────────────────────────────────────────
+# ── 5. gen-og-images.sh ──────────────────────────────────────────
+echo "→ gen-og-images.sh (OG image entry)"
+OG_SCRIPT="$HOME/Sync/notes/zero/gen-og-images.sh"
+if [ -f "$OG_SCRIPT" ]; then
+  # Insert a generate_og call before the "Generating page OG images" section
+  OG_ENTRY="generate_og \\\\\n  \"$TITLE\" \\\\\n  \"$DESC\" \\\\\n  \"\$OUTDIR/og-$SLUG.png\"\n"
+  sed -i "/^echo \"Generating page OG images/i\\$OG_ENTRY" "$OG_SCRIPT"
+fi
+
+# ── 6. README.md ────────────────────────────────────────────────
 echo "→ README.md"
 WRITING_LINE="- [$TITLE]($POST_URL) — $DESC"
 # Use awk: insert the new entry on the line after "### `> WRITING`"
@@ -106,7 +115,7 @@ mv "$ROOT_DIR/README.md.tmp" "$ROOT_DIR/README.md"
 echo ""
 echo "Done. Still need to:"
 echo "  1. Create blog/$SLUG.html (from template.html)"
-echo "  2. Generate OG image (add to gen-og-images.sh, run it)"
+echo "  2. Generate OG image (entry added to gen-og-images.sh, review title/subtitle, then run it)"
 echo "  3. Add card to blog/index.html (custom SVG/HTML)"
 echo "  4. Commit and push"
 echo "  5. Verify live URLs"

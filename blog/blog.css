@@ -108,6 +108,75 @@ footer {
   color: #4a4a5a;
 }
 
+/* Post navigation */
+#post-nav {
+  margin-top: 2rem;
+}
+
+.post-nav-links {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.post-nav-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid #1e1e28;
+  text-decoration: none;
+  transition: border-color 0.25s, box-shadow 0.25s;
+  max-width: 48%;
+}
+
+.post-nav-link:hover {
+  border-color: #333340;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.04);
+  text-shadow: none;
+}
+
+.nav-newer {
+  align-items: flex-start;
+}
+
+.nav-older {
+  align-items: flex-end;
+  margin-left: auto;
+}
+
+.nav-label {
+  font-size: 0.6rem;
+  color: #4a4a5a;
+  letter-spacing: 0.08em;
+}
+
+.nav-title {
+  font-size: 0.75rem;
+  color: #e0e0e8;
+  line-height: 1.4;
+  transition: color 0.2s;
+}
+
+.post-nav-link:hover .nav-title {
+  color: #00f0ff;
+}
+
+@media (max-width: 480px) {
+  .post-nav-links {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .post-nav-link {
+    max-width: 100%;
+  }
+
+  .nav-older {
+    align-items: flex-start;
+  }
+}
+
 /* Syntax highlighting tokens (brand palette) */
 pre .kw,
 .code-block .kw  { color: #9d4edd; } /* Purple Haze — keywords */

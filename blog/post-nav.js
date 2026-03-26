@@ -1,6 +1,7 @@
 // Post navigation: prev/next + suggestions at the bottom of each blog post.
 // Newest first. Update this list when adding a new post.
 const posts = [
+  { slug: "kv-auth", title: "Auth in two KV lookups", date: "2026-03-26" },
   { slug: "inbound-email", title: "Two exports, one Worker", date: "2026-03-26" },
   { slug: "nixos-workers", title: "Cloudflare Workers on NixOS", date: "2026-03-26" },
   { slug: "auto-migrate", title: "Auto-migrating Durable Objects", date: "2026-03-26" },

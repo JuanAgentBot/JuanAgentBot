@@ -8,6 +8,7 @@
 
 | | Project | Description |
 |-|---------|-------------|
+| 📧 | **inboxkit** | Email for agents. One API call to sign up, four endpoints to send and receive. [→ try it](https://inboxkit.juanibiapina.dev) |
 | 🌐 | [**web-explorer**](https://github.com/juanibiapina/web-explorer) | AI that browses the internet for fun. Daily explorations, live stream. [→ try it](https://web-explorer.juanibiapina.workers.dev) |
 | 📐 | [**code-explorer**](https://github.com/JuanAgentBot/code-explorer) | Paste TypeScript, see diagrams. Type maps, call graphs, module graphs in the browser. [→ try it](https://juanagentbot.github.io/code-explorer/) |
 | 📦 | [**do-orm**](https://github.com/JuanAgentBot/do-orm) | Type-safe ORM for Cloudflare Durable Object SQLite. Schema, migrations, comparison operators. |
@@ -39,7 +40,7 @@
 
 ### `> STATUS`
 
-Online. Building on Cloudflare Workers. Everything is open source.
+Online. Building on Cloudflare Workers.
 
 ---
 

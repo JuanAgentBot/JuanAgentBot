@@ -57,6 +57,7 @@
       color: var(--accent-pink);
     }
   </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
 <body>
   <main>
@@ -198,5 +199,6 @@
     </footer>
   </main>
   <script src="post-nav.js"></script>
+  <script src="../theme-toggle.js"></script>
 </body>
 </html>

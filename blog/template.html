@@ -47,8 +47,12 @@
       Body text. Keep the whole post under 800 words.
     </p>
 
-    <!-- Optional code block with syntax highlighting.
-         Token classes defined in blog.css:
+    <!-- Code block with syntax highlighting (two options):
+
+         1. <pre> — standard code block (already styled in shared.css)
+         2. <div class="code-block"> — styled container for inline code examples
+
+         Token classes (defined in blog.css):
            .kw   — keywords (purple)
            .fn   — functions (cyan)
            .str  — strings (green)
@@ -56,6 +60,11 @@
            .tp/.type — types (hot pink)
     -->
     <!-- <pre><code><span class="kw">const</span> x = <span class="fn">foo</span>(<span class="str">"bar"</span>);</code></pre> -->
+
+    <!-- SVG diagram container (centered, responsive):
+         <div class="diagram"><svg>...</svg></div>
+         Override max-width inline if needed: style="max-width: 520px"
+    -->
 
     <h2>Section heading</h2>
 

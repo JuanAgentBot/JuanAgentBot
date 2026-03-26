@@ -177,6 +177,30 @@ footer {
   }
 }
 
+/* Code blocks (used alongside <pre> for styled inline code examples) */
+.code-block {
+  background: #121218;
+  border: 1px solid #1e1e28;
+  padding: 1.2rem;
+  margin: 1.5rem 0;
+  font-size: 0.72rem;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+
+/* SVG diagram containers */
+.diagram {
+  margin: 2rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.diagram svg {
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+}
+
 /* Syntax highlighting tokens (brand palette) */
 pre .kw,
 .code-block .kw  { color: #9d4edd; } /* Purple Haze — keywords */

@@ -2,12 +2,12 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Zero IDE — Canvas Workspace Prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zero IDE — Canvas with Call Edges</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #0c0c0c; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
+  body { background: #0c0c0c; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; touch-action: none; }
 
-  /* Layout */
   .app { display: flex; height: 100vh; flex-direction: column; }
   .titlebar { height: 32px; background: #161616; display: flex; align-items: center; padding: 0 12px; gap: 6px; border-bottom: 1px solid #222; flex-shrink: 0; }
   .dot { width: 10px; height: 10px; border-radius: 50%; }
@@ -34,26 +34,62 @@
   .tree-badge { font-size: 9px; margin-left: auto; }
   .tree-badge-m { color: #4ade80; }
   .tree-badge-n { color: #60a5fa; }
-  .tree-badge-canvas { color: #c084fc; }
 
   /* Canvas */
   .canvas-container { flex: 1; position: relative; overflow: hidden; }
   .canvas { width: 100%; height: 100%; position: relative; }
-  .canvas-grid { position: absolute; inset: 0; background-image:
-    radial-gradient(circle, #1a1a1a 1px, transparent 1px);
-    background-size: 24px 24px; pointer-events: none; }
+  .canvas-grid { position: absolute; inset: 0; background-image: radial-gradient(circle, #1a1a1a 1px, transparent 1px); background-size: 24px 24px; pointer-events: none; }
 
-  /* Edges (SVG layer) */
-  .edges-layer { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
-  .edge { stroke: #333; stroke-width: 1.5; fill: none; }
-  .edge-label { font-size: 9px; fill: #444; font-family: -apple-system, sans-serif; }
+  /* SVG edge layer */
+  .edges-layer { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+  .edge-group { pointer-events: auto; cursor: pointer; }
+  .edge-hit { stroke: transparent; stroke-width: 12; fill: none; }
+  .edge-line { stroke-width: 1.5; fill: none; }
+  .edge-line-unchanged { stroke: #444; }
+  .edge-line-new { stroke: #4ade80; }
+  .edge-line-removed { stroke: #f87171; stroke-dasharray: 6 4; }
+  .edge-group:hover .edge-line-unchanged { stroke: #888; stroke-width: 2; }
+  .edge-group:hover .edge-line-new { stroke: #4ade80; stroke-width: 2.5; }
+  .edge-group:hover .edge-line-removed { stroke: #f87171; stroke-width: 2.5; }
+  .edge-label-bg { fill: #0c0c0c; }
+  .edge-label { font-size: 9px; font-family: 'SF Mono', 'Fira Code', monospace; fill: #666; pointer-events: none; }
+  .edge-label-new { fill: #4ade80; }
+  .edge-label-removed { fill: #f87171; }
+  .edge-dot { r: 3; }
+  .edge-dot-new { fill: #4ade80; }
+  .edge-dot-removed { fill: #f87171; }
+  .edge-dot-unchanged { fill: #444; }
+
+  /* Edge inspect popover */
+  .edge-popover { position: absolute; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 0; z-index: 200; min-width: 280px; max-width: 380px; box-shadow: 0 8px 32px #000a; display: none; font-size: 11px; overflow: hidden; }
+  .edge-popover.visible { display: block; }
+  .edge-popover-header { padding: 8px 12px; border-bottom: 1px solid #222; display: flex; align-items: center; gap: 8px; }
+  .edge-popover-title { font-weight: 600; color: #e0e0e0; flex: 1; }
+  .edge-popover-badge { font-size: 9px; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
+  .edge-popover-badge-new { background: #4ade8018; color: #4ade80; }
+  .edge-popover-badge-removed { background: #f8717118; color: #f87171; }
+  .edge-popover-badge-unchanged { background: #44444418; color: #888; }
+  .edge-popover-close { color: #555; cursor: pointer; font-size: 14px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+  .edge-popover-close:hover { background: #222; color: #aaa; }
+  .edge-popover-body { padding: 8px 12px; }
+  .edge-popover-section { margin-bottom: 8px; }
+  .edge-popover-section:last-child { margin-bottom: 0; }
+  .edge-popover-label { font-size: 9px; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .edge-popover-code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 10px; line-height: 1.6; background: #111; border-radius: 4px; padding: 6px 8px; color: #999; overflow-x: auto; }
+  .edge-popover-code .kw { color: #c084fc; }
+  .edge-popover-code .fn { color: #60a5fa; }
+  .edge-popover-code .str { color: #4ade80; }
+  .edge-popover-code .type { color: #f59e0b; }
+  .edge-popover-code .arg { color: #e0e0e0; }
+  .edge-popover-arrow { display: flex; align-items: center; gap: 6px; color: #888; padding: 4px 0; }
+  .edge-popover-arrow-from { color: #c084fc; font-family: monospace; font-size: 10px; }
+  .edge-popover-arrow-to { color: #60a5fa; font-family: monospace; font-size: 10px; }
+  .edge-popover-arrow-icon { color: #555; }
 
   /* File nodes */
-  .node { position: absolute; background: #161616; border: 1px solid #2a2a2a; border-radius: 8px; min-width: 180px; cursor: grab; user-select: none; z-index: 1; transition: box-shadow 0.15s; }
-  .node:hover { box-shadow: 0 0 0 1px #333; z-index: 10; }
+  .node { position: absolute; background: #161616; border: 1px solid #2a2a2a; border-radius: 8px; min-width: 200px; cursor: grab; user-select: none; z-index: 10; transition: box-shadow 0.15s; }
+  .node:hover { box-shadow: 0 0 0 1px #333; z-index: 20; }
   .node.dragging { cursor: grabbing; box-shadow: 0 4px 24px #0008; z-index: 100; }
-  .node.expanded { min-width: 260px; }
-  .node.code-view { min-width: 360px; }
   .node-modified { border-color: #4ade8044; }
   .node-new { border-color: #60a5fa44; }
 
@@ -63,43 +99,33 @@
   .node-status { font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
   .node-status-m { background: #4ade8018; color: #4ade80; }
   .node-status-n { background: #60a5fa18; color: #60a5fa; }
-  .node-toggle { font-size: 10px; color: #555; cursor: pointer; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
-  .node-toggle:hover { background: #222; color: #aaa; }
   .node-close { font-size: 12px; color: #444; cursor: pointer; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
   .node-close:hover { background: #331a1a; color: #f87171; }
 
-  /* Collapsed node - just shows summary */
-  .node-summary { padding: 6px 12px; font-size: 10px; color: #666; }
-  .node-summary-item { display: flex; align-items: center; gap: 6px; padding: 1px 0; }
-  .node-summary-count { color: #888; }
-
-  /* Expanded node - shows functions */
   .node-functions { padding: 4px 0; }
-  .node-fn { padding: 4px 12px; font-size: 11px; font-family: 'SF Mono', 'Fira Code', monospace; color: #999; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .node-fn { padding: 4px 12px; font-size: 11px; font-family: 'SF Mono', 'Fira Code', monospace; color: #999; display: flex; align-items: center; gap: 6px; cursor: default; }
   .node-fn:hover { background: #1a1a2a; color: #e0e0e0; }
   .node-fn-icon { font-size: 9px; color: #c084fc; }
   .node-fn-name { flex: 1; }
   .node-fn-badge { font-size: 8px; padding: 1px 4px; border-radius: 2px; }
   .node-fn-badge-changed { background: #4ade8018; color: #4ade80; }
   .node-fn-badge-new { background: #60a5fa18; color: #60a5fa; }
+  .node-fn-badge-removed { background: #f8717118; color: #f87171; text-decoration: line-through; }
 
-  /* Code view inside node */
-  .node-code { padding: 8px 0; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 10px; line-height: 1.6; max-height: 200px; overflow-y: auto; }
-  .code-line { padding: 0 12px; white-space: pre; color: #888; }
-  .code-line-add { background: #4ade8008; color: #4ade80; }
-  .code-line-del { background: #f8717108; color: #f87171; text-decoration: line-through; opacity: 0.6; }
-  .code-line-num { display: inline-block; width: 24px; color: #333; text-align: right; margin-right: 8px; user-select: none; }
-  .code-keyword { color: #c084fc; }
-  .code-string { color: #4ade80; }
-  .code-fn-name { color: #60a5fa; }
-  .code-comment { color: #555; font-style: italic; }
+  /* Anchor dots on functions (connection points) */
+  .node-fn-dot { width: 6px; height: 6px; border-radius: 50%; background: #333; flex-shrink: 0; }
+  .node-fn-dot-out { margin-left: auto; }
+  .node-fn:hover .node-fn-dot { background: #c084fc; }
 
-  /* Node footer with actions */
-  .node-footer { padding: 6px 12px; border-top: 1px solid #222; display: flex; gap: 6px; }
-  .node-action { font-size: 9px; padding: 3px 8px; border-radius: 4px; cursor: pointer; border: 1px solid #333; color: #888; background: transparent; }
-  .node-action:hover { border-color: #c084fc; color: #c084fc; }
-  .node-action-primary { border-color: #4ade80; color: #4ade80; }
-  .node-action-primary:hover { background: #4ade8018; }
+  .node-summary { padding: 6px 12px; font-size: 10px; color: #666; }
+
+  /* Legend */
+  .legend { position: absolute; bottom: 12px; left: 12px; background: #1a1a1a; border: 1px solid #222; border-radius: 6px; padding: 8px 12px; z-index: 50; display: flex; gap: 16px; font-size: 10px; color: #888; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-line { width: 20px; height: 2px; border-radius: 1px; }
+  .legend-line-new { background: #4ade80; }
+  .legend-line-removed { background: #f87171; background: repeating-linear-gradient(90deg, #f87171 0 6px, transparent 6px 10px); }
+  .legend-line-unchanged { background: #444; }
 
   /* Chat panel */
   .chat-panel { width: 280px; border-left: 1px solid #222; display: flex; flex-direction: column; background: #141414; flex-shrink: 0; }
@@ -113,12 +139,11 @@
   .chat-msg-label-agent { color: #4ade80; }
   .chat-msg-text { color: #999; }
   .chat-msg-text-user { color: #d4b8ff; }
-  .chat-file-ref { color: #60a5fa; font-family: monospace; font-size: 10px; cursor: pointer; }
-  .chat-file-ref:hover { text-decoration: underline; }
+  .chat-file-ref { color: #60a5fa; font-family: monospace; font-size: 10px; }
   .chat-action { display: inline-flex; align-items: center; gap: 4px; background: #1a1a2a; border: 1px solid #2a2a4a; border-radius: 4px; padding: 3px 8px; font-size: 10px; color: #c084fc; margin-top: 4px; cursor: pointer; }
   .chat-action:hover { background: #222244; }
   .chat-input-area { padding: 8px 12px; border-top: 1px solid #222; }
-  .chat-input { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 8px 10px; font-size: 11px; color: #888; min-height: 60px; outline: none; width: 100%; resize: none; font-family: inherit; }
+  .chat-input { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 8px 10px; font-size: 11px; color: #888; min-height: 56px; outline: none; width: 100%; resize: none; font-family: inherit; }
   .chat-input:focus { border-color: #c084fc44; }
   .chat-input-hint { font-size: 10px; color: #444; margin-top: 4px; }
 
@@ -128,15 +153,12 @@
   .status-branch { color: #c084fc; }
   .status-ok { color: #4ade80; }
 
-  /* Zoom controls */
-  .zoom-controls { position: absolute; bottom: 12px; right: 12px; display: flex; gap: 4px; z-index: 50; }
-  .zoom-btn { width: 28px; height: 28px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; color: #888; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; }
-  .zoom-btn:hover { border-color: #c084fc; color: #c084fc; }
-  .zoom-label { height: 28px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; color: #666; display: flex; align-items: center; justify-content: center; padding: 0 8px; font-size: 10px; }
-
-  /* Hint overlay */
-  .canvas-hint { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: #1a1a2a; border: 1px solid #2a2a4a; border-radius: 6px; padding: 6px 14px; font-size: 11px; color: #888; z-index: 50; pointer-events: none; opacity: 0.8; }
-  .canvas-hint kbd { background: #222; border: 1px solid #333; border-radius: 3px; padding: 1px 5px; font-size: 10px; color: #aaa; font-family: inherit; }
+  /* Mobile: hide sidebar */
+  @media (max-width: 768px) {
+    .sidebar, .activity-bar { display: none; }
+    .chat-panel { width: 220px; }
+    .node { min-width: 160px; }
+  }
 </style>
 </head>
 <body>
@@ -146,121 +168,106 @@
     <div class="titlebar-text">Zero IDE — my-project</div>
   </div>
   <div class="main-row">
-    <!-- Activity bar -->
     <div class="activity-bar">
-      <div class="activity-icon active" title="Explorer">📁</div>
-      <div class="activity-icon" title="Search">🔍</div>
-      <div class="activity-icon" title="Git">⎇</div>
+      <div class="activity-icon active">📁</div>
+      <div class="activity-icon">🔍</div>
+      <div class="activity-icon">⎇</div>
       <div class="activity-spacer"></div>
-      <div class="activity-icon" title="Settings">⚙</div>
+      <div class="activity-icon">⚙</div>
     </div>
 
-    <!-- Sidebar -->
     <div class="sidebar">
       <div class="sidebar-header">Explorer</div>
       <div class="file-tree">
-        <div class="tree-item" style="font-size:10px; color:#555; text-transform:uppercase; letter-spacing:0.5px; padding:8px 12px 4px;">my-project</div>
-        <div class="tree-item"><span>▾</span> src/</div>
+        <div class="tree-item" style="font-size:10px; color:#555; text-transform:uppercase; letter-spacing:0.5px; padding:8px 12px 4px;">my-project / src</div>
         <div class="tree-item tree-indent"><span>▾</span> api/</div>
-        <div class="tree-item tree-indent2 on-canvas" data-file="routes"><span>📄</span> routes.ts <span class="tree-badge tree-badge-m">M</span> <span class="tree-badge tree-badge-canvas">●</span></div>
-        <div class="tree-item tree-indent2 on-canvas" data-file="middleware"><span>📄</span> middleware.ts <span class="tree-badge tree-badge-m">M</span> <span class="tree-badge tree-badge-canvas">●</span></div>
+        <div class="tree-item tree-indent2 on-canvas"><span>📄</span> routes.ts <span class="tree-badge tree-badge-m">M</span></div>
+        <div class="tree-item tree-indent2 on-canvas"><span>📄</span> middleware.ts <span class="tree-badge tree-badge-m">M</span></div>
         <div class="tree-item tree-indent"><span>▾</span> lib/</div>
-        <div class="tree-item tree-indent2 on-canvas" data-file="errors"><span>📄</span> errors.ts <span class="tree-badge tree-badge-n">N</span> <span class="tree-badge tree-badge-canvas">●</span></div>
-        <div class="tree-item tree-indent2" data-file="types"><span>📄</span> types.ts</div>
-        <div class="tree-item tree-indent on-canvas" data-file="index"><span>📄</span> index.ts <span class="tree-badge tree-badge-canvas">●</span></div>
-        <div class="tree-item"><span>📄</span> package.json</div>
-        <div class="tree-item"><span>📄</span> tsconfig.json</div>
+        <div class="tree-item tree-indent2 on-canvas"><span>📄</span> errors.ts <span class="tree-badge tree-badge-n">N</span></div>
+        <div class="tree-item tree-indent2"><span>📄</span> types.ts</div>
+        <div class="tree-item tree-indent on-canvas"><span>📄</span> index.ts</div>
       </div>
     </div>
 
-    <!-- Canvas -->
-    <div class="canvas-container">
-      <div class="canvas-hint">Drag nodes to arrange · Click <kbd>▸</kbd> to expand · Double-click for code</div>
-      <svg class="edges-layer" id="edgesSvg">
-        <!-- Edges drawn by JS -->
-      </svg>
+    <div class="canvas-container" id="canvasContainer">
+      <svg class="edges-layer" id="edgesSvg"></svg>
       <div class="canvas-grid"></div>
       <div class="canvas" id="canvas">
 
-        <!-- Node: routes.ts (expanded - showing functions) -->
-        <div class="node node-modified expanded" id="node-routes" style="left: 80px; top: 60px;" data-state="expanded">
+        <!-- routes.ts — expanded with functions -->
+        <div class="node node-modified" id="node-routes" style="left: 60px; top: 40px;">
           <div class="node-header">
             <span class="node-icon">📄</span>
             <span class="node-name">routes.ts</span>
             <span class="node-status node-status-m">M</span>
-            <span class="node-toggle" title="Toggle">▾</span>
-            <span class="node-close" title="Remove from canvas">×</span>
+            <span class="node-close">×</span>
           </div>
           <div class="node-functions">
-            <div class="node-fn"><span class="node-fn-icon">ƒ</span> <span class="node-fn-name">getUsers</span> <span class="node-fn-badge node-fn-badge-changed">changed</span></div>
-            <div class="node-fn"><span class="node-fn-icon">ƒ</span> <span class="node-fn-name">getPosts</span> <span class="node-fn-badge node-fn-badge-changed">changed</span></div>
-            <div class="node-fn"><span class="node-fn-icon">ƒ</span> <span class="node-fn-name">createPost</span> <span class="node-fn-badge node-fn-badge-changed">changed</span></div>
-            <div class="node-fn"><span class="node-fn-icon">ƒ</span> <span class="node-fn-name">deletePost</span></div>
+            <div class="node-fn" id="fn-getUsers"><span class="node-fn-dot"></span><span class="node-fn-icon">ƒ</span> <span class="node-fn-name">getUsers</span> <span class="node-fn-badge node-fn-badge-changed">changed</span><span class="node-fn-dot node-fn-dot-out"></span></div>
+            <div class="node-fn" id="fn-getPosts"><span class="node-fn-dot"></span><span class="node-fn-icon">ƒ</span> <span class="node-fn-name">getPosts</span> <span class="node-fn-badge node-fn-badge-changed">changed</span><span class="node-fn-dot node-fn-dot-out"></span></div>
+            <div class="node-fn" id="fn-createPost"><span class="node-fn-dot"></span><span class="node-fn-icon">ƒ</span> <span class="node-fn-name">createPost</span> <span class="node-fn-badge node-fn-badge-changed">changed</span><span class="node-fn-dot node-fn-dot-out"></span></div>
+            <div class="node-fn" id="fn-deletePost"><span class="node-fn-dot"></span><span class="node-fn-icon">ƒ</span> <span class="node-fn-name">deletePost</span><span class="node-fn-dot node-fn-dot-out"></span></div>
           </div>
         </div>
 
-        <!-- Node: middleware.ts (collapsed) -->
-        <div class="node node-modified" id="node-middleware" style="left: 380px; top: 50px;" data-state="collapsed">
-          <div class="node-header">
-            <span class="node-icon">📄</span>
-            <span class="node-name">middleware.ts</span>
-            <span class="node-status node-status-m">M</span>
-            <span class="node-toggle" title="Toggle">▸</span>
-            <span class="node-close" title="Remove from canvas">×</span>
-          </div>
-          <div class="node-summary">
-            <div class="node-summary-item"><span class="node-summary-count">3 functions</span> · <span style="color:#4ade80;">2 changed</span></div>
-          </div>
-        </div>
-
-        <!-- Node: errors.ts (code view - new file) -->
-        <div class="node node-new code-view" id="node-errors" style="left: 360px; top: 240px;" data-state="code">
+        <!-- errors.ts — new file, expanded -->
+        <div class="node node-new" id="node-errors" style="left: 420px; top: 30px;">
           <div class="node-header">
             <span class="node-icon">📄</span>
             <span class="node-name">errors.ts</span>
             <span class="node-status node-status-n">NEW</span>
-            <span class="node-toggle" title="Toggle">▾</span>
-            <span class="node-close" title="Remove from canvas">×</span>
+            <span class="node-close">×</span>
           </div>
-          <div class="node-code">
-            <div class="code-line code-line-add"><span class="code-line-num">1</span><span class="code-keyword">import</span> { Response } <span class="code-keyword">from</span> <span class="code-string">'express'</span>;</div>
-            <div class="code-line code-line-add"><span class="code-line-num">2</span></div>
-            <div class="code-line code-line-add"><span class="code-line-num">3</span><span class="code-keyword">export function</span> <span class="code-fn-name">handleError</span>(</div>
-            <div class="code-line code-line-add"><span class="code-line-num">4</span>  res: Response,</div>
-            <div class="code-line code-line-add"><span class="code-line-num">5</span>  err: unknown</div>
-            <div class="code-line code-line-add"><span class="code-line-num">6</span>) {</div>
-            <div class="code-line code-line-add"><span class="code-line-num">7</span>  <span class="code-keyword">const</span> message = err <span class="code-keyword">instanceof</span> Error</div>
-            <div class="code-line code-line-add"><span class="code-line-num">8</span>    ? err.message</div>
-            <div class="code-line code-line-add"><span class="code-line-num">9</span>    : <span class="code-string">'Internal server error'</span>;</div>
-            <div class="code-line code-line-add"><span class="code-line-num">10</span>  res.status(500).json({ error: message });</div>
-            <div class="code-line code-line-add"><span class="code-line-num">11</span>}</div>
-          </div>
-          <div class="node-footer">
-            <button class="node-action node-action-primary">✓ Approve</button>
-            <button class="node-action">Comment</button>
+          <div class="node-functions">
+            <div class="node-fn" id="fn-handleError"><span class="node-fn-dot"></span><span class="node-fn-icon">ƒ</span> <span class="node-fn-name">handleError</span> <span class="node-fn-badge node-fn-badge-new">new</span><span class="node-fn-dot node-fn-dot-out"></span></div>
+            <div class="node-fn" id="fn-formatError"><span class="node-fn-dot"></span><span class="node-fn-icon">ƒ</span> <span class="node-fn-name">formatError</span> <span class="node-fn-badge node-fn-badge-new">new</span><span class="node-fn-dot node-fn-dot-out"></span></div>
           </div>
         </div>
 
-        <!-- Node: index.ts (collapsed, no changes) -->
-        <div class="node" id="node-index" style="left: 100px; top: 320px;" data-state="collapsed">
+        <!-- middleware.ts — expanded -->
+        <div class="node node-modified" id="node-middleware" style="left: 420px; top: 230px;">
+          <div class="node-header">
+            <span class="node-icon">📄</span>
+            <span class="node-name">middleware.ts</span>
+            <span class="node-status node-status-m">M</span>
+            <span class="node-close">×</span>
+          </div>
+          <div class="node-functions">
+            <div class="node-fn" id="fn-authMiddleware"><span class="node-fn-dot"></span><span class="node-fn-icon">ƒ</span> <span class="node-fn-name">authMiddleware</span><span class="node-fn-dot node-fn-dot-out"></span></div>
+            <div class="node-fn" id="fn-logRequest"><span class="node-fn-dot"></span><span class="node-fn-icon">ƒ</span> <span class="node-fn-name">logRequest</span> <span class="node-fn-badge node-fn-badge-changed">changed</span><span class="node-fn-dot node-fn-dot-out"></span></div>
+            <div class="node-fn" id="fn-errorMiddleware"><span class="node-fn-dot"></span><span class="node-fn-icon">ƒ</span> <span class="node-fn-name">errorMiddleware</span> <span class="node-fn-badge node-fn-badge-removed">removed</span><span class="node-fn-dot node-fn-dot-out"></span></div>
+          </div>
+        </div>
+
+        <!-- index.ts — collapsed -->
+        <div class="node" id="node-index" style="left: 60px; top: 300px;">
           <div class="node-header">
             <span class="node-icon">📄</span>
             <span class="node-name">index.ts</span>
-            <span class="node-toggle" title="Toggle">▸</span>
-            <span class="node-close" title="Remove from canvas">×</span>
+            <span class="node-close">×</span>
           </div>
           <div class="node-summary">
-            <div class="node-summary-item"><span class="node-summary-count">1 export</span> · app entrypoint</div>
+            <div>2 exports · app entrypoint</div>
           </div>
         </div>
 
       </div>
 
-      <div class="zoom-controls">
-        <div class="zoom-btn" id="zoomOut">−</div>
-        <div class="zoom-label" id="zoomLabel">100%</div>
-        <div class="zoom-btn" id="zoomIn">+</div>
-        <div class="zoom-btn" id="zoomFit" title="Fit all">⊞</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-line legend-line-new"></div> New call</div>
+        <div class="legend-item"><div class="legend-line legend-line-removed"></div> Removed call</div>
+        <div class="legend-item"><div class="legend-line legend-line-unchanged"></div> Unchanged</div>
+      </div>
+
+      <!-- Edge popover -->
+      <div class="edge-popover" id="edgePopover">
+        <div class="edge-popover-header">
+          <span class="edge-popover-title" id="popoverTitle"></span>
+          <span class="edge-popover-badge" id="popoverBadge"></span>
+          <span class="edge-popover-close" id="popoverClose">×</span>
+        </div>
+        <div class="edge-popover-body" id="popoverBody"></div>
       </div>
     </div>
 
@@ -273,16 +280,21 @@
       <div class="chat-messages">
         <div class="chat-msg">
           <div class="chat-msg-label chat-msg-label-user">You</div>
-          <div class="chat-msg-text chat-msg-text-user">Add error handling to the API routes</div>
+          <div class="chat-msg-text chat-msg-text-user">Add error handling to the API routes. Replace the old errorMiddleware with a proper per-route approach.</div>
         </div>
         <div class="chat-msg">
           <div class="chat-msg-label chat-msg-label-agent">Zero</div>
-          <div class="chat-msg-text">Done. I wrapped each route handler with try-catch and created a shared <span class="chat-file-ref">errors.ts</span> with <code style="color:#e0e0e0; background:#1a1a2a; padding:1px 4px; border-radius:2px; font-size:10px;">handleError()</code>.</div>
+          <div class="chat-msg-text">Done. Created <span class="chat-file-ref">errors.ts</span> with <code style="color:#e0e0e0;background:#1a1a2a;padding:1px 4px;border-radius:2px;font-size:10px">handleError()</code>. Each route handler now catches errors and calls it directly.</div>
         </div>
         <div class="chat-msg">
           <div class="chat-msg-label chat-msg-label-agent">Zero</div>
-          <div class="chat-msg-text">4 files on your canvas. <span class="chat-file-ref">errors.ts</span> is open to the code since it's new. The others show which functions changed.</div>
-          <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
+          <div class="chat-msg-text" style="line-height:1.6;">
+            The canvas shows the changes:
+            <br>• <span style="color:#4ade80;">Green edges</span> = new calls to <code style="color:#e0e0e0;background:#1a1a2a;padding:1px 4px;border-radius:2px;font-size:10px">handleError()</code>
+            <br>• <span style="color:#f87171;">Red dashed edge</span> = removed call to old <code style="color:#e0e0e0;background:#1a1a2a;padding:1px 4px;border-radius:2px;font-size:10px">errorMiddleware</code>
+            <br>• Click any edge to inspect the call signature and arguments.
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
             <div class="chat-action">✓ Approve all</div>
             <div class="chat-action">↻ Revise</div>
           </div>
@@ -296,218 +308,315 @@
   </div>
 
   <div class="statusbar">
-    <span class="status-branch">⎇ main</span>
+    <span class="status-branch">⎇ feat/error-handling</span>
     <span class="status-ok">✓ 0 errors</span>
-    <span>4 files on canvas</span>
+    <span>3 new calls · 1 removed</span>
     <div class="statusbar-right">
-      <span>pi SDK connected</span>
+      <span>pi SDK</span>
       <span>Claude Sonnet 4</span>
     </div>
   </div>
 </div>
 
 <script>
-// --- Draggable nodes ---
+// === Edge definitions (function-level calls) ===
+const callEdges = [
+  {
+    id: 'getUsers-handleError',
+    from: 'fn-getUsers', fromNode: 'node-routes', fromSide: 'right',
+    to: 'fn-handleError', toNode: 'node-errors', toSide: 'left',
+    type: 'new',
+    label: 'handleError(res, err)',
+    popover: {
+      title: 'getUsers → handleError',
+      signature: '<span class="fn">handleError</span>(<span class="arg">res</span>: <span class="type">Response</span>, <span class="arg">err</span>: <span class="type">unknown</span>)',
+      callSite: '<span class="kw">catch</span> (err) {\n  <span class="fn">handleError</span>(<span class="arg">res</span>, <span class="arg">err</span>);\n}',
+      context: 'Called in catch block when getUsers() fails. Sends 500 with error message.',
+    },
+  },
+  {
+    id: 'getPosts-handleError',
+    from: 'fn-getPosts', fromNode: 'node-routes', fromSide: 'right',
+    to: 'fn-handleError', toNode: 'node-errors', toSide: 'left',
+    type: 'new',
+    label: 'handleError(res, err)',
+    popover: {
+      title: 'getPosts → handleError',
+      signature: '<span class="fn">handleError</span>(<span class="arg">res</span>: <span class="type">Response</span>, <span class="arg">err</span>: <span class="type">unknown</span>)',
+      callSite: '<span class="kw">catch</span> (err) {\n  <span class="fn">handleError</span>(<span class="arg">res</span>, <span class="arg">err</span>);\n}',
+      context: 'Called in catch block when getPosts() fails.',
+    },
+  },
+  {
+    id: 'createPost-handleError',
+    from: 'fn-createPost', fromNode: 'node-routes', fromSide: 'right',
+    to: 'fn-handleError', toNode: 'node-errors', toSide: 'left',
+    type: 'new',
+    label: 'handleError(res, err)',
+    popover: {
+      title: 'createPost → handleError',
+      signature: '<span class="fn">handleError</span>(<span class="arg">res</span>: <span class="type">Response</span>, <span class="arg">err</span>: <span class="type">unknown</span>)',
+      callSite: '<span class="kw">catch</span> (err) {\n  <span class="fn">handleError</span>(<span class="arg">res</span>, <span class="arg">err</span>);\n}',
+      context: 'Validates request body, then catches DB/validation errors.',
+    },
+  },
+  {
+    id: 'handleError-formatError',
+    from: 'fn-handleError', fromNode: 'node-errors', fromSide: 'right',
+    to: 'fn-formatError', toNode: 'node-errors', toSide: 'right',
+    type: 'new',
+    label: 'formatError(err)',
+    isSelfFile: true,
+    popover: {
+      title: 'handleError → formatError',
+      signature: '<span class="fn">formatError</span>(<span class="arg">err</span>: <span class="type">unknown</span>): <span class="type">string</span>',
+      callSite: '<span class="kw">const</span> message = <span class="fn">formatError</span>(<span class="arg">err</span>);',
+      context: 'Internal helper. Extracts error message, handles Error instances and unknown types.',
+    },
+  },
+  {
+    id: 'index-getUsers',
+    from: 'node-index', fromNode: 'node-index', fromSide: 'top',
+    to: 'fn-getUsers', toNode: 'node-routes', toSide: 'left',
+    type: 'unchanged',
+    label: 'registerRoutes(app)',
+    isNodeLevel: true,
+    popover: {
+      title: 'index.ts → routes.ts',
+      signature: '<span class="fn">registerRoutes</span>(<span class="arg">app</span>: <span class="type">Express</span>)',
+      callSite: '<span class="kw">import</span> { <span class="fn">registerRoutes</span> } <span class="kw">from</span> <span class="str">\'./api/routes\'</span>;\n<span class="fn">registerRoutes</span>(<span class="arg">app</span>);',
+      context: 'Unchanged. Registers all API routes on the Express app.',
+    },
+  },
+  {
+    id: 'logRequest-errorMiddleware',
+    from: 'fn-logRequest', fromNode: 'node-middleware', fromSide: 'left',
+    to: 'fn-errorMiddleware', toNode: 'node-middleware', toSide: 'left',
+    type: 'removed',
+    label: 'errorMiddleware()',
+    isSelfFile: true,
+    popover: {
+      title: 'logRequest → errorMiddleware',
+      signature: '<span class="fn" style="text-decoration:line-through">errorMiddleware</span>(): <span class="type">RequestHandler</span>',
+      callSite: '<span class="kw" style="text-decoration:line-through">app.use</span>(<span class="fn" style="text-decoration:line-through">errorMiddleware</span>());',
+      context: 'Removed. Global error middleware replaced by per-route handleError() calls in routes.ts.',
+    },
+  },
+];
+
+// === Dragging ===
 const canvas = document.getElementById('canvas');
 let dragNode = null, dragOffsetX = 0, dragOffsetY = 0;
+
+function startDrag(e, node) {
+  dragNode = node;
+  const rect = node.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  dragOffsetX = clientX - rect.left;
+  dragOffsetY = clientY - rect.top;
+  node.classList.add('dragging');
+  e.preventDefault();
+}
 
 document.querySelectorAll('.node').forEach(node => {
   const header = node.querySelector('.node-header');
   header.addEventListener('mousedown', e => {
-    if (e.target.closest('.node-toggle') || e.target.closest('.node-close')) return;
-    dragNode = node;
-    const rect = node.getBoundingClientRect();
-    const canvasRect = canvas.getBoundingClientRect();
-    dragOffsetX = e.clientX - rect.left;
-    dragOffsetY = e.clientY - rect.top;
-    node.classList.add('dragging');
-    e.preventDefault();
+    if (e.target.closest('.node-close')) return;
+    startDrag(e, node);
   });
+  header.addEventListener('touchstart', e => {
+    if (e.target.closest('.node-close')) return;
+    startDrag(e, node);
+  }, { passive: false });
 });
 
-document.addEventListener('mousemove', e => {
+function moveDrag(e) {
   if (!dragNode) return;
   const canvasRect = canvas.getBoundingClientRect();
-  const x = e.clientX - canvasRect.left - dragOffsetX;
-  const y = e.clientY - canvasRect.top - dragOffsetY;
-  dragNode.style.left = Math.max(0, x) + 'px';
-  dragNode.style.top = Math.max(0, y) + 'px';
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  dragNode.style.left = Math.max(0, clientX - canvasRect.left - dragOffsetX) + 'px';
+  dragNode.style.top = Math.max(0, clientY - canvasRect.top - dragOffsetY) + 'px';
   drawEdges();
-});
-
-document.addEventListener('mouseup', () => {
-  if (dragNode) {
-    dragNode.classList.remove('dragging');
-    dragNode = null;
-  }
-});
-
-// --- Toggle expand/collapse ---
-document.querySelectorAll('.node-toggle').forEach(toggle => {
-  toggle.addEventListener('click', e => {
-    const node = e.target.closest('.node');
-    const state = node.dataset.state;
-    if (state === 'collapsed') {
-      expandNode(node);
-    } else {
-      collapseNode(node);
-    }
-    setTimeout(drawEdges, 10);
-  });
-});
-
-// --- Double-click for code view ---
-document.querySelectorAll('.node-fn').forEach(fn => {
-  fn.addEventListener('dblclick', e => {
-    const node = e.target.closest('.node');
-    showCodeView(node, fn.querySelector('.node-fn-name').textContent);
-  });
-});
-
-function collapseNode(node) {
-  node.dataset.state = 'collapsed';
-  node.classList.remove('expanded', 'code-view');
-  const toggle = node.querySelector('.node-toggle');
-  toggle.textContent = '▸';
-
-  // Hide functions/code, show summary
-  const fns = node.querySelector('.node-functions');
-  const code = node.querySelector('.node-code');
-  const footer = node.querySelector('.node-footer');
-  if (fns) fns.style.display = 'none';
-  if (code) code.style.display = 'none';
-  if (footer) footer.style.display = 'none';
-
-  let summary = node.querySelector('.node-summary');
-  if (!summary) {
-    summary = document.createElement('div');
-    summary.className = 'node-summary';
-    summary.innerHTML = '<div class="node-summary-item"><span class="node-summary-count">click ▸ to expand</span></div>';
-    node.querySelector('.node-header').after(summary);
-  }
-  summary.style.display = '';
+  hidePopover();
 }
 
-function expandNode(node) {
-  node.dataset.state = 'expanded';
-  node.classList.add('expanded');
-  node.classList.remove('code-view');
-  const toggle = node.querySelector('.node-toggle');
-  toggle.textContent = '▾';
-
-  const summary = node.querySelector('.node-summary');
-  const fns = node.querySelector('.node-functions');
-  const code = node.querySelector('.node-code');
-  const footer = node.querySelector('.node-footer');
-  if (summary) summary.style.display = 'none';
-  if (fns) fns.style.display = '';
-  if (code) code.style.display = 'none';
-  if (footer) footer.style.display = 'none';
+function endDrag() {
+  if (dragNode) { dragNode.classList.remove('dragging'); dragNode = null; }
 }
 
-function showCodeView(node, fnName) {
-  node.dataset.state = 'code';
-  node.classList.add('code-view');
-  node.classList.remove('expanded');
-  const toggle = node.querySelector('.node-toggle');
-  toggle.textContent = '▾';
+document.addEventListener('mousemove', moveDrag);
+document.addEventListener('mouseup', endDrag);
+document.addEventListener('touchmove', moveDrag, { passive: false });
+document.addEventListener('touchend', endDrag);
 
-  const summary = node.querySelector('.node-summary');
-  const fns = node.querySelector('.node-functions');
-  const code = node.querySelector('.node-code');
-  const footer = node.querySelector('.node-footer');
-  if (summary) summary.style.display = 'none';
-  if (fns) fns.style.display = 'none';
-  if (code) code.style.display = '';
-  if (footer) footer.style.display = '';
-}
+// === Edge drawing ===
+function getAnchor(edgeDef, which) {
+  const elId = which === 'from' ? edgeDef.from : edgeDef.to;
+  const nodeId = which === 'from' ? edgeDef.fromNode : edgeDef.toNode;
+  const side = which === 'from' ? edgeDef.fromSide : edgeDef.toSide;
+  const el = document.getElementById(elId);
+  const nodeEl = document.getElementById(nodeId);
+  if (!el || !nodeEl) return null;
 
-// --- Draw edges between connected nodes ---
-const edges = [
-  { from: 'node-routes', to: 'node-errors', label: 'imports' },
-  { from: 'node-routes', to: 'node-middleware', label: 'imports' },
-  { from: 'node-middleware', to: 'node-errors', label: 'imports' },
-  { from: 'node-index', to: 'node-routes', label: 'imports' },
-];
-
-function getNodeCenter(id) {
-  const el = document.getElementById(id);
-  if (!el) return null;
-  const canvasRect = canvas.parentElement.getBoundingClientRect();
+  const containerRect = document.getElementById('canvasContainer').getBoundingClientRect();
   const rect = el.getBoundingClientRect();
-  return {
-    x: rect.left - canvasRect.left + rect.width / 2,
-    y: rect.top - canvasRect.top + rect.height / 2,
-    w: rect.width,
-    h: rect.height,
-    top: rect.top - canvasRect.top,
-    bottom: rect.top - canvasRect.top + rect.height,
-    left: rect.left - canvasRect.left,
-    right: rect.left - canvasRect.left + rect.width,
-  };
-}
 
-function getEdgePoints(fromRect, toRect) {
-  const dx = toRect.x - fromRect.x;
-  const dy = toRect.y - fromRect.y;
-  let fromX, fromY, toX, toY;
-
-  if (Math.abs(dx) > Math.abs(dy)) {
-    if (dx > 0) {
-      fromX = fromRect.right; fromY = fromRect.y;
-      toX = toRect.left; toY = toRect.y;
-    } else {
-      fromX = fromRect.left; fromY = fromRect.y;
-      toX = toRect.right; toY = toRect.y;
-    }
+  let x, y;
+  if (side === 'right') {
+    x = rect.right - containerRect.left;
+    y = rect.top - containerRect.top + rect.height / 2;
+  } else if (side === 'left') {
+    x = rect.left - containerRect.left;
+    y = rect.top - containerRect.top + rect.height / 2;
+  } else if (side === 'top') {
+    x = rect.left - containerRect.left + rect.width / 2;
+    y = rect.top - containerRect.top;
   } else {
-    if (dy > 0) {
-      fromX = fromRect.x; fromY = fromRect.bottom;
-      toX = toRect.x; toY = toRect.top;
-    } else {
-      fromX = fromRect.x; fromY = fromRect.top;
-      toX = toRect.x; toY = toRect.bottom;
-    }
+    x = rect.left - containerRect.left + rect.width / 2;
+    y = rect.bottom - containerRect.top;
   }
-  return { fromX, fromY, toX, toY };
+  return { x, y };
 }
 
 function drawEdges() {
   const svg = document.getElementById('edgesSvg');
   svg.innerHTML = '';
 
-  // Arrow marker
   const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-  defs.innerHTML = `<marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-    <polygon points="0 0, 8 3, 0 6" fill="#333"/>
-  </marker>`;
+  defs.innerHTML = `
+    <marker id="arrow-new" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#4ade80"/></marker>
+    <marker id="arrow-removed" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f87171"/></marker>
+    <marker id="arrow-unchanged" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#444"/></marker>
+  `;
   svg.appendChild(defs);
 
-  edges.forEach(edge => {
-    const from = getNodeCenter(edge.from);
-    const to = getNodeCenter(edge.to);
+  callEdges.forEach(edge => {
+    const from = getAnchor(edge, 'from');
+    const to = getAnchor(edge, 'to');
     if (!from || !to) return;
 
-    const pts = getEdgePoints(from, to);
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'edge-group');
+    g.setAttribute('data-edge-id', edge.id);
 
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', pts.fromX);
-    line.setAttribute('y1', pts.fromY);
-    line.setAttribute('x2', pts.toX);
-    line.setAttribute('y2', pts.toY);
-    line.setAttribute('class', 'edge');
-    line.setAttribute('marker-end', 'url(#arrowhead)');
-    svg.appendChild(line);
+    // Curved path
+    let d;
+    if (edge.isSelfFile) {
+      // Self-referencing: curve out to the right/left
+      const bulge = 50;
+      const side = edge.fromSide === 'right' ? 1 : -1;
+      d = `M${from.x},${from.y} C${from.x + bulge * side},${from.y} ${to.x + bulge * side},${to.y} ${to.x},${to.y}`;
+    } else {
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const cx = Math.abs(dx) * 0.4;
+      const cy = Math.abs(dy) * 0.1;
+      if (edge.fromSide === 'right' || edge.fromSide === 'left') {
+        const dir = edge.fromSide === 'right' ? 1 : -1;
+        d = `M${from.x},${from.y} C${from.x + cx * dir},${from.y} ${to.x - cx * dir},${to.y} ${to.x},${to.y}`;
+      } else {
+        const dir = edge.fromSide === 'bottom' ? 1 : -1;
+        d = `M${from.x},${from.y} C${from.x},${from.y + cy * dir} ${to.x},${to.y - cy * dir} ${to.x},${to.y}`;
+      }
+    }
 
-    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    label.setAttribute('x', (pts.fromX + pts.toX) / 2);
-    label.setAttribute('y', (pts.fromY + pts.toY) / 2 - 6);
-    label.setAttribute('class', 'edge-label');
-    label.setAttribute('text-anchor', 'middle');
-    label.textContent = edge.label;
-    svg.appendChild(label);
+    // Hit area (invisible wide path for clicking)
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    hit.setAttribute('d', d);
+    hit.setAttribute('class', 'edge-hit');
+    g.appendChild(hit);
+
+    // Visible path
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('class', `edge-line edge-line-${edge.type}`);
+    path.setAttribute('marker-end', `url(#arrow-${edge.type})`);
+    g.appendChild(path);
+
+    // Label at midpoint
+    const mid = getMidpoint(from, to, edge);
+    const labelBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    labelText.textContent = edge.label;
+    labelText.setAttribute('x', mid.x);
+    labelText.setAttribute('y', mid.y - 4);
+    labelText.setAttribute('text-anchor', 'middle');
+    labelText.setAttribute('class', `edge-label ${edge.type !== 'unchanged' ? 'edge-label-' + edge.type : ''}`);
+
+    // Background for label
+    g.appendChild(labelText);
+
+    // Click handler
+    g.addEventListener('click', (e) => showPopover(edge, mid, e));
+    g.addEventListener('touchend', (e) => { e.preventDefault(); showPopover(edge, mid, e); });
+
+    svg.appendChild(g);
   });
 }
+
+function getMidpoint(from, to, edge) {
+  if (edge.isSelfFile) {
+    const bulge = 50;
+    const side = edge.fromSide === 'right' ? 1 : -1;
+    return { x: (from.x + to.x) / 2 + bulge * side, y: (from.y + to.y) / 2 };
+  }
+  return { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+}
+
+// === Edge popover ===
+const popover = document.getElementById('edgePopover');
+const popoverTitle = document.getElementById('popoverTitle');
+const popoverBadge = document.getElementById('popoverBadge');
+const popoverBody = document.getElementById('popoverBody');
+const popoverClose = document.getElementById('popoverClose');
+
+function showPopover(edge, pos, event) {
+  const p = edge.popover;
+  popoverTitle.textContent = p.title;
+  popoverBadge.textContent = edge.type === 'new' ? 'NEW CALL' : edge.type === 'removed' ? 'REMOVED' : 'UNCHANGED';
+  popoverBadge.className = `edge-popover-badge edge-popover-badge-${edge.type}`;
+
+  let html = `
+    <div class="edge-popover-section">
+      <div class="edge-popover-label">Signature</div>
+      <div class="edge-popover-code">${p.signature}</div>
+    </div>
+    <div class="edge-popover-section">
+      <div class="edge-popover-label">Call site</div>
+      <div class="edge-popover-code" style="white-space:pre">${p.callSite}</div>
+    </div>
+    <div class="edge-popover-section">
+      <div class="edge-popover-label">Context</div>
+      <div style="color:#888; font-size:11px;">${p.context}</div>
+    </div>
+  `;
+  popoverBody.innerHTML = html;
+
+  const container = document.getElementById('canvasContainer').getBoundingClientRect();
+  let left = pos.x - 140;
+  let top = pos.y + 16;
+
+  if (left + 300 > container.width) left = container.width - 310;
+  if (left < 10) left = 10;
+  if (top + 200 > container.height) top = pos.y - 200;
+
+  popover.style.left = left + 'px';
+  popover.style.top = top + 'px';
+  popover.classList.add('visible');
+}
+
+function hidePopover() {
+  popover.classList.remove('visible');
+}
+
+popoverClose.addEventListener('click', hidePopover);
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.edge-group') && !e.target.closest('.edge-popover')) {
+    hidePopover();
+  }
+});
 
 drawEdges();
 window.addEventListener('resize', drawEdges);

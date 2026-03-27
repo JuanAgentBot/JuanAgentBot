@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0a; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 32px; }
+  h1 { font-size: 20px; color: #fff; margin-bottom: 8px; font-weight: 500; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 32px; }
+
+  .mockup { width: 900px; height: 540px; border: 1px solid #222; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; background: #111; }
+  .titlebar { height: 32px; background: #161616; display: flex; align-items: center; padding: 0 12px; gap: 6px; border-bottom: 1px solid #222; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .titlebar-text { flex: 1; text-align: center; font-size: 11px; color: #555; }
+
+  .main { flex: 1; display: flex; overflow: hidden; }
+
+  /* Activity bar (icon strip) */
+  .activity-bar { width: 40px; background: #161616; border-right: 1px solid #222; display: flex; flex-direction: column; align-items: center; padding-top: 8px; gap: 4px; }
+  .activity-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 14px; color: #555; cursor: pointer; border-left: 2px solid transparent; }
+  .activity-icon.active { color: #e0e0e0; border-left-color: #c084fc; }
+  .activity-icon:hover { color: #aaa; }
+  .activity-spacer { flex: 1; }
+
+  /* File tree sidebar */
+  .sidebar { width: 200px; background: #161616; border-right: 1px solid #222; display: flex; flex-direction: column; }
+  .sidebar-header { height: 32px; display: flex; align-items: center; padding: 0 12px; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .file-tree { flex: 1; padding: 4px 0; font-size: 12px; overflow-y: auto; }
+  .tree-item { padding: 3px 12px; color: #999; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .tree-item:hover { background: #1a1a2a; }
+  .tree-item.active { background: #1a1a2a; color: #e0e0e0; }
+  .tree-folder { color: #c084fc; font-size: 10px; }
+  .tree-file { color: #666; font-size: 10px; }
+  .tree-indent { padding-left: 24px; }
+  .tree-indent2 { padding-left: 36px; }
+  .tree-modified { color: #4ade80; }
+  .tree-new-badge { font-size: 9px; color: #4ade80; margin-left: auto; }
+  .tree-section { padding: 8px 12px 4px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Workspace (center) */
+  .workspace { flex: 1; display: flex; flex-direction: column; }
+  .tab-bar { height: 32px; background: #161616; display: flex; align-items: stretch; border-bottom: 1px solid #222; }
+  .tab { padding: 0 16px; display: flex; align-items: center; font-size: 11px; color: #666; border-right: 1px solid #222; cursor: pointer; gap: 6px; }
+  .tab.active { color: #e0e0e0; background: #111; border-bottom: 2px solid #c084fc; }
+  .tab:hover { color: #aaa; }
+  .tab-icon { font-size: 10px; }
+  .workspace-content { flex: 1; display: flex; flex-direction: column; position: relative; }
+
+  /* Diff view in workspace */
+  .diff-header { height: 28px; background: #1a1a1a; display: flex; align-items: center; padding: 0 12px; font-size: 11px; color: #888; border-bottom: 1px solid #222; gap: 12px; }
+  .diff-file-name { color: #e0e0e0; }
+  .diff-stat { font-size: 10px; }
+  .diff-stat-add { color: #4ade80; }
+  .diff-stat-del { color: #f87171; }
+  .diff-body { flex: 1; display: flex; overflow: hidden; }
+  .diff-side { flex: 1; padding: 8px 0; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; line-height: 1.6; overflow: hidden; }
+  .diff-side-old { border-right: 1px solid #222; }
+  .diff-line { padding: 0 12px 0 8px; white-space: nowrap; display: flex; }
+  .diff-line-num { width: 32px; text-align: right; color: #444; margin-right: 12px; flex-shrink: 0; user-select: none; }
+  .diff-line-add { background: #4ade8012; }
+  .diff-line-add .diff-line-text { color: #4ade80; }
+  .diff-line-del { background: #f8717112; }
+  .diff-line-del .diff-line-text { color: #f87171; }
+  .diff-line-text { color: #999; }
+  .diff-line-empty { background: #0a0a0a; }
+  .diff-gutter { width: 3px; flex-shrink: 0; }
+  .diff-gutter-add { background: #4ade8044; }
+  .diff-gutter-del { background: #f8717144; }
+
+  /* Bottom bar in workspace */
+  .workspace-bottom { height: 28px; background: #161616; border-top: 1px solid #222; display: flex; align-items: center; padding: 0 12px; font-size: 10px; color: #555; gap: 16px; }
+  .ws-status { display: flex; align-items: center; gap: 4px; }
+  .ws-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .ws-dot-green { background: #4ade80; }
+  .ws-dot-orange { background: #f59e0b; }
+
+  /* Chat panel (right) */
+  .chat-panel { width: 280px; border-left: 1px solid #222; display: flex; flex-direction: column; background: #141414; }
+  .chat-header { height: 32px; display: flex; align-items: center; padding: 0 12px; font-size: 11px; color: #888; border-bottom: 1px solid #222; gap: 8px; }
+  .chat-header-title { color: #e0e0e0; font-weight: 500; }
+  .chat-header-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; }
+  .chat-messages { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+  .chat-msg { font-size: 11px; line-height: 1.5; }
+  .chat-msg-label { font-size: 10px; font-weight: 600; margin-bottom: 3px; }
+  .chat-msg-label-user { color: #c084fc; }
+  .chat-msg-label-agent { color: #4ade80; }
+  .chat-msg-text { color: #999; }
+  .chat-msg-text-user { color: #d4b8ff; }
+  .chat-action { display: inline-flex; align-items: center; gap: 4px; background: #1a1a2a; border: 1px solid #2a2a4a; border-radius: 4px; padding: 3px 8px; font-size: 10px; color: #c084fc; margin-top: 4px; cursor: pointer; }
+  .chat-action:hover { background: #222244; }
+  .chat-file-ref { color: #60a5fa; font-family: monospace; font-size: 10px; }
+  .chat-input-area { padding: 8px 12px; border-top: 1px solid #222; }
+  .chat-input { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 8px 10px; font-size: 11px; color: #666; min-height: 60px; }
+  .chat-input-hint { font-size: 10px; color: #444; margin-top: 4px; padding: 0 2px; }
+
+  /* Status bar */
+  .statusbar { height: 24px; background: #1a1020; display: flex; align-items: center; padding: 0 12px; font-size: 10px; color: #888; border-top: 1px solid #222; gap: 16px; }
+  .statusbar-left { display: flex; gap: 12px; align-items: center; }
+  .statusbar-right { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+  .status-item { display: flex; align-items: center; gap: 4px; }
+  .status-branch { color: #c084fc; }
+  .status-ok { color: #4ade80; }
+</style>
+</head>
+<body>
+<h1>Zero IDE — VS Code Layout</h1>
+<p class="subtitle">File tree left · Visual workspace center · Chat right</p>
+
+<div class="mockup">
+  <div class="titlebar">
+    <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+    <div class="titlebar-text">Zero IDE — my-project</div>
+  </div>
+  <div class="main">
+    <!-- Activity Bar -->
+    <div class="activity-bar">
+      <div class="activity-icon active" title="Explorer">📁</div>
+      <div class="activity-icon" title="Search">🔍</div>
+      <div class="activity-icon" title="Git">⎇</div>
+      <div class="activity-icon" title="Diagram">◇</div>
+      <div class="activity-spacer"></div>
+      <div class="activity-icon" title="Settings">⚙</div>
+    </div>
+
+    <!-- File Tree -->
+    <div class="sidebar">
+      <div class="sidebar-header">Explorer</div>
+      <div class="file-tree">
+        <div class="tree-section">my-project</div>
+        <div class="tree-item"><span class="tree-folder">▾</span> src/</div>
+        <div class="tree-item tree-indent"><span class="tree-folder">▾</span> api/</div>
+        <div class="tree-item tree-indent2 tree-modified active"><span class="tree-file">📄</span> routes.ts <span class="tree-new-badge">M</span></div>
+        <div class="tree-item tree-indent2 tree-modified"><span class="tree-file">📄</span> middleware.ts <span class="tree-new-badge">M</span></div>
+        <div class="tree-item tree-indent"><span class="tree-folder">▾</span> lib/</div>
+        <div class="tree-item tree-indent2"><span class="tree-file">📄</span> errors.ts <span class="tree-new-badge" style="color:#60a5fa">N</span></div>
+        <div class="tree-item tree-indent2"><span class="tree-file">📄</span> types.ts</div>
+        <div class="tree-item tree-indent"><span class="tree-file">📄</span> index.ts</div>
+        <div class="tree-item"><span class="tree-file">📄</span> package.json</div>
+        <div class="tree-item"><span class="tree-file">📄</span> tsconfig.json</div>
+      </div>
+    </div>
+
+    <!-- Workspace -->
+    <div class="workspace">
+      <div class="tab-bar">
+        <div class="tab active"><span class="tab-icon">±</span> Diff: routes.ts</div>
+        <div class="tab"><span class="tab-icon">◇</span> Architecture</div>
+        <div class="tab"><span class="tab-icon">⊞</span> Module Graph</div>
+      </div>
+      <div class="workspace-content">
+        <div class="diff-header">
+          <span class="diff-file-name">src/api/routes.ts</span>
+          <span class="diff-stat"><span class="diff-stat-add">+12</span> <span class="diff-stat-del">-3</span></span>
+        </div>
+        <div class="diff-body">
+          <div class="diff-side diff-side-old">
+            <div class="diff-line">
+              <span class="diff-line-num">14</span>
+              <span class="diff-line-text">app.get('/users', async (req, res) => {</span>
+            </div>
+            <div class="diff-line diff-line-del">
+              <div class="diff-gutter diff-gutter-del"></div>
+              <span class="diff-line-num">15</span>
+              <span class="diff-line-text">  const users = await getUsers();</span>
+            </div>
+            <div class="diff-line diff-line-del">
+              <div class="diff-gutter diff-gutter-del"></div>
+              <span class="diff-line-num">16</span>
+              <span class="diff-line-text">  res.json(users);</span>
+            </div>
+            <div class="diff-line diff-line-empty"><span class="diff-line-num"></span></div>
+            <div class="diff-line diff-line-empty"><span class="diff-line-num"></span></div>
+            <div class="diff-line diff-line-empty"><span class="diff-line-num"></span></div>
+            <div class="diff-line">
+              <span class="diff-line-num">17</span>
+              <span class="diff-line-text">});</span>
+            </div>
+            <div class="diff-line"><span class="diff-line-num">18</span><span class="diff-line-text"></span></div>
+            <div class="diff-line">
+              <span class="diff-line-num">19</span>
+              <span class="diff-line-text">app.get('/posts', async (req, res) => {</span>
+            </div>
+          </div>
+          <div class="diff-side">
+            <div class="diff-line">
+              <span class="diff-line-num">14</span>
+              <span class="diff-line-text">app.get('/users', async (req, res) => {</span>
+            </div>
+            <div class="diff-line diff-line-add">
+              <div class="diff-gutter diff-gutter-add"></div>
+              <span class="diff-line-num">15</span>
+              <span class="diff-line-text">  try {</span>
+            </div>
+            <div class="diff-line diff-line-add">
+              <div class="diff-gutter diff-gutter-add"></div>
+              <span class="diff-line-num">16</span>
+              <span class="diff-line-text">    const users = await getUsers();</span>
+            </div>
+            <div class="diff-line diff-line-add">
+              <div class="diff-gutter diff-gutter-add"></div>
+              <span class="diff-line-num">17</span>
+              <span class="diff-line-text">    res.json(users);</span>
+            </div>
+            <div class="diff-line diff-line-add">
+              <div class="diff-gutter diff-gutter-add"></div>
+              <span class="diff-line-num">18</span>
+              <span class="diff-line-text">  } catch (err) {</span>
+            </div>
+            <div class="diff-line diff-line-add">
+              <div class="diff-gutter diff-gutter-add"></div>
+              <span class="diff-line-num">19</span>
+              <span class="diff-line-text">    handleError(res, err);</span>
+            </div>
+            <div class="diff-line">
+              <span class="diff-line-num">20</span>
+              <span class="diff-line-text">});</span>
+            </div>
+            <div class="diff-line"><span class="diff-line-num">21</span><span class="diff-line-text"></span></div>
+            <div class="diff-line">
+              <span class="diff-line-num">22</span>
+              <span class="diff-line-text">app.get('/posts', async (req, res) => {</span>
+            </div>
+          </div>
+        </div>
+        <div class="workspace-bottom">
+          <div class="ws-status"><div class="ws-dot ws-dot-green"></div> Agent idle</div>
+          <span>4 files changed</span>
+          <span>2 of 4 reviewed</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Panel -->
+    <div class="chat-panel">
+      <div class="chat-header">
+        <div class="chat-header-dot"></div>
+        <span class="chat-header-title">Zero</span>
+      </div>
+      <div class="chat-messages">
+        <div class="chat-msg">
+          <div class="chat-msg-label chat-msg-label-user">You</div>
+          <div class="chat-msg-text chat-msg-text-user">Add error handling to the API routes</div>
+        </div>
+        <div class="chat-msg">
+          <div class="chat-msg-label chat-msg-label-agent">Zero</div>
+          <div class="chat-msg-text">I've wrapped each route handler with try-catch and added a shared <span class="chat-file-ref">errors.ts</span> module with <code style="color:#e0e0e0; background:#1a1a2a; padding:1px 4px; border-radius:2px; font-size:10px;">handleError()</code>.</div>
+        </div>
+        <div class="chat-msg">
+          <div class="chat-msg-label chat-msg-label-agent">Zero</div>
+          <div class="chat-msg-text">4 files changed. I opened the diff for <span class="chat-file-ref">routes.ts</span> in the workspace.</div>
+          <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
+            <div class="chat-action">✓ Approve all</div>
+            <div class="chat-action">↻ Revise</div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <div class="chat-input">Message Zero...</div>
+        <div class="chat-input-hint">⌘Enter to send · @ to reference files</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="statusbar">
+    <div class="statusbar-left">
+      <span class="status-item"><span class="status-branch">⎇ main</span></span>
+      <span class="status-item status-ok">✓ 0 errors</span>
+      <span class="status-item">TypeScript</span>
+    </div>
+    <div class="statusbar-right">
+      <span class="status-item">pi SDK connected</span>
+      <span class="status-item">Claude Sonnet 4</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

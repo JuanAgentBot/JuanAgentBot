@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PONG / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    #game-canvas {
+      display: block;
+      margin: 0 auto 1rem;
+      border: 1px solid var(--border);
+    }
+
+    .hud {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      max-width: 400px;
+      margin: 0 auto 1rem;
+      font-size: 0.8rem;
+    }
+
+    .hud-you {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 10px var(--glow-cyan);
+    }
+
+    .hud-cpu {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 10px var(--glow-magenta);
+    }
+
+    .controls {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      margin-top: 0.5rem;
+      line-height: 1.8;
+    }
+
+    .controls kbd {
+      display: inline-block;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      padding: 0.1em 0.45em;
+      font-family: inherit;
+      font-size: 1em;
+      color: var(--accent-cyan);
+      margin: 0 0.1em;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 15, 0.85);
+      z-index: 2;
+    }
+
+    .overlay-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 15px var(--glow-magenta);
+    }
+
+    .overlay-text {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+    }
+
+    .overlay-score {
+      font-size: 0.9rem;
+      color: var(--accent-green);
+      margin-bottom: 0.4rem;
+      text-shadow: 0 0 10px var(--glow-green);
+    }
+
+    .canvas-wrap {
+      position: relative;
+      display: inline-block;
+      margin: 0 auto 1rem;
+    }
+
+    .touch-controls {
+      display: none;
+      max-width: 400px;
+      margin: 0.5rem auto 0;
+    }
+
+    .touch-row {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .touch-btn {
+      width: 80px;
+      height: 52px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .touch-btn:active {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--glow-cyan);
+    }
+
+    @media (pointer: coarse) {
+      .touch-controls { display: block; }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>PONG</h1>
+    <p class="subtitle">YOU VS CPU. FIRST TO 7 WINS.</p>
+
+    <div class="hud">
+      <span class="hud-you">YOU: <span id="score-you">0</span></span>
+      <span class="hud-cpu">CPU: <span id="score-cpu">0</span></span>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="game-canvas" width="500" height="350"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="overlay-title" id="overlay-title">PONG</div>
+        <div class="overlay-score" id="overlay-score" style="display:none"></div>
+        <div class="overlay-text" id="overlay-text">PRESS SPACE TO START</div>
+      </div>
+    </div>
+
+    <div class="touch-controls" id="touch-controls">
+      <div class="touch-row">
+        <button class="touch-btn" data-dir="up">&uarr; UP</button>
+        <button class="touch-btn" data-dir="down">&darr; DOWN</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <kbd>&uarr;</kbd> <kbd>&darr;</kbd> MOVE PADDLE
+      &nbsp;&middot;&nbsp;
+      <kbd>SPACE</kbd> START / SERVE
+    </div>
+  </main>
+
+  <script>
+  (function() {
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlayText = document.getElementById('overlay-text');
+    const overlayScore = document.getElementById('overlay-score');
+    const scoreYouEl = document.getElementById('score-you');
+    const scoreCpuEl = document.getElementById('score-cpu');
+
+    const WIN_SCORE = 7;
+    const PADDLE_W = 10;
+    const PADDLE_H = 60;
+    const BALL_SIZE = 8;
+    const PADDLE_SPEED = 5;
+    const BALL_SPEED_INIT = 4;
+    const BALL_SPEED_MAX = 8;
+    const CPU_SPEED = 3.2;
+
+    let W, H;
+
+    function resizeCanvas() {
+      const maxW = Math.min(500, window.innerWidth - 48);
+      const ratio = 350 / 500;
+      const w = Math.floor(maxW);
+      const h = Math.floor(w * ratio);
+      canvas.width = w;
+      canvas.height = h;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      W = w;
+      H = h;
+    }
+
+    const isDark = () => !document.documentElement.hasAttribute('data-theme') || document.documentElement.getAttribute('data-theme') !== 'light';
+
+    function colors() {
+      if (isDark()) {
+        return {
+          bg: '#0a0a0f',
+          net: '#7a7a90',
+          playerPaddle: '#00f0ff',
+          playerGlow: 'rgba(0,240,255,0.4)',
+          cpuPaddle: '#ff2d7b',
+          cpuGlow: 'rgba(255,45,123,0.4)',
+          ball: '#39ff14',
+          ballGlow: 'rgba(57,255,20,0.5)',
+          ballTrail: 'rgba(57,255,20,0.1)',
+          scoreDim: 'rgba(224,224,232,0.08)',
+        };
+      } else {
+        return {
+          bg: '#f0eff5',
+          net: '#c8c8d6',
+          playerPaddle: '#00717f',
+          playerGlow: 'rgba(0,113,127,0.3)',
+          cpuPaddle: '#cc1166',
+          cpuGlow: 'rgba(204,17,102,0.3)',
+          ball: '#1a7a12',
+          ballGlow: 'rgba(26,122,18,0.3)',
+          ballTrail: 'rgba(26,122,18,0.08)',
+          scoreDim: 'rgba(24,24,42,0.06)',
+        };
+      }
+    }
+
+    let player, cpu, ball;
+    let scoreYou = 0;
+    let scoreCpu = 0;
+    let state = 'idle'; // idle, serving, playing, scored, won
+    let keysDown = {};
+    let touchDir = null;
+    let ballTrail = [];
+    let serveTimer = 0;
+    let lastServeWinner = null;
+    let loopId = null;
+    let rallies = 0;
+
+    function initPaddles() {
+      const ph = Math.min(PADDLE_H, H * 0.18);
+      player = { x: 15, y: H / 2 - ph / 2, w: PADDLE_W, h: ph };
+      cpu = { x: W - 15 - PADDLE_W, y: H / 2 - ph / 2, w: PADDLE_W, h: ph };
+    }
+
+    function resetBall(direction) {
+      const angle = (Math.random() * 0.8 - 0.4); // -0.4 to 0.4 radians
+      const speed = BALL_SPEED_INIT;
+      ball = {
+        x: W / 2,
+        y: H / 2,
+        vx: Math.cos(angle) * speed * direction,
+        vy: Math.sin(angle) * speed,
+        speed: speed,
+      };
+      ballTrail = [];
+      rallies = 0;
+    }
+
+    function init() {
+      resizeCanvas();
+      initPaddles();
+      resetBall(1);
+      scoreYou = 0;
+      scoreCpu = 0;
+      scoreYouEl.textContent = '0';
+      scoreCpuEl.textContent = '0';
+    }
+
+    function serve() {
+      const dir = lastServeWinner === 'cpu' ? 1 : -1;
+      resetBall(dir);
+      state = 'playing';
+    }
+
+    function updatePlayer() {
+      let dy = 0;
+      if (keysDown['ArrowUp'] || keysDown['KeyW'] || touchDir === 'up') dy = -PADDLE_SPEED;
+      if (keysDown['ArrowDown'] || keysDown['KeyS'] || touchDir === 'down') dy = PADDLE_SPEED;
+      player.y += dy;
+      player.y = Math.max(0, Math.min(H - player.h, player.y));
+    }
+
+    function updateCPU() {
+      // CPU tracks ball center with slight delay and imperfection
+      const cpuCenter = cpu.y + cpu.h / 2;
+      const target = ball.y;
+      const diff = target - cpuCenter;
+
+      // Add slight reaction dead zone so CPU isn't perfect
+      const deadZone = 5;
+      let speed = CPU_SPEED;
+
+      // CPU gets slightly faster as rallies increase
+      speed = Math.min(CPU_SPEED + rallies * 0.05, PADDLE_SPEED - 0.3);
+
+      if (Math.abs(diff) > deadZone) {
+        cpu.y += Math.sign(diff) * Math.min(speed, Math.abs(diff));
+      }
+      cpu.y = Math.max(0, Math.min(H - cpu.h, cpu.y));
+    }
+
+    function updateBall() {
+      // Add trail
+      ballTrail.push({ x: ball.x, y: ball.y, life: 1.0 });
+      ballTrail = ballTrail.filter(t => {
+        t.life -= 0.08;
+        return t.life > 0;
+      });
+
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      // Top/bottom bounce
+      if (ball.y - BALL_SIZE / 2 <= 0) {
+        ball.y = BALL_SIZE / 2;
+        ball.vy = Math.abs(ball.vy);
+      }
+      if (ball.y + BALL_SIZE / 2 >= H) {
+        ball.y = H - BALL_SIZE / 2;
+        ball.vy = -Math.abs(ball.vy);
+      }
+
+      // Player paddle collision
+      if (ball.vx < 0 &&
+          ball.x - BALL_SIZE / 2 <= player.x + player.w &&
+          ball.x + BALL_SIZE / 2 >= player.x &&
+          ball.y >= player.y &&
+          ball.y <= player.y + player.h) {
+        ball.x = player.x + player.w + BALL_SIZE / 2;
+        const hitPos = (ball.y - player.y) / player.h; // 0 to 1
+        const angle = (hitPos - 0.5) * 1.2; // -0.6 to 0.6
+        ball.speed = Math.min(ball.speed + 0.15, BALL_SPEED_MAX);
+        ball.vx = Math.cos(angle) * ball.speed;
+        ball.vy = Math.sin(angle) * ball.speed;
+        rallies++;
+      }
+
+      // CPU paddle collision
+      if (ball.vx > 0 &&
+          ball.x + BALL_SIZE / 2 >= cpu.x &&
+          ball.x - BALL_SIZE / 2 <= cpu.x + cpu.w &&
+          ball.y >= cpu.y &&
+          ball.y <= cpu.y + cpu.h) {
+        ball.x = cpu.x - BALL_SIZE / 2;
+        const hitPos = (ball.y - cpu.y) / cpu.h;
+        const angle = Math.PI - (hitPos - 0.5) * 1.2;
+        ball.speed = Math.min(ball.speed + 0.15, BALL_SPEED_MAX);
+        ball.vx = Math.cos(angle) * ball.speed;
+        ball.vy = Math.sin(angle) * ball.speed;
+        rallies++;
+      }
+
+      // Scoring
+      if (ball.x < -BALL_SIZE) {
+        scoreCpu++;
+        scoreCpuEl.textContent = scoreCpu;
+        lastServeWinner = 'cpu';
+        checkWin();
+        return;
+      }
+      if (ball.x > W + BALL_SIZE) {
+        scoreYou++;
+        scoreYouEl.textContent = scoreYou;
+        lastServeWinner = 'you';
+        checkWin();
+        return;
+      }
+    }
+
+    function checkWin() {
+      if (scoreYou >= WIN_SCORE) {
+        state = 'won';
+        overlayTitle.textContent = 'YOU WIN';
+        overlayScore.textContent = scoreYou + ' - ' + scoreCpu;
+        overlayScore.style.display = 'block';
+        overlayText.textContent = 'PRESS SPACE TO PLAY AGAIN';
+        overlay.style.display = 'flex';
+      } else if (scoreCpu >= WIN_SCORE) {
+        state = 'won';
+        overlayTitle.textContent = 'CPU WINS';
+        overlayScore.textContent = scoreYou + ' - ' + scoreCpu;
+        overlayScore.style.display = 'block';
+        overlayText.textContent = 'PRESS SPACE TO PLAY AGAIN';
+        overlay.style.display = 'flex';
+      } else {
+        state = 'scored';
+        serveTimer = 60; // ~1 second delay before next serve
+      }
+    }
+
+    function draw() {
+      const c = colors();
+
+      // Background
+      ctx.fillStyle = c.bg;
+      ctx.fillRect(0, 0, W, H);
+
+      // Center line (dashed net)
+      ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = c.net;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(W / 2, 0);
+      ctx.lineTo(W / 2, H);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Big score numbers in background
+      ctx.fillStyle = c.scoreDim;
+      ctx.font = 'bold ' + Math.floor(H * 0.4) + 'px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(scoreYou), W / 4, H / 2);
+      ctx.fillText(String(scoreCpu), W * 3 / 4, H / 2);
+
+      // Ball trail
+      ballTrail.forEach(t => {
+        ctx.fillStyle = c.ballTrail;
+        ctx.globalAlpha = t.life * 0.5;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, BALL_SIZE / 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+
+      // Ball
+      ctx.fillStyle = c.ball;
+      ctx.shadowColor = c.ballGlow;
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, BALL_SIZE / 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ball pulse ring
+      const pulse = (Math.sin(Date.now() / 200) + 1) / 2;
+      ctx.strokeStyle = c.ball;
+      ctx.globalAlpha = 0.15 + pulse * 0.2;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, BALL_SIZE / 2 + 2 + pulse * 3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+
+      // Player paddle
+      ctx.fillStyle = c.playerPaddle;
+      ctx.shadowColor = c.playerGlow;
+      ctx.shadowBlur = 10;
+      ctx.fillRect(player.x, player.y, player.w, player.h);
+      ctx.shadowBlur = 0;
+
+      // CPU paddle
+      ctx.fillStyle = c.cpuPaddle;
+      ctx.shadowColor = c.cpuGlow;
+      ctx.shadowBlur = 10;
+      ctx.fillRect(cpu.x, cpu.y, cpu.w, cpu.h);
+      ctx.shadowBlur = 0;
+
+      // Top/bottom borders with glow
+      ctx.strokeStyle = c.net;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, 0.5);
+      ctx.lineTo(W, 0.5);
+      ctx.moveTo(0, H - 0.5);
+      ctx.lineTo(W, H - 0.5);
+      ctx.stroke();
+    }
+
+    function loop() {
+      loopId = requestAnimationFrame(loop);
+
+      if (state === 'playing') {
+        updatePlayer();
+        updateCPU();
+        updateBall();
+      } else if (state === 'scored') {
+        updatePlayer();
+        serveTimer--;
+        if (serveTimer <= 0) {
+          serve();
+        }
+      }
+
+      draw();
+    }
+
+    function startGame() {
+      init();
+      state = 'playing';
+      overlay.style.display = 'none';
+      if (!loopId) loopId = requestAnimationFrame(loop);
+    }
+
+    // Keyboard
+    document.addEventListener('keydown', function(e) {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (state === 'idle' || state === 'won') startGame();
+        return;
+      }
+      keysDown[e.code] = true;
+      if (['ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
+    });
+
+    document.addEventListener('keyup', function(e) {
+      keysDown[e.code] = false;
+    });
+
+    // Touch controls
+    document.querySelectorAll('.touch-btn').forEach(btn => {
+      function onDown(e) {
+        e.preventDefault();
+        const d = btn.dataset.dir;
+        touchDir = d;
+        if (state === 'idle' || state === 'won') startGame();
+      }
+      function onUp(e) {
+        e.preventDefault();
+        if (touchDir === btn.dataset.dir) touchDir = null;
+      }
+      btn.addEventListener('touchstart', onDown);
+      btn.addEventListener('touchend', onUp);
+      btn.addEventListener('touchcancel', onUp);
+    });
+
+    // Tap canvas to start on mobile
+    canvas.addEventListener('touchstart', function(e) {
+      if (state === 'idle' || state === 'won') { e.preventDefault(); startGame(); }
+    });
+
+    // Mouse/touch on canvas to move paddle
+    let canvasTouch = false;
+    canvas.addEventListener('touchmove', function(e) {
+      if (state !== 'playing' && state !== 'scored') return;
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const scaleY = H / rect.height;
+      const y = (e.touches[0].clientY - rect.top) * scaleY;
+      player.y = y - player.h / 2;
+      player.y = Math.max(0, Math.min(H - player.h, player.y));
+      canvasTouch = true;
+    });
+
+    canvas.addEventListener('mousemove', function(e) {
+      if (state !== 'playing' && state !== 'scored') return;
+      const rect = canvas.getBoundingClientRect();
+      const scaleY = H / rect.height;
+      const y = (e.clientY - rect.top) * scaleY;
+      player.y = y - player.h / 2;
+      player.y = Math.max(0, Math.min(H - player.h, player.y));
+    });
+
+    // Handle resize
+    window.addEventListener('resize', function() {
+      resizeCanvas();
+      initPaddles();
+      if (state === 'idle') {
+        resetBall(1);
+        draw();
+      }
+    });
+
+    // Initial draw
+    init();
+    draw();
+    loopId = requestAnimationFrame(loop);
+  })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

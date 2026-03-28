@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIM TRAINER / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+      transition: color 0.3s;
+    }
+
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .stats-bar {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1rem;
+      font-size: 0.75rem;
+    }
+
+    .stat-label {
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      color: var(--accent-cyan);
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-shadow: 0 0 8px var(--glow-cyan);
+    }
+
+    .stat-value.green { color: var(--accent-green); text-shadow: 0 0 8px rgba(57,255,20,0.4); }
+    .stat-value.magenta { color: var(--accent-magenta); text-shadow: 0 0 8px var(--glow-magenta); }
+
+    #arena {
+      position: relative;
+      width: 100%;
+      height: 420px;
+      border: 1px solid var(--border);
+      margin: 0 auto 1.2rem;
+      cursor: crosshair;
+      overflow: hidden;
+      background: var(--bg-panel);
+      user-select: none;
+    }
+
+    #arena .target {
+      position: absolute;
+      border-radius: 50%;
+      cursor: crosshair;
+      transition: transform 0.08s ease-out;
+      pointer-events: auto;
+    }
+
+    #arena .target:hover {
+      transform: scale(1.05);
+    }
+
+    #arena .target .ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      border-radius: 50%;
+      border: 2px solid;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    #arena .target .dot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .hit-marker {
+      position: absolute;
+      color: var(--accent-green);
+      font-size: 0.7rem;
+      font-weight: 700;
+      pointer-events: none;
+      animation: hitFloat 0.5s ease-out forwards;
+    }
+
+    @keyframes hitFloat {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-30px); }
+    }
+
+    .miss-marker {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border: 1px solid rgba(255,23,68,0.6);
+      pointer-events: none;
+      animation: missFade 0.4s ease-out forwards;
+    }
+
+    @keyframes missFade {
+      0% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(2); }
+    }
+
+    .shrink-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 2px solid;
+      pointer-events: none;
+      animation: shrink linear forwards;
+    }
+
+    @keyframes shrink {
+      0% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
+      100% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .btn.active {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+      text-shadow: 0 0 8px var(--glow-magenta);
+    }
+
+    .btn.start {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    .btn.start:hover {
+      background: rgba(57,255,20,0.08);
+      text-shadow: 0 0 10px rgba(57,255,20,0.5);
+    }
+
+    .instructions {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(10,10,15,0.85);
+      z-index: 10;
+    }
+
+    .overlay h2 {
+      color: var(--accent-magenta);
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .overlay .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6rem 2rem;
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+
+    .overlay .result-label {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      text-align: right;
+    }
+
+    .overlay .result-val {
+      color: var(--accent-cyan);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .overlay .result-val.good { color: var(--accent-green); }
+    .overlay .result-val.bad { color: #ff1744; }
+
+    .countdown {
+      font-size: 3rem;
+      font-weight: 800;
+      color: var(--accent-cyan);
+      text-shadow: 0 0 30px var(--glow-cyan);
+    }
+
+    .timer-bar {
+      width: 100%;
+      height: 3px;
+      background: var(--border);
+      position: relative;
+      margin-bottom: 0.5rem;
+    }
+
+    .timer-fill {
+      height: 100%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--glow-cyan);
+      transition: width 0.1s linear;
+    }
+
+    .mode-label {
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    .best-score {
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      margin-top: 0.5rem;
+    }
+
+    .best-score span {
+      color: var(--accent-green);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>AIM TRAINER</h1>
+    <p class="subtitle">CLICK TARGETS. BE FAST. BE PRECISE.</p>
+
+    <div class="stats-bar">
+      <div>
+        <div class="stat-label">HITS</div>
+        <div class="stat-value green" id="hits">0</div>
+      </div>
+      <div>
+        <div class="stat-label">MISSES</div>
+        <div class="stat-value magenta" id="misses">0</div>
+      </div>
+      <div>
+        <div class="stat-label">ACCURACY</div>
+        <div class="stat-value" id="accuracy">---</div>
+      </div>
+      <div>
+        <div class="stat-label">AVG TIME</div>
+        <div class="stat-value" id="avg-time">---</div>
+      </div>
+    </div>
+
+    <div class="timer-bar">
+      <div class="timer-fill" id="timer-fill" style="width:100%"></div>
+    </div>
+
+    <div id="arena">
+      <div class="overlay" id="start-overlay">
+        <h2>AIM TRAINER</h2>
+        <p style="color:var(--text-muted);font-size:0.75rem;margin-bottom:1rem;">Click targets as fast and accurately as you can</p>
+        <button class="btn start" onclick="startGame()">&#9654; START</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="mode-label">MODE:</div>
+      <button class="btn active" data-mode="timed30" onclick="setMode('timed30')">30 SEC</button>
+      <button class="btn" data-mode="timed60" onclick="setMode('timed60')">60 SEC</button>
+      <button class="btn" data-mode="precision" onclick="setMode('precision')">PRECISION</button>
+    </div>
+
+    <div class="controls">
+      <div class="mode-label">SIZE:</div>
+      <button class="btn" data-size="small" onclick="setSize('small')">SMALL</button>
+      <button class="btn active" data-size="medium" onclick="setSize('medium')">MEDIUM</button>
+      <button class="btn" data-size="large" onclick="setSize('large')">LARGE</button>
+    </div>
+
+    <div class="best-score" id="best-score"></div>
+
+    <div class="instructions">
+      CLICK TARGETS AS THEY APPEAR &bull; MISSES COUNT AGAINST ACCURACY<br>
+      TIMED: HIT AS MANY AS YOU CAN BEFORE TIME RUNS OUT<br>
+      PRECISION: 3 MISSES AND YOU'RE OUT &bull; TARGETS SHRINK OVER TIME
+    </div>
+  </main>
+
+  <script>
+    const COLORS = [
+      { bg: '#ff2d7b', ring: '#ff6ac1', glow: 'rgba(255,45,123,0.5)' },
+      { bg: '#00f0ff', ring: '#66f7ff', glow: 'rgba(0,240,255,0.5)' },
+      { bg: '#39ff14', ring: '#7fff5e', glow: 'rgba(57,255,20,0.5)' },
+      { bg: '#9d4edd', ring: '#c77dff', glow: 'rgba(157,78,221,0.5)' }
+    ];
+
+    const SIZES = { small: 28, medium: 44, large: 64 };
+
+    let mode = 'timed30';
+    let targetSize = 'medium';
+    let running = false;
+    let hits = 0;
+    let misses = 0;
+    let reactionTimes = [];
+    let targetSpawnTime = 0;
+    let timerInterval = null;
+    let timeLeft = 30;
+    let totalTime = 30;
+    let currentTarget = null;
+    let precisionMisses = 0;
+    let shrinkInterval = null;
+
+    const arena = document.getElementById('arena');
+    const hitsEl = document.getElementById('hits');
+    const missesEl = document.getElementById('misses');
+    const accuracyEl = document.getElementById('accuracy');
+    const avgTimeEl = document.getElementById('avg-time');
+    const timerFill = document.getElementById('timer-fill');
+    const startOverlay = document.getElementById('start-overlay');
+    const bestScoreEl = document.getElementById('best-score');
+
+    function setMode(m) {
+      if (running) return;
+      mode = m;
+      document.querySelectorAll('[data-mode]').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === m);
+      });
+      showBestScore();
+    }
+
+    function setSize(s) {
+      if (running) return;
+      targetSize = s;
+      document.querySelectorAll('[data-size]').forEach(b => {
+        b.classList.toggle('active', b.dataset.size === s);
+      });
+      showBestScore();
+    }
+
+    function getBestKey() {
+      return `aim-best-${mode}-${targetSize}`;
+    }
+
+    function showBestScore() {
+      const best = localStorage.getItem(getBestKey());
+      if (best) {
+        const data = JSON.parse(best);
+        bestScoreEl.innerHTML = `BEST: <span>${data.hits} hits</span> @ <span>${data.accuracy}%</span> accuracy, <span>${data.avgTime}ms</span> avg`;
+      } else {
+        bestScoreEl.textContent = '';
+      }
+    }
+
+    function startGame() {
+      hits = 0;
+      misses = 0;
+      reactionTimes = [];
+      precisionMisses = 0;
+      running = true;
+
+      hitsEl.textContent = '0';
+      missesEl.textContent = '0';
+      accuracyEl.textContent = '---';
+      avgTimeEl.textContent = '---';
+
+      arena.innerHTML = '';
+
+      if (mode === 'timed30') {
+        totalTime = 30;
+        timeLeft = 30;
+      } else if (mode === 'timed60') {
+        totalTime = 60;
+        timeLeft = 60;
+      } else {
+        totalTime = 0;
+        timeLeft = 0;
+      }
+
+      timerFill.style.width = '100%';
+
+      // countdown
+      showCountdown(3, () => {
+        if (mode !== 'precision') {
+          timerInterval = setInterval(tick, 100);
+        }
+        spawnTarget();
+      });
+    }
+
+    function showCountdown(n, cb) {
+      if (n <= 0) { cb(); return; }
+      const overlay = document.createElement('div');
+      overlay.className = 'overlay';
+      overlay.innerHTML = `<div class="countdown">${n}</div>`;
+      arena.appendChild(overlay);
+      setTimeout(() => {
+        overlay.remove();
+        showCountdown(n - 1, cb);
+      }, 600);
+    }
+
+    function tick() {
+      timeLeft -= 0.1;
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        endGame();
+        return;
+      }
+      timerFill.style.width = (timeLeft / totalTime * 100) + '%';
+      if (timeLeft < totalTime * 0.25) {
+        timerFill.style.background = '#ff1744';
+        timerFill.style.boxShadow = '0 0 8px rgba(255,23,68,0.5)';
+      } else {
+        timerFill.style.background = 'var(--accent-cyan)';
+        timerFill.style.boxShadow = '0 0 8px var(--glow-cyan)';
+      }
+    }
+
+    function spawnTarget() {
+      if (!running) return;
+
+      if (currentTarget) {
+        currentTarget.remove();
+        currentTarget = null;
+      }
+
+      const size = SIZES[targetSize];
+      const pad = 10;
+      const arenaRect = arena.getBoundingClientRect();
+      const maxX = arenaRect.width - size - pad * 2;
+      const maxY = arenaRect.height - size - pad * 2;
+      const x = pad + Math.random() * maxX;
+      const y = pad + Math.random() * maxY;
+
+      const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+
+      const el = document.createElement('div');
+      el.className = 'target';
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      el.style.background = `radial-gradient(circle at 35% 35%, ${color.ring}, ${color.bg})`;
+      el.style.boxShadow = `0 0 16px ${color.glow}, inset 0 0 8px rgba(0,0,0,0.3)`;
+
+      // outer ring
+      const ring = document.createElement('div');
+      ring.className = 'ring';
+      ring.style.width = (size * 0.7) + 'px';
+      ring.style.height = (size * 0.7) + 'px';
+      ring.style.borderColor = 'rgba(255,255,255,0.3)';
+      el.appendChild(ring);
+
+      // center dot
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      dot.style.background = '#fff';
+      dot.style.boxShadow = '0 0 4px #fff';
+      el.appendChild(dot);
+
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onHit(el, e);
+      });
+
+      arena.appendChild(el);
+      currentTarget = el;
+      targetSpawnTime = performance.now();
+
+      // In precision mode, targets shrink and disappear
+      if (mode === 'precision') {
+        const shrinkDuration = Math.max(1500, 3000 - hits * 50);
+        el.style.transition = `width ${shrinkDuration}ms linear, height ${shrinkDuration}ms linear, left ${shrinkDuration/2}ms linear, top ${shrinkDuration/2}ms linear`;
+
+        // Also add a shrinking ring indicator
+        const shrinkRing = document.createElement('div');
+        shrinkRing.className = 'shrink-ring';
+        shrinkRing.style.left = (x + size/2) + 'px';
+        shrinkRing.style.top = (y + size/2) + 'px';
+        shrinkRing.style.width = (size * 2) + 'px';
+        shrinkRing.style.height = (size * 2) + 'px';
+        shrinkRing.style.borderColor = color.glow;
+        shrinkRing.style.animationDuration = shrinkDuration + 'ms';
+        arena.appendChild(shrinkRing);
+
+        setTimeout(() => {
+          shrinkRing.remove();
+        }, shrinkDuration);
+
+        // Target fades after shrinkDuration
+        if (shrinkInterval) clearTimeout(shrinkInterval);
+        shrinkInterval = setTimeout(() => {
+          if (currentTarget === el && running) {
+            onMiss(null);
+            el.remove();
+            currentTarget = null;
+            spawnTarget();
+          }
+        }, shrinkDuration);
+      }
+    }
+
+    function onHit(el, event) {
+      if (!running) return;
+
+      const rt = performance.now() - targetSpawnTime;
+      reactionTimes.push(rt);
+      hits++;
+
+      hitsEl.textContent = hits;
+      updateStats();
+
+      // hit feedback
+      const marker = document.createElement('div');
+      marker.className = 'hit-marker';
+      marker.textContent = Math.round(rt) + 'ms';
+      marker.style.left = el.style.left;
+      marker.style.top = (parseInt(el.style.top) - 10) + 'px';
+      arena.appendChild(marker);
+      setTimeout(() => marker.remove(), 500);
+
+      if (shrinkInterval) clearTimeout(shrinkInterval);
+      el.remove();
+      currentTarget = null;
+
+      setTimeout(() => spawnTarget(), 150);
+    }
+
+    function onMiss(event) {
+      misses++;
+      missesEl.textContent = misses;
+      updateStats();
+
+      if (event) {
+        const rect = arena.getBoundingClientRect();
+        const marker = document.createElement('div');
+        marker.className = 'miss-marker';
+        marker.style.left = (event.clientX - rect.left - 4) + 'px';
+        marker.style.top = (event.clientY - rect.top - 4) + 'px';
+        arena.appendChild(marker);
+        setTimeout(() => marker.remove(), 400);
+      }
+
+      if (mode === 'precision') {
+        precisionMisses++;
+        if (precisionMisses >= 3) {
+          endGame();
+        }
+      }
+    }
+
+    arena.addEventListener('click', (e) => {
+      if (!running) return;
+      if (e.target === arena || !e.target.classList.contains('target')) {
+        onMiss(e);
+      }
+    });
+
+    function updateStats() {
+      const total = hits + misses;
+      if (total > 0) {
+        accuracyEl.textContent = Math.round(hits / total * 100) + '%';
+      }
+      if (reactionTimes.length > 0) {
+        const avg = reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length;
+        avgTimeEl.textContent = Math.round(avg) + 'ms';
+      }
+    }
+
+    function endGame() {
+      running = false;
+      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+      if (shrinkInterval) { clearTimeout(shrinkInterval); shrinkInterval = null; }
+      if (currentTarget) { currentTarget.remove(); currentTarget = null; }
+
+      const total = hits + misses;
+      const accuracy = total > 0 ? Math.round(hits / total * 100) : 0;
+      const avgTime = reactionTimes.length > 0
+        ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
+        : 0;
+      const bestTime = reactionTimes.length > 0
+        ? Math.round(Math.min(...reactionTimes))
+        : 0;
+
+      // save best
+      const bestKey = getBestKey();
+      const prev = localStorage.getItem(bestKey);
+      let isNewBest = false;
+      if (!prev || hits > JSON.parse(prev).hits ||
+          (hits === JSON.parse(prev).hits && accuracy > JSON.parse(prev).accuracy)) {
+        localStorage.setItem(bestKey, JSON.stringify({ hits, accuracy, avgTime }));
+        isNewBest = true;
+      }
+
+      const overlay = document.createElement('div');
+      overlay.className = 'overlay';
+      overlay.innerHTML = `
+        <h2>${isNewBest ? 'NEW BEST!' : 'ROUND OVER'}</h2>
+        <div class="result-grid">
+          <div class="result-label">HITS</div>
+          <div class="result-val good">${hits}</div>
+          <div class="result-label">MISSES</div>
+          <div class="result-val ${misses > 0 ? 'bad' : ''}">${misses}</div>
+          <div class="result-label">ACCURACY</div>
+          <div class="result-val ${accuracy >= 80 ? 'good' : accuracy < 50 ? 'bad' : ''}">${accuracy}%</div>
+          <div class="result-label">AVG TIME</div>
+          <div class="result-val">${avgTime}ms</div>
+          <div class="result-label">BEST TIME</div>
+          <div class="result-val good">${bestTime}ms</div>
+          <div class="result-label">TOTAL</div>
+          <div class="result-val">${total} clicks</div>
+        </div>
+        <button class="btn start" onclick="this.closest('.overlay').remove();startGame()">&#9654; PLAY AGAIN</button>
+      `;
+      arena.appendChild(overlay);
+
+      showBestScore();
+    }
+
+    showBestScore();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TIC-TAC-TOE / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+      transition: color 0.3s;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.4rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1.2rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.4rem 0.8rem;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .btn.active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--glow-cyan-soft);
+    }
+
+    .scoreboard {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+    }
+
+    .score-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.2rem;
+    }
+
+    .score-label {
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      text-transform: uppercase;
+    }
+
+    .score-label.player { color: var(--accent-cyan); }
+    .score-label.draws { color: var(--text-dim); }
+    .score-label.cpu { color: var(--accent-magenta); }
+
+    .score-val {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-bright);
+    }
+
+    .score-item.player .score-val { color: var(--accent-cyan); text-shadow: 0 0 10px var(--glow-cyan-soft); }
+    .score-item.draws .score-val { color: var(--text-dim); }
+    .score-item.cpu .score-val { color: var(--accent-magenta); text-shadow: 0 0 10px var(--glow-magenta); }
+
+    .status {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 1.2rem;
+      min-height: 1.4em;
+      letter-spacing: 0.04em;
+    }
+
+    .status.win { color: var(--accent-green); text-shadow: 0 0 10px rgba(57, 255, 20, 0.3); }
+    .status.lose { color: var(--accent-magenta); text-shadow: 0 0 10px var(--glow-magenta); }
+    .status.draw { color: var(--accent-purple); }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      max-width: 320px;
+      margin: 0 auto 1.5rem;
+      aspect-ratio: 1;
+    }
+
+    .cell {
+      background: var(--bg-secondary, #121218);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+      -webkit-user-select: none;
+      position: relative;
+    }
+
+    .cell:hover:not(.taken):not(.locked) {
+      border-color: var(--accent-cyan);
+      background: rgba(0, 240, 255, 0.04);
+    }
+
+    .cell.taken, .cell.locked {
+      cursor: default;
+    }
+
+    .cell .mark {
+      opacity: 0;
+      transform: scale(0.5);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .cell .mark.show {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .cell .mark.x {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 15px var(--glow-cyan-soft);
+    }
+
+    .cell .mark.o {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 15px var(--glow-magenta);
+    }
+
+    .cell.win-cell {
+      background: rgba(57, 255, 20, 0.06);
+      border-color: var(--accent-green);
+      box-shadow: 0 0 12px rgba(57, 255, 20, 0.15);
+    }
+
+    .cell.win-cell .mark {
+      text-shadow: 0 0 20px rgba(57, 255, 20, 0.5);
+    }
+
+    .new-game-btn {
+      background: transparent;
+      border: 1px solid var(--accent-green);
+      color: var(--accent-green);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.5rem 1.2rem;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      transition: all 0.2s;
+      margin-bottom: 1.5rem;
+    }
+
+    .new-game-btn:hover {
+      background: rgba(57, 255, 20, 0.08);
+      box-shadow: 0 0 12px rgba(57, 255, 20, 0.2);
+    }
+
+    .instructions {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      line-height: 1.6;
+      letter-spacing: 0.04em;
+    }
+
+    @media (max-width: 400px) {
+      .board { max-width: 280px; }
+      .cell { font-size: 2.4rem; }
+      h1 { font-size: 1.4rem; }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>TIC-TAC-TOE</h1>
+    <p class="subtitle">YOU (X) VS CPU (O)</p>
+
+    <div class="controls">
+      <button class="btn active" data-diff="easy" onclick="setDifficulty('easy')">EASY</button>
+      <button class="btn" data-diff="medium" onclick="setDifficulty('medium')">MEDIUM</button>
+      <button class="btn" data-diff="hard" onclick="setDifficulty('hard')">UNBEATABLE</button>
+    </div>
+
+    <div class="scoreboard">
+      <div class="score-item player">
+        <span class="score-label player">YOU (X)</span>
+        <span class="score-val" id="score-player">0</span>
+      </div>
+      <div class="score-item draws">
+        <span class="score-label draws">DRAWS</span>
+        <span class="score-val" id="score-draws">0</span>
+      </div>
+      <div class="score-item cpu">
+        <span class="score-label cpu">CPU (O)</span>
+        <span class="score-val" id="score-cpu">0</span>
+      </div>
+    </div>
+
+    <div class="status" id="status">YOUR TURN</div>
+
+    <div class="board" id="board"></div>
+
+    <button class="new-game-btn" onclick="newGame()">NEW GAME</button>
+
+    <div class="instructions">
+      CLICK A CELL TO PLACE YOUR X<br>
+      BEAT THE CPU. THREE DIFFICULTY LEVELS.
+    </div>
+  </main>
+
+  <script>
+    const HUMAN = 'X';
+    const CPU = 'O';
+    const WINS = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    let board = Array(9).fill(null);
+    let gameOver = false;
+    let locked = false;
+    let difficulty = 'easy';
+    let scores = { player: 0, draws: 0, cpu: 0 };
+
+    function setDifficulty(d) {
+      difficulty = d;
+      document.querySelectorAll('.btn[data-diff]').forEach(b => {
+        b.classList.toggle('active', b.dataset.diff === d);
+      });
+      scores = { player: 0, draws: 0, cpu: 0 };
+      updateScores();
+      newGame();
+    }
+
+    function updateScores() {
+      document.getElementById('score-player').textContent = scores.player;
+      document.getElementById('score-draws').textContent = scores.draws;
+      document.getElementById('score-cpu').textContent = scores.cpu;
+    }
+
+    function setStatus(text, cls) {
+      const el = document.getElementById('status');
+      el.textContent = text;
+      el.className = 'status' + (cls ? ' ' + cls : '');
+    }
+
+    function checkWin(b, player) {
+      for (const w of WINS) {
+        if (w.every(i => b[i] === player)) return w;
+      }
+      return null;
+    }
+
+    function isFull(b) {
+      return b.every(c => c !== null);
+    }
+
+    function getEmpty(b) {
+      return b.map((c, i) => c === null ? i : -1).filter(i => i >= 0);
+    }
+
+    function minimax(b, isMax, depth) {
+      const winCPU = checkWin(b, CPU);
+      if (winCPU) return 10 - depth;
+      const winHuman = checkWin(b, HUMAN);
+      if (winHuman) return depth - 10;
+      if (isFull(b)) return 0;
+
+      const empty = getEmpty(b);
+      if (isMax) {
+        let best = -Infinity;
+        for (const i of empty) {
+          b[i] = CPU;
+          best = Math.max(best, minimax(b, false, depth + 1));
+          b[i] = null;
+        }
+        return best;
+      } else {
+        let best = Infinity;
+        for (const i of empty) {
+          b[i] = HUMAN;
+          best = Math.min(best, minimax(b, true, depth + 1));
+          b[i] = null;
+        }
+        return best;
+      }
+    }
+
+    function cpuMoveHard() {
+      const empty = getEmpty(board);
+      let bestScore = -Infinity;
+      let bestMove = empty[0];
+      for (const i of empty) {
+        board[i] = CPU;
+        const score = minimax(board, false, 0);
+        board[i] = null;
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = i;
+        }
+      }
+      return bestMove;
+    }
+
+    function cpuMoveMedium() {
+      // 60% optimal, 40% random
+      if (Math.random() < 0.6) return cpuMoveHard();
+      const empty = getEmpty(board);
+      return empty[Math.floor(Math.random() * empty.length)];
+    }
+
+    function cpuMoveEasy() {
+      // Check for immediate win first
+      const empty = getEmpty(board);
+      for (const i of empty) {
+        board[i] = CPU;
+        if (checkWin(board, CPU)) { board[i] = null; return i; }
+        board[i] = null;
+      }
+      // Otherwise random
+      return empty[Math.floor(Math.random() * empty.length)];
+    }
+
+    function getCPUMove() {
+      if (difficulty === 'hard') return cpuMoveHard();
+      if (difficulty === 'medium') return cpuMoveMedium();
+      return cpuMoveEasy();
+    }
+
+    function placeMarker(index, player) {
+      board[index] = player;
+      const cell = document.querySelectorAll('.cell')[index];
+      cell.classList.add('taken');
+      const mark = cell.querySelector('.mark');
+      mark.textContent = player;
+      mark.className = 'mark ' + (player === HUMAN ? 'x' : 'o');
+      requestAnimationFrame(() => mark.classList.add('show'));
+    }
+
+    function highlightWin(cells) {
+      cells.forEach(i => {
+        document.querySelectorAll('.cell')[i].classList.add('win-cell');
+      });
+    }
+
+    function lockBoard() {
+      locked = true;
+      document.querySelectorAll('.cell').forEach(c => c.classList.add('locked'));
+    }
+
+    function handleClick(index) {
+      if (gameOver || locked || board[index] !== null) return;
+
+      placeMarker(index, HUMAN);
+
+      const humanWin = checkWin(board, HUMAN);
+      if (humanWin) {
+        gameOver = true;
+        scores.player++;
+        updateScores();
+        highlightWin(humanWin);
+        setStatus('YOU WIN!', 'win');
+        lockBoard();
+        return;
+      }
+
+      if (isFull(board)) {
+        gameOver = true;
+        scores.draws++;
+        updateScores();
+        setStatus('DRAW', 'draw');
+        lockBoard();
+        return;
+      }
+
+      locked = true;
+      setStatus('CPU THINKING...');
+
+      setTimeout(() => {
+        const move = getCPUMove();
+        placeMarker(move, CPU);
+
+        const cpuWin = checkWin(board, CPU);
+        if (cpuWin) {
+          gameOver = true;
+          scores.cpu++;
+          updateScores();
+          highlightWin(cpuWin);
+          setStatus('CPU WINS', 'lose');
+          lockBoard();
+          return;
+        }
+
+        if (isFull(board)) {
+          gameOver = true;
+          scores.draws++;
+          updateScores();
+          setStatus('DRAW', 'draw');
+          lockBoard();
+          return;
+        }
+
+        locked = false;
+        setStatus('YOUR TURN');
+      }, 300 + Math.random() * 200);
+    }
+
+    function buildBoard() {
+      const el = document.getElementById('board');
+      el.innerHTML = '';
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.innerHTML = '<span class="mark"></span>';
+        cell.addEventListener('click', () => handleClick(i));
+        el.appendChild(cell);
+      }
+    }
+
+    function newGame() {
+      board = Array(9).fill(null);
+      gameOver = false;
+      locked = false;
+      buildBoard();
+      setStatus('YOUR TURN');
+    }
+
+    // init
+    buildBoard();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

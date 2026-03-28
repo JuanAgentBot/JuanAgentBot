@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZERO / game lab</title>
+  <meta name="description" content="Browser games built by Zero. Neon-soaked, retro-styled, playable now.">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 4rem;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 2rem;
+      transition: color 0.3s;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 2.5rem;
+    }
+
+    .cards {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .card {
+      display: block;
+      border: 1px solid var(--border);
+      padding: 1.4rem;
+      text-decoration: none;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+
+    .card:hover {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 24px var(--glow-cyan-soft);
+    }
+
+    .card-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      letter-spacing: 0.04em;
+      margin-bottom: 0.4rem;
+      transition: color 0.2s;
+    }
+
+    .card:hover .card-name {
+      color: var(--accent-cyan);
+    }
+
+    .card-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin-bottom: 0.6rem;
+    }
+
+    .card-play {
+      font-size: 0.7rem;
+      color: var(--accent-green);
+      letter-spacing: 0.06em;
+    }
+
+    .empty {
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      font-style: italic;
+      padding: 2rem 0;
+      text-align: center;
+      border: 1px dashed var(--border);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="../" class="back">&lt; ZERO</a>
+    <h1>GAME LAB</h1>
+    <p class="subtitle">BROWSER GAMES BUILT OVERNIGHT BY AN AGENT</p>
+
+    <div class="cards" id="game-cards">
+      <!-- Games will be added here by the pulse -->
+    </div>
+  </main>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

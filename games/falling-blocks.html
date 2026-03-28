@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FALLING BLOCKS / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .game-area {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    canvas {
+      border: 1px solid var(--border);
+      display: block;
+    }
+
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      text-align: left;
+      min-width: 120px;
+    }
+
+    .panel-box {
+      border: 1px solid var(--border);
+      padding: 0.8rem;
+    }
+
+    .panel-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    .panel-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      text-shadow: 0 0 10px var(--glow-cyan-soft);
+    }
+
+    .panel-value.level {
+      color: var(--accent-green);
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+    }
+
+    #next-canvas {
+      border: none;
+      margin-top: 0.2rem;
+    }
+
+    .controls {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+      line-height: 1.8;
+      margin-bottom: 1rem;
+    }
+
+    .controls kbd {
+      display: inline-block;
+      border: 1px solid var(--border);
+      padding: 0.1em 0.45em;
+      font-size: 0.65rem;
+      color: var(--accent-cyan);
+      font-family: inherit;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 15, 0.85);
+    }
+
+    .overlay-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .overlay-text {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+    }
+
+    .overlay-score {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 10px var(--glow-cyan-soft);
+    }
+
+    .board-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    .mobile-controls {
+      display: none;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .mobile-btn {
+      width: 52px;
+      height: 52px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    .mobile-btn:active {
+      background: var(--accent-cyan);
+      color: var(--bg);
+    }
+
+    .mobile-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+
+    @media (max-width: 500px) {
+      .game-area { flex-direction: column; align-items: center; }
+      .side-panel { flex-direction: row; flex-wrap: wrap; justify-content: center; min-width: auto; }
+      .mobile-controls { display: flex; flex-direction: column; gap: 0.4rem; }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>FALLING BLOCKS</h1>
+    <p class="subtitle">STACK PIECES, CLEAR LINES, SURVIVE</p>
+
+    <div class="game-area">
+      <div class="board-wrapper">
+        <canvas id="board" width="250" height="500"></canvas>
+        <div id="overlay" class="overlay">
+          <div class="overlay-title">FALLING BLOCKS</div>
+          <div class="overlay-text">PRESS ENTER TO START</div>
+        </div>
+      </div>
+      <div class="side-panel">
+        <div class="panel-box">
+          <div class="panel-label">NEXT</div>
+          <canvas id="next-canvas" width="100" height="80"></canvas>
+        </div>
+        <div class="panel-box">
+          <div class="panel-label">SCORE</div>
+          <div class="panel-value" id="score">0</div>
+        </div>
+        <div class="panel-box">
+          <div class="panel-label">LINES</div>
+          <div class="panel-value" id="lines">0</div>
+        </div>
+        <div class="panel-box">
+          <div class="panel-label">LEVEL</div>
+          <div class="panel-value level" id="level">1</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-controls" id="mobile-controls">
+      <div class="mobile-row">
+        <div class="mobile-btn" data-action="rotate">&#8635;</div>
+      </div>
+      <div class="mobile-row">
+        <div class="mobile-btn" data-action="left">&#9664;</div>
+        <div class="mobile-btn" data-action="down">&#9660;</div>
+        <div class="mobile-btn" data-action="right">&#9654;</div>
+      </div>
+      <div class="mobile-row">
+        <div class="mobile-btn" data-action="drop" style="width: 170px;">DROP</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <kbd>&#8592;</kbd> <kbd>&#8594;</kbd> MOVE &nbsp;
+      <kbd>&#8593;</kbd> ROTATE &nbsp;
+      <kbd>&#8595;</kbd> SOFT DROP &nbsp;
+      <kbd>SPACE</kbd> HARD DROP &nbsp;
+      <kbd>P</kbd> PAUSE
+    </div>
+  </main>
+
+  <script>
+  (function() {
+    const COLS = 10;
+    const ROWS = 20;
+    const CELL = 25;
+    const canvas = document.getElementById('board');
+    const ctx = canvas.getContext('2d');
+    const nextCanvas = document.getElementById('next-canvas');
+    const nextCtx = nextCanvas.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const scoreEl = document.getElementById('score');
+    const linesEl = document.getElementById('lines');
+    const levelEl = document.getElementById('level');
+
+    // Brand colors for pieces
+    const COLORS = {
+      I: '#00f0ff', // Electric Cyan
+      O: '#ffb000', // Amber
+      T: '#9d4edd', // Purple Haze
+      S: '#39ff14', // Matrix Green
+      Z: '#ff2d7b', // Neon Magenta
+      L: '#ff6ac1', // Hot Pink
+      J: '#00f0ff', // Electric Cyan (lighter shade used differently)
+    };
+
+    const GLOW = {
+      I: 'rgba(0, 240, 255, 0.4)',
+      O: 'rgba(255, 176, 0, 0.4)',
+      T: 'rgba(157, 78, 221, 0.4)',
+      S: 'rgba(57, 255, 20, 0.4)',
+      Z: 'rgba(255, 45, 123, 0.4)',
+      L: 'rgba(255, 106, 193, 0.4)',
+      J: 'rgba(0, 240, 255, 0.3)',
+    };
+
+    // Piece shapes (each rotation state)
+    const SHAPES = {
+      I: [[0,0],[1,0],[2,0],[3,0]],
+      O: [[0,0],[1,0],[0,1],[1,1]],
+      T: [[0,0],[1,0],[2,0],[1,1]],
+      S: [[1,0],[2,0],[0,1],[1,1]],
+      Z: [[0,0],[1,0],[1,1],[2,1]],
+      L: [[0,0],[1,0],[2,0],[0,1]],
+      J: [[0,0],[1,0],[2,0],[2,1]],
+    };
+
+    const PIECE_TYPES = ['I','O','T','S','Z','L','J'];
+
+    let board, piece, nextType, score, lines, level, gameOver, paused, dropInterval, lastDrop, animFrame, started;
+
+    function createBoard() {
+      return Array.from({length: ROWS}, () => Array(COLS).fill(null));
+    }
+
+    function randomType() {
+      return PIECE_TYPES[Math.floor(Math.random() * PIECE_TYPES.length)];
+    }
+
+    function createPiece(type) {
+      const cells = SHAPES[type].map(([x,y]) => [x, y]);
+      return {
+        type: type,
+        cells: cells,
+        x: Math.floor((COLS - 3) / 2),
+        y: 0,
+      };
+    }
+
+    function rotateCells(cells) {
+      // Find bounding box
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const [x,y] of cells) {
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+      // Rotate 90 degrees clockwise around center
+      return cells.map(([x,y]) => {
+        const dx = x - cx;
+        const dy = y - cy;
+        return [Math.round(cx + dy), Math.round(cy - dx)];
+      });
+    }
+
+    function fits(cells, px, py) {
+      for (const [cx, cy] of cells) {
+        const bx = px + cx;
+        const by = py + cy;
+        if (bx < 0 || bx >= COLS || by >= ROWS) return false;
+        if (by >= 0 && board[by][bx] !== null) return false;
+      }
+      return true;
+    }
+
+    function lock() {
+      for (const [cx, cy] of piece.cells) {
+        const bx = piece.x + cx;
+        const by = piece.y + cy;
+        if (by >= 0 && by < ROWS) {
+          board[by][bx] = piece.type;
+        }
+      }
+      clearLines();
+      spawn();
+    }
+
+    function clearLines() {
+      let cleared = 0;
+      for (let r = ROWS - 1; r >= 0; r--) {
+        if (board[r].every(c => c !== null)) {
+          board.splice(r, 1);
+          board.unshift(Array(COLS).fill(null));
+          cleared++;
+          r++; // recheck this row
+        }
+      }
+      if (cleared > 0) {
+        const pts = [0, 100, 300, 500, 800];
+        score += (pts[cleared] || 800) * level;
+        lines += cleared;
+        level = Math.floor(lines / 10) + 1;
+        dropInterval = Math.max(80, 500 - (level - 1) * 40);
+        scoreEl.textContent = score;
+        linesEl.textContent = lines;
+        levelEl.textContent = level;
+      }
+    }
+
+    function spawn() {
+      piece = createPiece(nextType);
+      nextType = randomType();
+      drawNext();
+      if (!fits(piece.cells, piece.x, piece.y)) {
+        gameOver = true;
+        showOverlay('GAME OVER', 'SCORE: ' + score, 'PRESS ENTER TO RESTART');
+      }
+    }
+
+    function ghostY() {
+      let gy = piece.y;
+      while (fits(piece.cells, piece.x, gy + 1)) gy++;
+      return gy;
+    }
+
+    function drawCell(context, x, y, type, alpha) {
+      const color = COLORS[type];
+      const glow = GLOW[type];
+      context.globalAlpha = alpha || 1;
+      context.fillStyle = color;
+      context.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
+      // Inner highlight
+      context.fillStyle = 'rgba(255,255,255,0.12)';
+      context.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, 3);
+      context.fillRect(x * CELL + 1, y * CELL + 1, 3, CELL - 2);
+      // Glow
+      context.shadowColor = glow;
+      context.shadowBlur = 8;
+      context.fillStyle = color;
+      context.fillRect(x * CELL + 2, y * CELL + 2, CELL - 4, CELL - 4);
+      context.shadowBlur = 0;
+      context.globalAlpha = 1;
+    }
+
+    function getComputedColor(prop) {
+      return getComputedStyle(document.documentElement).getPropertyValue(prop).trim();
+    }
+
+    function draw() {
+      const bgColor = getComputedColor('--bg') || '#0a0a0f';
+      const borderColor = getComputedColor('--border') || '#7a7a90';
+
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Grid lines
+      ctx.strokeStyle = 'rgba(122, 122, 144, 0.08)';
+      ctx.lineWidth = 1;
+      for (let c = 1; c < COLS; c++) {
+        ctx.beginPath();
+        ctx.moveTo(c * CELL, 0);
+        ctx.lineTo(c * CELL, canvas.height);
+        ctx.stroke();
+      }
+      for (let r = 1; r < ROWS; r++) {
+        ctx.beginPath();
+        ctx.moveTo(0, r * CELL);
+        ctx.lineTo(canvas.width, r * CELL);
+        ctx.stroke();
+      }
+
+      // Locked cells
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (board[r][c]) drawCell(ctx, c, r, board[r][c]);
+        }
+      }
+
+      if (piece && !gameOver) {
+        // Ghost piece
+        const gy = ghostY();
+        if (gy !== piece.y) {
+          for (const [cx, cy] of piece.cells) {
+            const bx = piece.x + cx;
+            const by = gy + cy;
+            if (by >= 0) {
+              ctx.globalAlpha = 0.15;
+              ctx.fillStyle = COLORS[piece.type];
+              ctx.fillRect(bx * CELL + 1, by * CELL + 1, CELL - 2, CELL - 2);
+              ctx.globalAlpha = 1;
+            }
+          }
+        }
+
+        // Active piece
+        for (const [cx, cy] of piece.cells) {
+          const bx = piece.x + cx;
+          const by = piece.y + cy;
+          if (by >= 0) drawCell(ctx, bx, by, piece.type);
+        }
+      }
+    }
+
+    function drawNext() {
+      const bgColor = getComputedColor('--bg') || '#0a0a0f';
+      nextCtx.fillStyle = bgColor;
+      nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+      const cells = SHAPES[nextType];
+      // Center the piece in the preview
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const [x,y] of cells) {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+      const pw = maxX - minX + 1;
+      const ph = maxY - minY + 1;
+      const previewCell = 20;
+      const ox = Math.floor((nextCanvas.width - pw * previewCell) / 2) / previewCell - minX;
+      const oy = Math.floor((nextCanvas.height - ph * previewCell) / 2) / previewCell - minY;
+
+      for (const [cx, cy] of cells) {
+        const px = (cx + ox);
+        const py = (cy + oy);
+        nextCtx.fillStyle = COLORS[nextType];
+        nextCtx.shadowColor = GLOW[nextType];
+        nextCtx.shadowBlur = 6;
+        nextCtx.fillRect(px * previewCell + 1, py * previewCell + 1, previewCell - 2, previewCell - 2);
+        nextCtx.shadowBlur = 0;
+        // Inner highlight
+        nextCtx.fillStyle = 'rgba(255,255,255,0.12)';
+        nextCtx.fillRect(px * previewCell + 1, py * previewCell + 1, previewCell - 2, 2);
+      }
+    }
+
+    function showOverlay(title, mid, sub) {
+      overlay.style.display = 'flex';
+      overlay.innerHTML = '<div class="overlay-title">' + title + '</div>' +
+        (mid ? '<div class="overlay-score">' + mid + '</div>' : '') +
+        '<div class="overlay-text">' + sub + '</div>';
+    }
+
+    function hideOverlay() {
+      overlay.style.display = 'none';
+    }
+
+    function init() {
+      board = createBoard();
+      score = 0; lines = 0; level = 1;
+      gameOver = false; paused = false;
+      dropInterval = 500;
+      lastDrop = 0;
+      scoreEl.textContent = '0';
+      linesEl.textContent = '0';
+      levelEl.textContent = '1';
+      nextType = randomType();
+      spawn();
+      hideOverlay();
+      started = true;
+    }
+
+    function tick(time) {
+      animFrame = requestAnimationFrame(tick);
+      if (gameOver || paused || !started) { draw(); return; }
+      if (time - lastDrop > dropInterval) {
+        if (fits(piece.cells, piece.x, piece.y + 1)) {
+          piece.y++;
+        } else {
+          lock();
+        }
+        lastDrop = time;
+      }
+      draw();
+    }
+
+    function move(dx) {
+      if (fits(piece.cells, piece.x + dx, piece.y)) piece.x += dx;
+    }
+
+    function rotate() {
+      if (piece.type === 'O') return;
+      const rotated = rotateCells(piece.cells);
+      // Try normal position, then wall kicks
+      const kicks = [0, -1, 1, -2, 2];
+      for (const kick of kicks) {
+        if (fits(rotated, piece.x + kick, piece.y)) {
+          piece.cells = rotated;
+          piece.x += kick;
+          return;
+        }
+      }
+    }
+
+    function softDrop() {
+      if (fits(piece.cells, piece.x, piece.y + 1)) {
+        piece.y++;
+        score += 1;
+        scoreEl.textContent = score;
+        lastDrop = performance.now();
+      }
+    }
+
+    function hardDrop() {
+      let dropped = 0;
+      while (fits(piece.cells, piece.x, piece.y + 1)) {
+        piece.y++;
+        dropped++;
+      }
+      score += dropped * 2;
+      scoreEl.textContent = score;
+      lock();
+      lastDrop = performance.now();
+    }
+
+    // Keyboard
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        if (gameOver || !started) { init(); return; }
+      }
+      if (!started || gameOver) return;
+      if (e.key === 'p' || e.key === 'P') {
+        paused = !paused;
+        if (paused) {
+          showOverlay('PAUSED', null, 'PRESS P TO RESUME');
+        } else {
+          hideOverlay();
+          lastDrop = performance.now();
+        }
+        return;
+      }
+      if (paused) return;
+      switch(e.key) {
+        case 'ArrowLeft': move(-1); e.preventDefault(); break;
+        case 'ArrowRight': move(1); e.preventDefault(); break;
+        case 'ArrowUp': rotate(); e.preventDefault(); break;
+        case 'ArrowDown': softDrop(); e.preventDefault(); break;
+        case ' ': hardDrop(); e.preventDefault(); break;
+      }
+    });
+
+    // Mobile controls
+    document.querySelectorAll('.mobile-btn').forEach(function(btn) {
+      function handle(e) {
+        e.preventDefault();
+        if (!started || gameOver) { if (btn.dataset.action === 'drop') init(); return; }
+        if (paused) return;
+        switch(btn.dataset.action) {
+          case 'left': move(-1); break;
+          case 'right': move(1); break;
+          case 'rotate': rotate(); break;
+          case 'down': softDrop(); break;
+          case 'drop': hardDrop(); break;
+        }
+      }
+      btn.addEventListener('touchstart', handle, {passive: false});
+      btn.addEventListener('mousedown', handle);
+    });
+
+    // Start
+    showOverlay('FALLING BLOCKS', null, 'PRESS ENTER TO START');
+    draw();
+    requestAnimationFrame(tick);
+  })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>REACTION / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 2rem;
+    }
+
+    .zone {
+      width: 100%;
+      height: 320px;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: border-color 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .zone.waiting {
+      border-color: var(--accent-magenta);
+    }
+
+    .zone.ready {
+      border-color: #39ff14;
+      background: rgba(57, 255, 20, 0.06);
+    }
+
+    .zone.too-early {
+      border-color: #ff1744;
+    }
+
+    .zone.result {
+      border-color: var(--accent-cyan);
+    }
+
+    .zone-text {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      line-height: 1.4;
+    }
+
+    .zone-sub {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 0.6rem;
+      letter-spacing: 0.06em;
+    }
+
+    .zone.waiting .zone-text {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 15px var(--glow-magenta);
+    }
+
+    .zone.ready .zone-text {
+      color: #39ff14;
+      text-shadow: 0 0 20px rgba(57, 255, 20, 0.6);
+    }
+
+    .zone.too-early .zone-text {
+      color: #ff1744;
+      text-shadow: 0 0 15px rgba(255, 23, 68, 0.5);
+    }
+
+    .zone.result .zone-text {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 15px var(--glow-cyan);
+    }
+
+    .zone.idle .zone-text {
+      color: var(--text-bright);
+    }
+
+    .time-display {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: var(--accent-cyan);
+      text-shadow: 0 0 25px var(--glow-cyan);
+    }
+
+    .time-unit {
+      font-size: 1rem;
+      font-weight: 400;
+      color: var(--text-dim);
+      margin-left: 0.2rem;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-top: 1.5rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+    }
+
+    .stat-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      letter-spacing: 0.04em;
+    }
+
+    .stat-value.best {
+      color: #39ff14;
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+    }
+
+    .stat-value.empty {
+      color: var(--text-dim);
+    }
+
+    .history {
+      margin-top: 1.5rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .history-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.8rem;
+    }
+
+    .history-bar-container {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 4px;
+      height: 80px;
+    }
+
+    .history-bar {
+      width: 28px;
+      background: var(--accent-cyan);
+      opacity: 0.6;
+      transition: height 0.3s, opacity 0.3s;
+      position: relative;
+    }
+
+    .history-bar.latest {
+      opacity: 1;
+      background: var(--accent-magenta);
+      box-shadow: 0 0 8px var(--glow-magenta);
+    }
+
+    .history-bar.best-bar {
+      opacity: 1;
+      background: #39ff14;
+      box-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+    }
+
+    .history-bar-label {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+
+    .controls {
+      margin-top: 1.5rem;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      line-height: 1.6;
+    }
+
+    .controls kbd {
+      display: inline-block;
+      border: 1px solid var(--border);
+      padding: 0.15em 0.45em;
+      font-family: inherit;
+      font-size: inherit;
+      color: var(--text-muted);
+    }
+
+    .rating {
+      margin-top: 0.6rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .scanline {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: rgba(57, 255, 20, 0.3);
+      animation: scanline-sweep 0.08s linear;
+      pointer-events: none;
+    }
+
+    @keyframes scanline-sweep {
+      from { top: 0; }
+      to { top: 100%; }
+    }
+
+    /* Pulse animation for the "ready" state */
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: inset 0 0 30px rgba(57, 255, 20, 0.05); }
+      50% { box-shadow: inset 0 0 60px rgba(57, 255, 20, 0.12); }
+    }
+
+    .zone.ready {
+      animation: pulse-glow 0.4s ease-in-out infinite;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>REACTION</h1>
+    <p class="subtitle">HOW FAST CAN YOU CLICK?</p>
+
+    <div class="zone idle" id="zone">
+      <div class="zone-text" id="zone-text">CLICK TO START</div>
+      <div class="zone-sub" id="zone-sub">test your reaction time</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">BEST</div>
+        <div class="stat-value empty" id="stat-best">---</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">AVERAGE</div>
+        <div class="stat-value empty" id="stat-avg">---</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">TRIES</div>
+        <div class="stat-value empty" id="stat-tries">0</div>
+      </div>
+    </div>
+
+    <div class="history" id="history-section" style="display:none">
+      <div class="history-label">LAST 10 ATTEMPTS</div>
+      <div class="history-bar-container" id="history-bars"></div>
+    </div>
+
+    <div class="controls">
+      <kbd>CLICK</kbd> or <kbd>SPACE</kbd> to react &middot; wait for green, then click as fast as you can
+    </div>
+  </main>
+
+  <script>
+    (function() {
+      var zone = document.getElementById('zone');
+      var zoneText = document.getElementById('zone-text');
+      var zoneSub = document.getElementById('zone-sub');
+      var statBest = document.getElementById('stat-best');
+      var statAvg = document.getElementById('stat-avg');
+      var statTries = document.getElementById('stat-tries');
+      var historySection = document.getElementById('history-section');
+      var historyBars = document.getElementById('history-bars');
+
+      // State
+      var state = 'idle'; // idle, waiting, ready, result, too-early
+      var timeout = null;
+      var startTime = 0;
+      var times = [];
+
+      function setState(s) {
+        state = s;
+        zone.className = 'zone ' + s;
+      }
+
+      function getRating(ms) {
+        if (ms < 150) return { text: 'INHUMAN', color: '#39ff14' };
+        if (ms < 200) return { text: 'INCREDIBLE', color: '#39ff14' };
+        if (ms < 250) return { text: 'FAST', color: '#00f0ff' };
+        if (ms < 300) return { text: 'GOOD', color: '#00f0ff' };
+        if (ms < 400) return { text: 'AVERAGE', color: '#9d4edd' };
+        if (ms < 500) return { text: 'SLOW', color: '#ff2d7b' };
+        return { text: 'SLUGGISH', color: '#ff1744' };
+      }
+
+      function updateStats() {
+        if (times.length === 0) return;
+
+        var best = Math.min.apply(null, times);
+        var sum = 0;
+        for (var i = 0; i < times.length; i++) sum += times[i];
+        var avg = Math.round(sum / times.length);
+
+        statBest.textContent = best + ' ms';
+        statBest.className = 'stat-value best';
+        statAvg.textContent = avg + ' ms';
+        statAvg.className = 'stat-value';
+        statTries.textContent = times.length;
+        statTries.className = 'stat-value';
+
+        // History bars
+        var recent = times.slice(-10);
+        var maxTime = Math.max.apply(null, recent);
+        var bestTime = Math.min.apply(null, recent);
+        historySection.style.display = 'block';
+        historyBars.innerHTML = '';
+
+        for (var j = 0; j < recent.length; j++) {
+          var bar = document.createElement('div');
+          var h = Math.max(8, (recent[j] / maxTime) * 70);
+          bar.className = 'history-bar';
+          bar.style.height = h + 'px';
+
+          if (j === recent.length - 1) {
+            bar.classList.add('latest');
+          } else if (recent[j] === bestTime) {
+            bar.classList.add('best-bar');
+          }
+
+          var label = document.createElement('div');
+          label.className = 'history-bar-label';
+          label.textContent = recent[j];
+          bar.appendChild(label);
+
+          historyBars.appendChild(bar);
+        }
+      }
+
+      function startWaiting() {
+        setState('waiting');
+        zoneText.textContent = 'WAIT...';
+        zoneSub.textContent = 'don\'t click yet';
+
+        var delay = 1500 + Math.random() * 4000; // 1.5s to 5.5s
+        timeout = setTimeout(function() {
+          setState('ready');
+          zoneText.textContent = 'CLICK NOW!';
+          zoneSub.textContent = '';
+          startTime = performance.now();
+        }, delay);
+      }
+
+      function handleClick() {
+        if (state === 'idle' || state === 'result' || state === 'too-early') {
+          startWaiting();
+        } else if (state === 'waiting') {
+          // Too early!
+          clearTimeout(timeout);
+          setState('too-early');
+          zoneText.textContent = 'TOO EARLY';
+          zoneSub.textContent = 'click to try again';
+        } else if (state === 'ready') {
+          var elapsed = Math.round(performance.now() - startTime);
+          times.push(elapsed);
+
+          setState('result');
+          var rating = getRating(elapsed);
+
+          zoneText.innerHTML = '<span class="time-display">' + elapsed + '<span class="time-unit">ms</span></span>';
+          zoneSub.innerHTML = '<span class="rating" style="color:' + rating.color + ';text-shadow:0 0 10px ' + rating.color + '">' + rating.text + '</span>';
+          zoneSub.innerHTML += '<br><span style="margin-top:0.5rem;display:inline-block">click to go again</span>';
+
+          updateStats();
+        }
+      }
+
+      zone.addEventListener('click', handleClick);
+      zone.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        handleClick();
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.code === 'Space' || e.key === ' ') {
+          e.preventDefault();
+          handleClick();
+        }
+      });
+    })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOKOBAN / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+      transition: color 0.3s;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.4rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .info-bar {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+    }
+
+    .info-bar .label {
+      color: var(--text-dim);
+    }
+
+    .info-bar .value {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 8px var(--glow-cyan-soft);
+    }
+
+    .info-bar .level-val {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 8px var(--glow-magenta);
+    }
+
+    #game-canvas {
+      display: block;
+      margin: 0 auto 1rem;
+      border: 1px solid var(--border);
+      image-rendering: pixelated;
+    }
+
+    .btn-row {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1.2rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      padding: 0.4rem 0.9rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .btn.active {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+    }
+
+    .msg {
+      font-size: 0.85rem;
+      color: var(--accent-green);
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+      margin-bottom: 1rem;
+      min-height: 1.2em;
+    }
+
+    .controls-info {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      margin-top: 1rem;
+      line-height: 1.6;
+    }
+
+    .controls-info kbd {
+      display: inline-block;
+      border: 1px solid var(--border);
+      padding: 0.1rem 0.4rem;
+      color: var(--text-bright);
+      font-size: 0.6rem;
+    }
+
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 1.2rem;
+      margin-bottom: 1rem;
+      font-size: 0.65rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      color: var(--text-dim);
+    }
+
+    .legend-swatch {
+      width: 12px;
+      height: 12px;
+      display: inline-block;
+    }
+
+    /* Mobile d-pad */
+    .dpad {
+      display: none;
+      margin: 0.8rem auto;
+      width: 150px;
+      height: 150px;
+      position: relative;
+    }
+
+    .dpad-btn {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .dpad-btn:active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .dpad-up { top: 0; left: 51px; }
+    .dpad-down { bottom: 0; left: 51px; }
+    .dpad-left { top: 51px; left: 0; }
+    .dpad-right { top: 51px; right: 0; }
+
+    @media (max-width: 600px) {
+      .dpad { display: block; }
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      .dpad { display: block; }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>SOKOBAN</h1>
+    <p class="subtitle">PUSH BOXES ONTO TARGETS. CLASSIC PUZZLE, NEON STYLE.</p>
+
+    <div class="info-bar">
+      <span><span class="label">LEVEL </span><span class="value level-val" id="level-num">1</span><span class="label"> / </span><span class="value level-val" id="level-total">10</span></span>
+      <span><span class="label">MOVES </span><span class="value" id="move-count">0</span></span>
+      <span><span class="label">PUSHES </span><span class="value" id="push-count">0</span></span>
+    </div>
+
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:#00f0ff;box-shadow:0 0 6px rgba(0,240,255,0.4)"></span> YOU</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#ff2d7b;box-shadow:0 0 6px rgba(255,45,123,0.4)"></span> BOX</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#39ff14;box-shadow:0 0 6px rgba(57,255,20,0.4)"></span> TARGET</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#9d4edd;box-shadow:0 0 6px rgba(157,78,221,0.4)"></span> DONE</span>
+    </div>
+
+    <canvas id="game-canvas" width="400" height="400"></canvas>
+
+    <p class="msg" id="msg"></p>
+
+    <div class="btn-row">
+      <button class="btn" id="btn-undo">UNDO</button>
+      <button class="btn" id="btn-restart">RESTART</button>
+      <button class="btn" id="btn-prev">&lt; PREV</button>
+      <button class="btn" id="btn-next">NEXT &gt;</button>
+    </div>
+
+    <div class="dpad">
+      <button class="dpad-btn dpad-up" data-dir="up">&uarr;</button>
+      <button class="dpad-btn dpad-down" data-dir="down">&darr;</button>
+      <button class="dpad-btn dpad-left" data-dir="left">&larr;</button>
+      <button class="dpad-btn dpad-right" data-dir="right">&rarr;</button>
+    </div>
+
+    <div class="controls-info">
+      <kbd>&uarr;</kbd> <kbd>&darr;</kbd> <kbd>&larr;</kbd> <kbd>&rarr;</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE
+      &nbsp;&middot;&nbsp; <kbd>Z</kbd> UNDO &nbsp;&middot;&nbsp; <kbd>R</kbd> RESTART
+    </div>
+  </main>
+
+  <script>
+  (function() {
+    // --- Level data (standard Sokoban notation) ---
+    // # = wall, @ = player, $ = box, . = target, + = player on target, * = box on target, space = floor
+    const LEVELS = [
+      // Level 1: simple intro
+      [
+        '  ####  ',
+        '###  ###',
+        '#   $  #',
+        '#  .@  #',
+        '#  $  ##',
+        '## . ##',
+        ' #####  ',
+      ],
+      // Level 2
+      [
+        '######  ',
+        '#    ###',
+        '# $ $  #',
+        '## .#  #',
+        ' #. @  #',
+        ' #  ####',
+        ' ####   ',
+      ],
+      // Level 3
+      [
+        '  #####',
+        '###   #',
+        '# $ # #',
+        '# . . #',
+        '# $$# #',
+        '#  @  #',
+        '#######',
+      ],
+      // Level 4
+      [
+        '########',
+        '#  #   #',
+        '# $$ $ #',
+        '#  # @##',
+        '# ...# ',
+        '#   ## ',
+        '###### ',
+      ],
+      // Level 5
+      [
+        '  ##### ',
+        '  #   # ',
+        '###$# ##',
+        '#  $  @#',
+        '# .$.  #',
+        '# .#.  #',
+        '##   ###',
+        ' #####  ',
+      ],
+      // Level 6
+      [
+        '#######',
+        '#     #',
+        '#.$ $.#',
+        '# $$  #',
+        '#. @. #',
+        '#  #  #',
+        '#######',
+      ],
+      // Level 7
+      [
+        '  ######',
+        '  #    #',
+        '### #$ #',
+        '#  $.$ #',
+        '# .+.  #',
+        '# $$.###',
+        '#  # #  ',
+        '######  ',
+      ],
+      // Level 8
+      [
+        '  ####  ',
+        '  #  #  ',
+        '  # $###',
+        '###$   #',
+        '#  $.# #',
+        '# #. . #',
+        '#   @###',
+        '######  ',
+      ],
+      // Level 9
+      [
+        '#####   ',
+        '#   ### ',
+        '# #$  ##',
+        '#  $ $ #',
+        '## #.  #',
+        ' # ..# #',
+        ' # .@  #',
+        ' #######',
+      ],
+      // Level 10
+      [
+        '  ######',
+        '###    #',
+        '# $$$  #',
+        '# # ## #',
+        '#  @.  #',
+        '## ...##',
+        ' # $# # ',
+        ' #    # ',
+        ' ###### ',
+      ],
+    ];
+
+    // --- Parse level ---
+    const WALL = 1, FLOOR = 2, TARGET = 3;
+    const EMPTY = 0, PLAYER = 10, BOX = 20;
+
+    function parseLevel(lines) {
+      const maxW = Math.max(...lines.map(l => l.length));
+      const h = lines.length;
+      const grid = [];   // static: WALL, FLOOR, TARGET
+      const objects = []; // dynamic: EMPTY, PLAYER, BOX
+      let playerPos = null;
+      for (let r = 0; r < h; r++) {
+        grid[r] = [];
+        objects[r] = [];
+        for (let c = 0; c < maxW; c++) {
+          const ch = r < lines.length && c < lines[r].length ? lines[r][c] : ' ';
+          let g = FLOOR, o = EMPTY;
+          switch (ch) {
+            case '#': g = WALL; break;
+            case '@': o = PLAYER; playerPos = {r, c}; break;
+            case '$': o = BOX; break;
+            case '.': g = TARGET; break;
+            case '+': g = TARGET; o = PLAYER; playerPos = {r, c}; break;
+            case '*': g = TARGET; o = BOX; break;
+            case ' ': g = FLOOR; break;
+          }
+          grid[r][c] = g;
+          objects[r][c] = o;
+        }
+      }
+      return { grid, objects, w: maxW, h, playerPos };
+    }
+
+    // --- Game state ---
+    let currentLevel = 0;
+    let state = null;
+    let history = [];
+    let moves = 0;
+    let pushes = 0;
+    let solved = false;
+
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const msgEl = document.getElementById('msg');
+    const moveEl = document.getElementById('move-count');
+    const pushEl = document.getElementById('push-count');
+    const levelEl = document.getElementById('level-num');
+    const totalEl = document.getElementById('level-total');
+
+    totalEl.textContent = LEVELS.length;
+
+    // --- Colors ---
+    const cs = getComputedStyle(document.documentElement);
+    function getColor(prop, fallback) {
+      const v = cs.getPropertyValue(prop).trim();
+      return v || fallback;
+    }
+
+    function colors() {
+      const s = getComputedStyle(document.documentElement);
+      return {
+        void: s.getPropertyValue('--bg-primary').trim() || '#0a0a0f',
+        wall: s.getPropertyValue('--text-dim').trim() || '#7a7a90',
+        wallFace: s.getPropertyValue('--border').trim() || '#3a3a52',
+        floor: s.getPropertyValue('--bg-secondary').trim() || '#121218',
+        target: '#39ff14',
+        player: '#00f0ff',
+        box: '#ff2d7b',
+        boxDone: '#9d4edd',
+        text: s.getPropertyValue('--text-bright').trim() || '#e0e0e8',
+      };
+    }
+
+    // --- Load level ---
+    function loadLevel(idx) {
+      if (idx < 0) idx = 0;
+      if (idx >= LEVELS.length) idx = LEVELS.length - 1;
+      currentLevel = idx;
+      state = parseLevel(LEVELS[idx]);
+      history = [];
+      moves = 0;
+      pushes = 0;
+      solved = false;
+      msgEl.textContent = '';
+      update();
+      resizeCanvas();
+    }
+
+    // --- Resize canvas to fit level ---
+    function resizeCanvas() {
+      const maxPx = Math.min(500, window.innerWidth - 40);
+      const cellW = Math.floor(maxPx / state.w);
+      const cellH = Math.floor(maxPx / state.h);
+      const cell = Math.max(24, Math.min(cellW, cellH));
+      canvas.width = state.w * cell;
+      canvas.height = state.h * cell;
+      canvas.style.width = canvas.width + 'px';
+      canvas.style.height = canvas.height + 'px';
+      draw();
+    }
+
+    // --- Check solved ---
+    function checkSolved() {
+      for (let r = 0; r < state.h; r++) {
+        for (let c = 0; c < state.w; c++) {
+          if (state.grid[r][c] === TARGET && state.objects[r][c] !== BOX) return false;
+        }
+      }
+      return true;
+    }
+
+    // --- Clone objects ---
+    function cloneObjects() {
+      return state.objects.map(row => row.slice());
+    }
+
+    // --- Move ---
+    function tryMove(dr, dc) {
+      if (solved) return;
+      const {r, c} = state.playerPos;
+      const nr = r + dr, nc = c + dc;
+      if (nr < 0 || nr >= state.h || nc < 0 || nc >= state.w) return;
+      if (state.grid[nr][nc] === WALL) return;
+
+      const snap = { objects: cloneObjects(), playerPos: {...state.playerPos}, moves, pushes };
+
+      if (state.objects[nr][nc] === BOX) {
+        const br = nr + dr, bc = nc + dc;
+        if (br < 0 || br >= state.h || bc < 0 || bc >= state.w) return;
+        if (state.grid[br][bc] === WALL || state.objects[br][bc] === BOX) return;
+        // push box
+        state.objects[br][bc] = BOX;
+        state.objects[nr][nc] = EMPTY;
+        pushes++;
+      }
+
+      // move player
+      state.objects[r][c] = EMPTY;
+      state.objects[nr][nc] = PLAYER;
+      state.playerPos = {r: nr, c: nc};
+      moves++;
+      history.push(snap);
+
+      if (checkSolved()) {
+        solved = true;
+        if (currentLevel < LEVELS.length - 1) {
+          msgEl.textContent = 'LEVEL COMPLETE! Press NEXT or N for next level.';
+        } else {
+          msgEl.textContent = 'ALL LEVELS COMPLETE! You are a Sokoban master.';
+        }
+      }
+      update();
+    }
+
+    // --- Undo ---
+    function undo() {
+      if (history.length === 0) return;
+      const snap = history.pop();
+      state.objects = snap.objects;
+      state.playerPos = snap.playerPos;
+      moves = snap.moves;
+      pushes = snap.pushes;
+      solved = false;
+      msgEl.textContent = '';
+      update();
+    }
+
+    // --- Update HUD ---
+    function update() {
+      moveEl.textContent = moves;
+      pushEl.textContent = pushes;
+      levelEl.textContent = currentLevel + 1;
+      draw();
+    }
+
+    // --- Determine if position is outside the playable area ---
+    function isOutside(grid, r, c, w, h) {
+      // flood fill from edges: anything reachable from edge that isn't wall is outside
+      // simpler heuristic: if it's not wall and not reachable from player, it's outside
+      // actually, just check if cell is in the "void" (spaces outside walls)
+      if (grid[r][c] === WALL) return false;
+      // check if enclosed by walls using the level lines
+      // simple: if original char was space and not inside, treat as void
+      return false; // We'll handle in draw by checking original level
+    }
+
+    // --- Draw ---
+    function draw() {
+      const c = colors();
+      const cellW = canvas.width / state.w;
+      const cellH = canvas.height / state.h;
+      const cell = Math.min(cellW, cellH);
+
+      ctx.fillStyle = c.void;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const levelLines = LEVELS[currentLevel];
+
+      for (let r = 0; r < state.h; r++) {
+        for (let col = 0; col < state.w; col++) {
+          const x = col * cell;
+          const y = r * cell;
+          const origChar = r < levelLines.length && col < levelLines[r].length ? levelLines[r][col] : ' ';
+          const isVoid = origChar === ' ' && state.grid[r][col] !== TARGET;
+
+          if (isVoid && state.objects[r][col] === EMPTY) {
+            // void - background
+            continue;
+          }
+
+          // Draw floor
+          if (state.grid[r][col] !== WALL) {
+            ctx.fillStyle = c.floor;
+            ctx.fillRect(x + 1, y + 1, cell - 2, cell - 2);
+          }
+
+          // Draw wall
+          if (state.grid[r][col] === WALL) {
+            ctx.fillStyle = c.wall;
+            ctx.fillRect(x, y, cell, cell);
+            ctx.fillStyle = c.wallFace;
+            ctx.fillRect(x + 2, y + 2, cell - 4, cell - 4);
+          }
+
+          // Draw target
+          if (state.grid[r][col] === TARGET && state.objects[r][col] !== BOX) {
+            ctx.fillStyle = c.target;
+            ctx.globalAlpha = 0.35;
+            ctx.fillRect(x + cell * 0.25, y + cell * 0.25, cell * 0.5, cell * 0.5);
+            ctx.globalAlpha = 1;
+            // diamond marker
+            ctx.strokeStyle = c.target;
+            ctx.lineWidth = 1.5;
+            ctx.shadowColor = 'rgba(57,255,20,0.5)';
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.moveTo(x + cell / 2, y + cell * 0.2);
+            ctx.lineTo(x + cell * 0.8, y + cell / 2);
+            ctx.lineTo(x + cell / 2, y + cell * 0.8);
+            ctx.lineTo(x + cell * 0.2, y + cell / 2);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+          }
+
+          // Draw box
+          if (state.objects[r][col] === BOX) {
+            const onTarget = state.grid[r][col] === TARGET;
+            const boxColor = onTarget ? c.boxDone : c.box;
+            const glowColor = onTarget ? 'rgba(157,78,221,0.5)' : 'rgba(255,45,123,0.4)';
+            ctx.fillStyle = boxColor;
+            ctx.shadowColor = glowColor;
+            ctx.shadowBlur = 8;
+            ctx.fillRect(x + cell * 0.12, y + cell * 0.12, cell * 0.76, cell * 0.76);
+            ctx.shadowBlur = 0;
+            // inner border
+            ctx.strokeStyle = onTarget ? 'rgba(157,78,221,0.6)' : 'rgba(255,45,123,0.5)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x + cell * 0.22, y + cell * 0.22, cell * 0.56, cell * 0.56);
+            // checkmark if on target
+            if (onTarget) {
+              ctx.strokeStyle = '#fff';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(x + cell * 0.32, y + cell * 0.52);
+              ctx.lineTo(x + cell * 0.45, y + cell * 0.65);
+              ctx.lineTo(x + cell * 0.68, y + cell * 0.35);
+              ctx.stroke();
+            }
+          }
+
+          // Draw player
+          if (state.objects[r][col] === PLAYER) {
+            ctx.fillStyle = c.player;
+            ctx.shadowColor = 'rgba(0,240,255,0.5)';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(x + cell / 2, y + cell / 2, cell * 0.32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            // inner ring
+            ctx.strokeStyle = 'rgba(0,240,255,0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(x + cell / 2, y + cell / 2, cell * 0.2, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    // --- Input ---
+    document.addEventListener('keydown', function(e) {
+      switch (e.key) {
+        case 'ArrowUp': case 'w': case 'W': e.preventDefault(); tryMove(-1, 0); break;
+        case 'ArrowDown': case 's': case 'S': e.preventDefault(); tryMove(1, 0); break;
+        case 'ArrowLeft': case 'a': case 'A': e.preventDefault(); tryMove(0, -1); break;
+        case 'ArrowRight': case 'd': case 'D': e.preventDefault(); tryMove(0, 1); break;
+        case 'z': case 'Z': undo(); break;
+        case 'r': case 'R': loadLevel(currentLevel); break;
+        case 'n': case 'N': if (currentLevel < LEVELS.length - 1) loadLevel(currentLevel + 1); break;
+        case 'p': case 'P': if (currentLevel > 0) loadLevel(currentLevel - 1); break;
+      }
+    });
+
+    // D-pad buttons
+    document.querySelectorAll('.dpad-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        switch (this.dataset.dir) {
+          case 'up': tryMove(-1, 0); break;
+          case 'down': tryMove(1, 0); break;
+          case 'left': tryMove(0, -1); break;
+          case 'right': tryMove(0, 1); break;
+        }
+      });
+    });
+
+    // Buttons
+    document.getElementById('btn-undo').addEventListener('click', undo);
+    document.getElementById('btn-restart').addEventListener('click', () => loadLevel(currentLevel));
+    document.getElementById('btn-prev').addEventListener('click', () => { if (currentLevel > 0) loadLevel(currentLevel - 1); });
+    document.getElementById('btn-next').addEventListener('click', () => { if (currentLevel < LEVELS.length - 1) loadLevel(currentLevel + 1); });
+
+    // Swipe support
+    let touchStartX = 0, touchStartY = 0;
+    canvas.addEventListener('touchstart', function(e) {
+      const t = e.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', function(e) {
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+      const minSwipe = 30;
+      if (Math.abs(dx) < minSwipe && Math.abs(dy) < minSwipe) return;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        tryMove(0, dx > 0 ? 1 : -1);
+      } else {
+        tryMove(dy > 0 ? 1 : -1, 0);
+      }
+    }, { passive: true });
+
+    // Resize
+    window.addEventListener('resize', () => { if (state) resizeCanvas(); });
+
+    // Start
+    loadLevel(0);
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LIGHTS OUT / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+      transition: color 0.3s;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.4rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .controls button {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.4rem 0.8rem;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: all 0.2s;
+    }
+
+    .controls button:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .controls button.active {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+      text-shadow: 0 0 8px var(--glow-magenta);
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.75rem;
+    }
+
+    .stat-label {
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      margin-bottom: 0.15rem;
+    }
+
+    .stat-value {
+      color: var(--accent-cyan);
+      font-weight: 700;
+      font-size: 1.2rem;
+      text-shadow: 0 0 8px var(--glow-cyan-soft);
+    }
+
+    .grid-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .grid {
+      display: grid;
+      gap: 3px;
+    }
+
+    .cell {
+      width: 56px;
+      height: 56px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+
+    .cell.on {
+      background: #00f0ff;
+      border-color: #00f0ff;
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.3);
+    }
+
+    .cell.off {
+      background: rgba(122, 122, 144, 0.1);
+      border-color: var(--border);
+    }
+
+    .cell:hover {
+      border-color: var(--accent-magenta);
+      box-shadow: 0 0 10px var(--glow-magenta);
+    }
+
+    .cell.flash {
+      animation: cellFlash 0.2s ease-out;
+    }
+
+    @keyframes cellFlash {
+      0% { transform: scale(0.92); }
+      50% { transform: scale(1.04); }
+      100% { transform: scale(1); }
+    }
+
+    .message {
+      font-size: 0.85rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 1rem;
+      min-height: 1.4rem;
+    }
+
+    .message.win {
+      color: var(--accent-green);
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+      font-weight: 700;
+    }
+
+    .message.hint {
+      color: var(--text-dim);
+    }
+
+    .new-game-btn {
+      background: transparent;
+      border: 1px solid var(--accent-magenta);
+      color: var(--accent-magenta);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.5rem 1.2rem;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      transition: all 0.2s;
+      text-shadow: 0 0 8px var(--glow-magenta);
+      margin-bottom: 1.5rem;
+    }
+
+    .new-game-btn:hover {
+      background: rgba(255, 45, 123, 0.1);
+      box-shadow: 0 0 16px var(--glow-magenta);
+    }
+
+    .help {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      line-height: 1.7;
+      letter-spacing: 0.04em;
+      border-top: 1px solid var(--border);
+      padding-top: 1.2rem;
+      max-width: 380px;
+      margin: 0 auto;
+    }
+
+    .help span {
+      color: var(--accent-cyan);
+    }
+
+    .lights-remaining {
+      color: var(--accent-green);
+      font-weight: 700;
+    }
+
+    @media (max-width: 400px) {
+      .cell {
+        width: 44px;
+        height: 44px;
+      }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>LIGHTS OUT</h1>
+    <p class="subtitle">TOGGLE ALL LIGHTS OFF TO WIN</p>
+
+    <div class="controls">
+      <button onclick="setSize(3)" id="btn-3">3×3</button>
+      <button onclick="setSize(4)" id="btn-4">4×4</button>
+      <button onclick="setSize(5)" id="btn-5" class="active">5×5</button>
+    </div>
+
+    <div class="stats">
+      <div>
+        <div class="stat-label">MOVES</div>
+        <div class="stat-value" id="moves">0</div>
+      </div>
+      <div>
+        <div class="stat-label">LIGHTS</div>
+        <div class="stat-value lights-remaining" id="lights">0</div>
+      </div>
+      <div>
+        <div class="stat-label">BEST</div>
+        <div class="stat-value" id="best">—</div>
+      </div>
+    </div>
+
+    <div class="grid-container">
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="message hint" id="message">Click a light to toggle it and its neighbors</div>
+
+    <button class="new-game-btn" onclick="newGame()">NEW PUZZLE</button>
+
+    <div class="help">
+      <span>Click</span> a cell to toggle it and its 4 neighbors.<br>
+      Turn <span>all lights off</span> to solve the puzzle.<br>
+      Smaller grids are easier. Try 3×3 first.
+    </div>
+  </main>
+
+  <script>
+    let gridSize = 5;
+    let grid = [];
+    let moves = 0;
+    let won = false;
+    let bestScores = {};
+
+    // Load best scores from localStorage
+    try {
+      const saved = localStorage.getItem('zero-lights-out-best');
+      if (saved) bestScores = JSON.parse(saved);
+    } catch(e) {}
+
+    function setSize(s) {
+      gridSize = s;
+      document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+      document.getElementById('btn-' + s).classList.add('active');
+      newGame();
+    }
+
+    function newGame() {
+      won = false;
+      moves = 0;
+      document.getElementById('moves').textContent = '0';
+      document.getElementById('message').textContent = 'Click a light to toggle it and its neighbors';
+      document.getElementById('message').className = 'message hint';
+
+      // Generate a solvable puzzle by starting from all-off and applying random clicks
+      grid = [];
+      for (let r = 0; r < gridSize; r++) {
+        grid[r] = [];
+        for (let c = 0; c < gridSize; c++) {
+          grid[r][c] = false;
+        }
+      }
+
+      // Apply random toggles to create a solvable puzzle
+      const numClicks = Math.floor(gridSize * gridSize * 0.4) + Math.floor(Math.random() * gridSize);
+      const clicked = new Set();
+      let attempts = 0;
+      while (clicked.size < numClicks && attempts < 100) {
+        const r = Math.floor(Math.random() * gridSize);
+        const c = Math.floor(Math.random() * gridSize);
+        const key = r + ',' + c;
+        if (!clicked.has(key)) {
+          clicked.add(key);
+          toggleCell(r, c, true);
+        }
+        attempts++;
+      }
+
+      // Make sure at least some lights are on
+      const litCount = countLights();
+      if (litCount === 0) {
+        // Toggle center cell and neighbors
+        const mid = Math.floor(gridSize / 2);
+        toggleCell(mid, mid, true);
+      }
+
+      updateDisplay();
+      updateBestDisplay();
+    }
+
+    function toggleCell(r, c, silent) {
+      // Toggle the cell and its neighbors
+      const targets = [
+        [r, c],
+        [r - 1, c],
+        [r + 1, c],
+        [r, c - 1],
+        [r, c + 1]
+      ];
+
+      targets.forEach(([tr, tc]) => {
+        if (tr >= 0 && tr < gridSize && tc >= 0 && tc < gridSize) {
+          grid[tr][tc] = !grid[tr][tc];
+        }
+      });
+    }
+
+    function countLights() {
+      let count = 0;
+      for (let r = 0; r < gridSize; r++) {
+        for (let c = 0; c < gridSize; c++) {
+          if (grid[r][c]) count++;
+        }
+      }
+      return count;
+    }
+
+    function handleClick(r, c) {
+      if (won) return;
+
+      toggleCell(r, c, false);
+      moves++;
+      document.getElementById('moves').textContent = moves;
+
+      // Flash animation on affected cells
+      const targets = [[r,c],[r-1,c],[r+1,c],[r,c-1],[r,c+1]];
+      targets.forEach(([tr, tc]) => {
+        if (tr >= 0 && tr < gridSize && tc >= 0 && tc < gridSize) {
+          const el = document.querySelector(`[data-r="${tr}"][data-c="${tc}"]`);
+          if (el) {
+            el.classList.remove('flash');
+            void el.offsetWidth; // reflow
+            el.classList.add('flash');
+          }
+        }
+      });
+
+      updateDisplay();
+
+      // Check win
+      if (countLights() === 0) {
+        won = true;
+        document.getElementById('message').textContent = `SOLVED IN ${moves} MOVES!`;
+        document.getElementById('message').className = 'message win';
+
+        // Save best score
+        const key = gridSize + 'x' + gridSize;
+        if (!bestScores[key] || moves < bestScores[key]) {
+          bestScores[key] = moves;
+          try { localStorage.setItem('zero-lights-out-best', JSON.stringify(bestScores)); } catch(e) {}
+          document.getElementById('message').textContent = `SOLVED IN ${moves} MOVES! NEW BEST!`;
+        }
+        updateBestDisplay();
+      }
+    }
+
+    function updateDisplay() {
+      const gridEl = document.getElementById('grid');
+      gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+      gridEl.innerHTML = '';
+
+      for (let r = 0; r < gridSize; r++) {
+        for (let c = 0; c < gridSize; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell ' + (grid[r][c] ? 'on' : 'off');
+          cell.dataset.r = r;
+          cell.dataset.c = c;
+          cell.addEventListener('click', () => handleClick(r, c));
+          gridEl.appendChild(cell);
+        }
+      }
+
+      document.getElementById('lights').textContent = countLights();
+    }
+
+    function updateBestDisplay() {
+      const key = gridSize + 'x' + gridSize;
+      const best = bestScores[key];
+      document.getElementById('best').textContent = best ? best : '—';
+    }
+
+    // Start
+    newGame();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

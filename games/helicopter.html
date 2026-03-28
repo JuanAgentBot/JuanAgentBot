@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HELICOPTER / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 660px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.4rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .controls-hint {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      max-width: 100%;
+      image-rendering: pixelated;
+    }
+
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.8rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+    }
+
+    .hud-score {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 8px var(--glow-cyan);
+    }
+
+    .hud-best {
+      color: var(--accent-green);
+      text-shadow: 0 0 8px var(--glow-green);
+    }
+
+    .hud-speed {
+      color: var(--accent-purple);
+    }
+
+    .msg {
+      margin-top: 1rem;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      min-height: 1.2em;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>HELICOPTER</h1>
+    <div class="controls-hint">HOLD SPACE / CLICK / TAP TO FLY UP &middot; RELEASE TO FALL</div>
+    <canvas id="c" width="640" height="400"></canvas>
+    <div class="hud">
+      <span class="hud-score" id="score">SCORE: 0</span>
+      <span class="hud-speed" id="speed">SPEED: 1x</span>
+      <span class="hud-best" id="best">BEST: 0</span>
+    </div>
+    <div class="msg" id="msg">CLICK OR PRESS SPACE TO START</div>
+  </main>
+  <script src="../theme-toggle.js"></script>
+  <script>
+(function() {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const W = 640, H = 400;
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const speedEl = document.getElementById('speed');
+  const msgEl = document.getElementById('msg');
+
+  // Colors (read from CSS variables at runtime for theme support)
+  function getColor(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  // Game state
+  let state = 'idle'; // idle, playing, dead
+  let best = parseInt(localStorage.getItem('heli-best') || '0');
+  bestEl.textContent = 'BEST: ' + best;
+
+  // Physics
+  const GRAVITY = 0.35;
+  const LIFT = -0.6;
+  const MAX_VY = 6;
+
+  // Helicopter
+  let hx, hy, vy, heliTrail;
+
+  // Cave
+  let caveTop, caveBot, caveSpeed, caveSegments;
+  const SEG_W = 4;
+  const MIN_GAP = 120;
+  const MAX_GAP = 220;
+
+  // Obstacles
+  let obstacles, obstacleTimer;
+  const OBS_W = 20;
+  const OBS_MIN_H = 30;
+  const OBS_MAX_H = 100;
+
+  // Score / speed
+  let score, frames, speedMult;
+
+  // Input
+  let pressing = false;
+
+  // Particles
+  let particles;
+
+  function init() {
+    hx = 80;
+    hy = H / 2;
+    vy = 0;
+    heliTrail = [];
+    score = 0;
+    frames = 0;
+    speedMult = 1;
+    particles = [];
+
+    // Build initial cave
+    caveSpeed = 2;
+    caveSegments = [];
+    let top = 40;
+    let bot = H - 40;
+    for (let x = 0; x <= W + SEG_W; x += SEG_W) {
+      caveSegments.push({ top: top, bot: bot });
+      top += (Math.random() - 0.5) * 6;
+      bot += (Math.random() - 0.5) * 6;
+      top = Math.max(10, Math.min(top, H / 2 - MIN_GAP / 2));
+      bot = Math.min(H - 10, Math.max(bot, H / 2 + MIN_GAP / 2));
+      if (bot - top < MIN_GAP) {
+        let mid = (top + bot) / 2;
+        top = mid - MIN_GAP / 2;
+        bot = mid + MIN_GAP / 2;
+      }
+    }
+
+    obstacles = [];
+    obstacleTimer = 0;
+
+    scoreEl.textContent = 'SCORE: 0';
+    speedEl.textContent = 'SPEED: 1.0x';
+  }
+
+  function spawnObstacle() {
+    let seg = caveSegments[caveSegments.length - 1];
+    let gap = seg.bot - seg.top;
+    let h = OBS_MIN_H + Math.random() * Math.min(OBS_MAX_H - OBS_MIN_H, gap * 0.4);
+    let fromTop = Math.random() > 0.5;
+    let oy;
+    if (fromTop) {
+      oy = seg.top;
+    } else {
+      oy = seg.bot - h;
+    }
+    obstacles.push({ x: W + OBS_W, y: oy, w: OBS_W, h: h });
+  }
+
+  function addParticles(x, y, count, color) {
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: x,
+        y: y,
+        vx: (Math.random() - 0.5) * 6,
+        vy: (Math.random() - 0.5) * 6,
+        life: 30 + Math.random() * 20,
+        maxLife: 50,
+        color: color
+      });
+    }
+  }
+
+  function update() {
+    if (state !== 'playing') return;
+    frames++;
+
+    // Speed increases over time
+    speedMult = 1 + Math.floor(frames / 600) * 0.2;
+    if (speedMult > 3) speedMult = 3;
+    let spd = caveSpeed * speedMult;
+
+    speedEl.textContent = 'SPEED: ' + speedMult.toFixed(1) + 'x';
+
+    // Helicopter physics
+    if (pressing) {
+      vy += LIFT;
+    } else {
+      vy += GRAVITY;
+    }
+    if (vy > MAX_VY) vy = MAX_VY;
+    if (vy < -MAX_VY) vy = -MAX_VY;
+    hy += vy;
+
+    // Trail
+    heliTrail.push({ x: hx, y: hy });
+    if (heliTrail.length > 20) heliTrail.shift();
+
+    // Exhaust particles when pressing
+    if (pressing && frames % 2 === 0) {
+      particles.push({
+        x: hx - 10,
+        y: hy + 4 + (Math.random() - 0.5) * 4,
+        vx: -2 - Math.random() * 2,
+        vy: (Math.random() - 0.5) * 1.5,
+        life: 10 + Math.random() * 10,
+        maxLife: 20,
+        color: 'exhaust'
+      });
+    }
+
+    // Scroll cave
+    caveSegments.shift();
+    let last = caveSegments[caveSegments.length - 1];
+    let newTop = last.top + (Math.random() - 0.5) * 8 * speedMult;
+    let newBot = last.bot + (Math.random() - 0.5) * 8 * speedMult;
+
+    // Narrow the gap over time
+    let targetGap = MAX_GAP - (speedMult - 1) * 30;
+    if (targetGap < MIN_GAP) targetGap = MIN_GAP;
+
+    newTop = Math.max(10, Math.min(newTop, H / 2 - targetGap / 2));
+    newBot = Math.min(H - 10, Math.max(newBot, H / 2 + targetGap / 2));
+    if (newBot - newTop < targetGap) {
+      let mid = (newTop + newBot) / 2;
+      newTop = mid - targetGap / 2;
+      newBot = mid + targetGap / 2;
+    }
+    caveSegments.push({ top: newTop, bot: newBot });
+
+    // Move obstacles
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      obstacles[i].x -= spd;
+      if (obstacles[i].x + obstacles[i].w < 0) {
+        obstacles.splice(i, 1);
+      }
+    }
+
+    // Spawn obstacles
+    obstacleTimer += spd;
+    if (obstacleTimer > 200 + Math.random() * 100) {
+      spawnObstacle();
+      obstacleTimer = 0;
+    }
+
+    // Update particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      let p = particles[i];
+      p.x += p.vx - spd * 0.5;
+      p.y += p.vy;
+      p.life--;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // Collision with cave walls
+    let segIdx = Math.floor(hx / SEG_W);
+    if (segIdx >= 0 && segIdx < caveSegments.length) {
+      let seg = caveSegments[segIdx];
+      if (hy - 6 < seg.top || hy + 6 > seg.bot) {
+        die();
+        return;
+      }
+    }
+
+    // Collision with obstacles
+    for (let obs of obstacles) {
+      if (hx + 12 > obs.x && hx - 12 < obs.x + obs.w &&
+          hy + 6 > obs.y && hy - 6 < obs.y + obs.h) {
+        die();
+        return;
+      }
+    }
+
+    // Off screen
+    if (hy < 0 || hy > H) {
+      die();
+      return;
+    }
+
+    // Score
+    score = Math.floor(frames / 6);
+    scoreEl.textContent = 'SCORE: ' + score;
+  }
+
+  function die() {
+    state = 'dead';
+    addParticles(hx, hy, 30, 'magenta');
+    addParticles(hx, hy, 20, 'cyan');
+    if (score > best) {
+      best = score;
+      localStorage.setItem('heli-best', best.toString());
+      bestEl.textContent = 'BEST: ' + best;
+      msgEl.textContent = 'NEW BEST! CLICK OR PRESS SPACE TO RETRY';
+    } else {
+      msgEl.textContent = 'CRASHED! CLICK OR PRESS SPACE TO RETRY';
+    }
+  }
+
+  function draw() {
+    let bgColor = getColor('--bg-void');
+    let magenta = getColor('--accent-magenta');
+    let cyan = getColor('--accent-cyan');
+    let green = getColor('--accent-green');
+    let purple = getColor('--accent-purple');
+    let dimGray = getColor('--text-dim');
+    let borderColor = getColor('--border');
+    let brightText = getColor('--text-bright');
+
+    // Clear
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, W, H);
+
+    // Draw cave walls
+    ctx.fillStyle = borderColor;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    for (let i = 0; i < caveSegments.length; i++) {
+      ctx.lineTo(i * SEG_W, caveSegments[i].top);
+    }
+    ctx.lineTo(W, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    for (let i = 0; i < caveSegments.length; i++) {
+      ctx.lineTo(i * SEG_W, caveSegments[i].bot);
+    }
+    ctx.lineTo(W, H);
+    ctx.closePath();
+    ctx.fill();
+
+    // Cave edge glow lines
+    ctx.strokeStyle = cyan;
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = cyan;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    for (let i = 0; i < caveSegments.length; i++) {
+      if (i === 0) ctx.moveTo(i * SEG_W, caveSegments[i].top);
+      else ctx.lineTo(i * SEG_W, caveSegments[i].top);
+    }
+    ctx.stroke();
+
+    ctx.beginPath();
+    for (let i = 0; i < caveSegments.length; i++) {
+      if (i === 0) ctx.moveTo(i * SEG_W, caveSegments[i].bot);
+      else ctx.lineTo(i * SEG_W, caveSegments[i].bot);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Draw obstacles
+    for (let obs of obstacles) {
+      ctx.fillStyle = purple;
+      ctx.shadowColor = purple;
+      ctx.shadowBlur = 6;
+      ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+      // Edge highlight
+      ctx.strokeStyle = magenta;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+    }
+    ctx.shadowBlur = 0;
+
+    // Draw particles
+    for (let p of particles) {
+      let alpha = p.life / p.maxLife;
+      let color;
+      if (p.color === 'magenta') color = magenta;
+      else if (p.color === 'cyan') color = cyan;
+      else if (p.color === 'exhaust') color = green;
+      else color = p.color;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 4;
+      let size = p.color === 'exhaust' ? 2 : 3;
+      ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+
+    if (state === 'idle' || state === 'playing') {
+      // Draw helicopter trail
+      for (let i = 0; i < heliTrail.length; i++) {
+        let alpha = i / heliTrail.length * 0.5;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = cyan;
+        ctx.fillRect(heliTrail[i].x - 3, heliTrail[i].y - 1, 6, 2);
+      }
+      ctx.globalAlpha = 1;
+
+      // Draw helicopter (simple shape)
+      ctx.save();
+      ctx.translate(hx, hy);
+
+      // Body
+      ctx.fillStyle = cyan;
+      ctx.shadowColor = cyan;
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.moveTo(14, 0);
+      ctx.lineTo(-8, -7);
+      ctx.lineTo(-12, -5);
+      ctx.lineTo(-12, 5);
+      ctx.lineTo(-8, 7);
+      ctx.closePath();
+      ctx.fill();
+
+      // Tail
+      ctx.fillStyle = magenta;
+      ctx.shadowColor = magenta;
+      ctx.fillRect(-14, -2, 6, 4);
+
+      // Rotor line
+      ctx.strokeStyle = green;
+      ctx.shadowColor = green;
+      ctx.shadowBlur = 6;
+      ctx.lineWidth = 1.5;
+      let rotorOffset = Math.sin(frames * 0.5) * 10;
+      ctx.beginPath();
+      ctx.moveTo(-4 + rotorOffset, -8);
+      ctx.lineTo(4 - rotorOffset, -8);
+      ctx.stroke();
+
+      ctx.restore();
+      ctx.shadowBlur = 0;
+    }
+
+    // Idle state: draw faded centered text
+    if (state === 'idle') {
+      ctx.fillStyle = brightText;
+      ctx.globalAlpha = 0.4 + Math.sin(Date.now() / 500) * 0.2;
+      ctx.font = '800 20px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillText('HOLD TO FLY', W / 2, H / 2 - 20);
+      ctx.font = '400 12px "JetBrains Mono"';
+      ctx.fillText('AVOID WALLS AND OBSTACLES', W / 2, H / 2 + 10);
+      ctx.globalAlpha = 1;
+    }
+
+    // Dead state: flash effect
+    if (state === 'dead') {
+      ctx.fillStyle = magenta;
+      ctx.globalAlpha = 0.15;
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+
+      ctx.fillStyle = magenta;
+      ctx.shadowColor = magenta;
+      ctx.shadowBlur = 15;
+      ctx.font = '800 28px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillText('CRASHED', W / 2, H / 2 - 20);
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = brightText;
+      ctx.font = '700 18px "JetBrains Mono"';
+      ctx.fillText('SCORE: ' + score, W / 2, H / 2 + 15);
+    }
+
+    // Score display on canvas
+    if (state === 'playing') {
+      ctx.fillStyle = cyan;
+      ctx.shadowColor = cyan;
+      ctx.shadowBlur = 6;
+      ctx.font = '700 14px "JetBrains Mono"';
+      ctx.textAlign = 'left';
+      ctx.fillText(score.toString(), 12, 24);
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  function gameLoop() {
+    update();
+    // Update death particles even when dead
+    if (state === 'dead') {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.1;
+        p.life--;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
+    draw();
+    requestAnimationFrame(gameLoop);
+  }
+
+  function startGame() {
+    init();
+    state = 'playing';
+    msgEl.textContent = '';
+  }
+
+  function handleDown() {
+    pressing = true;
+    if (state === 'idle' || state === 'dead') {
+      startGame();
+    }
+  }
+
+  function handleUp() {
+    pressing = false;
+  }
+
+  // Keyboard
+  document.addEventListener('keydown', function(e) {
+    if (e.code === 'Space' || e.key === ' ') {
+      e.preventDefault();
+      handleDown();
+    }
+  });
+  document.addEventListener('keyup', function(e) {
+    if (e.code === 'Space' || e.key === ' ') {
+      e.preventDefault();
+      handleUp();
+    }
+  });
+
+  // Mouse
+  canvas.addEventListener('mousedown', function(e) {
+    e.preventDefault();
+    handleDown();
+  });
+  canvas.addEventListener('mouseup', function(e) {
+    e.preventDefault();
+    handleUp();
+  });
+  canvas.addEventListener('mouseleave', function() {
+    pressing = false;
+  });
+
+  // Touch
+  canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    handleDown();
+  });
+  canvas.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    handleUp();
+  });
+
+  // Init idle state
+  init();
+  state = 'idle';
+  gameLoop();
+})();
+  </script>
+</body>
+</html>

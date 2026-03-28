@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAME OF LIFE / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+    }
+
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.2rem;
+    }
+
+    .stats {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.75rem;
+    }
+
+    .stat-label {
+      color: var(--text-dim);
+      margin-right: 0.4rem;
+    }
+
+    .stat-value {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 8px var(--glow-cyan-soft);
+    }
+
+    .canvas-wrap {
+      border: 1px solid var(--border);
+      margin-bottom: 1rem;
+      line-height: 0;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      cursor: crosshair;
+      image-rendering: pixelated;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    button {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 0.5rem 0.9rem;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--glow-cyan-soft);
+    }
+
+    button.active {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      box-shadow: 0 0 10px rgba(57, 255, 20, 0.2);
+    }
+
+    .speed-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.7rem;
+    }
+
+    .speed-wrap label {
+      color: var(--text-dim);
+    }
+
+    .speed-wrap input[type="range"] {
+      flex: 1;
+      max-width: 160px;
+      accent-color: #9d4edd;
+    }
+
+    .speed-val {
+      color: var(--accent-purple);
+      min-width: 3em;
+    }
+
+    .presets {
+      margin-bottom: 1.2rem;
+    }
+
+    .presets-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.4rem;
+    }
+
+    .presets-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .presets-row button {
+      font-size: 0.65rem;
+      padding: 0.35rem 0.65rem;
+    }
+
+    .help {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      line-height: 1.6;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+
+    .help span {
+      color: var(--accent-cyan);
+    }
+
+    .color-legend {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.65rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .legend-swatch {
+      width: 10px;
+      height: 10px;
+      display: inline-block;
+    }
+
+    .legend-text {
+      color: var(--text-dim);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>GAME OF LIFE</h1>
+    <p class="subtitle">CONWAY'S CELLULAR AUTOMATON</p>
+
+    <div class="stats">
+      <div><span class="stat-label">GEN</span><span class="stat-value" id="gen">0</span></div>
+      <div><span class="stat-label">POP</span><span class="stat-value" id="pop">0</span></div>
+      <div><span class="stat-label">SIZE</span><span class="stat-value" id="size">80×60</span></div>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="c"></canvas>
+    </div>
+
+    <div class="controls">
+      <button id="btnPlay">▶ PLAY</button>
+      <button id="btnStep">⏭ STEP</button>
+      <button id="btnClear">✕ CLEAR</button>
+      <button id="btnRandom">⚡ RANDOM</button>
+    </div>
+
+    <div class="speed-wrap">
+      <label>SPEED</label>
+      <input type="range" id="speed" min="1" max="30" value="10">
+      <span class="speed-val" id="speedVal">10</span>
+    </div>
+
+    <div class="presets">
+      <div class="presets-label">PRESETS</div>
+      <div class="presets-row">
+        <button data-preset="glider">GLIDER</button>
+        <button data-preset="lwss">LWSS</button>
+        <button data-preset="pulsar">PULSAR</button>
+        <button data-preset="pentadecathlon">PENTADECATHLON</button>
+        <button data-preset="gun">GOSPER GUN</button>
+        <button data-preset="rpentomino">R-PENTOMINO</button>
+        <button data-preset="acorn">ACORN</button>
+        <button data-preset="diehard">DIEHARD</button>
+      </div>
+    </div>
+
+    <div class="color-legend">
+      <div class="legend-item">
+        <span class="legend-swatch" style="background:#00f0ff;box-shadow:0 0 4px #00f0ff"></span>
+        <span class="legend-text">Newborn</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-swatch" style="background:#39ff14;box-shadow:0 0 4px #39ff14"></span>
+        <span class="legend-text">Young</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-swatch" style="background:#ff2d7b;box-shadow:0 0 4px #ff2d7b"></span>
+        <span class="legend-text">Mature</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-swatch" style="background:#9d4edd;box-shadow:0 0 4px #9d4edd"></span>
+        <span class="legend-text">Elder</span>
+      </div>
+    </div>
+
+    <div class="help">
+      <span>Click/drag</span> to draw cells &middot;
+      <span>Space</span> play/pause &middot;
+      <span>N</span> step &middot;
+      <span>C</span> clear &middot;
+      <span>R</span> random
+    </div>
+  </main>
+
+  <script>
+    (function() {
+      const COLS = 80;
+      const ROWS = 60;
+      const CELL = 8;
+
+      const canvas = document.getElementById('c');
+      const ctx = canvas.getContext('2d');
+      canvas.width = COLS * CELL;
+      canvas.height = ROWS * CELL;
+
+      const genEl = document.getElementById('gen');
+      const popEl = document.getElementById('pop');
+      const sizeEl = document.getElementById('size');
+      const speedSlider = document.getElementById('speed');
+      const speedVal = document.getElementById('speedVal');
+      const btnPlay = document.getElementById('btnPlay');
+
+      sizeEl.textContent = COLS + '×' + ROWS;
+
+      // Grid: 0 = dead, >0 = age (generations alive)
+      let grid = createGrid();
+      let generation = 0;
+      let running = false;
+      let lastTime = 0;
+      let animId = null;
+
+      function createGrid() {
+        return new Int32Array(COLS * ROWS);
+      }
+
+      function idx(x, y) {
+        return y * COLS + x;
+      }
+
+      function getCell(g, x, y) {
+        // Wrap around
+        x = ((x % COLS) + COLS) % COLS;
+        y = ((y % ROWS) + ROWS) % ROWS;
+        return g[idx(x, y)];
+      }
+
+      function countNeighbors(g, x, y) {
+        let count = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            if (getCell(g, x + dx, y + dy) > 0) count++;
+          }
+        }
+        return count;
+      }
+
+      function step() {
+        const next = createGrid();
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            const alive = grid[idx(x, y)] > 0;
+            const n = countNeighbors(grid, x, y);
+            if (alive) {
+              // Survives with 2 or 3 neighbors
+              if (n === 2 || n === 3) {
+                next[idx(x, y)] = grid[idx(x, y)] + 1;
+              }
+              // else dies (stays 0)
+            } else {
+              // Born with exactly 3 neighbors
+              if (n === 3) {
+                next[idx(x, y)] = 1;
+              }
+            }
+          }
+        }
+        grid = next;
+        generation++;
+        updateStats();
+      }
+
+      function getColor(age) {
+        if (age <= 0) return null;
+        if (age === 1) return '#00f0ff';  // Cyan: newborn
+        if (age <= 5) return '#39ff14';   // Green: young
+        if (age <= 20) return '#ff2d7b';  // Magenta: mature
+        return '#9d4edd';                 // Purple: elder
+      }
+
+      function getGlow(age) {
+        if (age <= 0) return null;
+        if (age === 1) return 'rgba(0,240,255,0.3)';
+        if (age <= 5) return 'rgba(57,255,20,0.25)';
+        if (age <= 20) return 'rgba(255,45,123,0.25)';
+        return 'rgba(157,78,221,0.2)';
+      }
+
+      // Check if light theme
+      function isLight() {
+        return document.documentElement.getAttribute('data-theme') === 'light';
+      }
+
+      function draw() {
+        const light = isLight();
+        const bg = light ? '#f0eff5' : '#0a0a0f';
+        const gridLine = light ? 'rgba(200,200,214,0.4)' : 'rgba(122,122,144,0.12)';
+
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw grid lines
+        ctx.strokeStyle = gridLine;
+        ctx.lineWidth = 0.5;
+        for (let x = 0; x <= COLS; x++) {
+          ctx.beginPath();
+          ctx.moveTo(x * CELL, 0);
+          ctx.lineTo(x * CELL, ROWS * CELL);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= ROWS; y++) {
+          ctx.beginPath();
+          ctx.moveTo(0, y * CELL);
+          ctx.lineTo(COLS * CELL, y * CELL);
+          ctx.stroke();
+        }
+
+        // Draw cells
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            const age = grid[idx(x, y)];
+            if (age > 0) {
+              const color = getColor(age);
+              const glow = getGlow(age);
+              // Glow
+              if (!light) {
+                ctx.fillStyle = glow;
+                ctx.fillRect(x * CELL - 1, y * CELL - 1, CELL + 2, CELL + 2);
+              }
+              // Cell
+              ctx.fillStyle = color;
+              ctx.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
+            }
+          }
+        }
+      }
+
+      function updateStats() {
+        genEl.textContent = generation;
+        let pop = 0;
+        for (let i = 0; i < grid.length; i++) {
+          if (grid[i] > 0) pop++;
+        }
+        popEl.textContent = pop;
+      }
+
+      function getSpeed() {
+        return parseInt(speedSlider.value);
+      }
+
+      function loop(time) {
+        if (!running) return;
+        const fps = getSpeed();
+        const interval = 1000 / fps;
+        if (time - lastTime >= interval) {
+          step();
+          draw();
+          lastTime = time;
+        }
+        animId = requestAnimationFrame(loop);
+      }
+
+      function startSim() {
+        if (running) return;
+        running = true;
+        btnPlay.textContent = '⏸ PAUSE';
+        btnPlay.classList.add('active');
+        lastTime = performance.now();
+        animId = requestAnimationFrame(loop);
+      }
+
+      function stopSim() {
+        running = false;
+        btnPlay.textContent = '▶ PLAY';
+        btnPlay.classList.remove('active');
+        if (animId) cancelAnimationFrame(animId);
+      }
+
+      function toggleSim() {
+        if (running) stopSim(); else startSim();
+      }
+
+      function clear() {
+        stopSim();
+        grid = createGrid();
+        generation = 0;
+        updateStats();
+        draw();
+      }
+
+      function randomize() {
+        stopSim();
+        grid = createGrid();
+        for (let i = 0; i < grid.length; i++) {
+          grid[i] = Math.random() < 0.25 ? 1 : 0;
+        }
+        generation = 0;
+        updateStats();
+        draw();
+      }
+
+      // Mouse drawing
+      let drawing = false;
+      let drawValue = 1; // 1 = draw alive, 0 = erase
+
+      function getCellFromEvent(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const mx = (e.clientX - rect.left) * scaleX;
+        const my = (e.clientY - rect.top) * scaleY;
+        const cx = Math.floor(mx / CELL);
+        const cy = Math.floor(my / CELL);
+        if (cx >= 0 && cx < COLS && cy >= 0 && cy < ROWS) {
+          return { x: cx, y: cy };
+        }
+        return null;
+      }
+
+      canvas.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        const cell = getCellFromEvent(e);
+        if (!cell) return;
+        drawing = true;
+        // Toggle: if cell alive, erase mode; else draw mode
+        drawValue = grid[idx(cell.x, cell.y)] > 0 ? 0 : 1;
+        grid[idx(cell.x, cell.y)] = drawValue;
+        updateStats();
+        draw();
+      });
+
+      canvas.addEventListener('mousemove', function(e) {
+        if (!drawing) return;
+        const cell = getCellFromEvent(e);
+        if (!cell) return;
+        grid[idx(cell.x, cell.y)] = drawValue;
+        updateStats();
+        draw();
+      });
+
+      window.addEventListener('mouseup', function() {
+        drawing = false;
+      });
+
+      // Touch support
+      canvas.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const cell = getCellFromEvent(touch);
+        if (!cell) return;
+        drawing = true;
+        drawValue = grid[idx(cell.x, cell.y)] > 0 ? 0 : 1;
+        grid[idx(cell.x, cell.y)] = drawValue;
+        updateStats();
+        draw();
+      }, { passive: false });
+
+      canvas.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+        if (!drawing) return;
+        const touch = e.touches[0];
+        const cell = getCellFromEvent(touch);
+        if (!cell) return;
+        grid[idx(cell.x, cell.y)] = drawValue;
+        updateStats();
+        draw();
+      }, { passive: false });
+
+      canvas.addEventListener('touchend', function() {
+        drawing = false;
+      });
+
+      // Place a pattern centered at given position
+      function placePattern(pattern, cx, cy) {
+        const ph = pattern.length;
+        const pw = pattern[0].length;
+        const sx = cx - Math.floor(pw / 2);
+        const sy = cy - Math.floor(ph / 2);
+        for (let r = 0; r < ph; r++) {
+          for (let c = 0; c < pw; c++) {
+            if (pattern[r][c]) {
+              const x = ((sx + c) % COLS + COLS) % COLS;
+              const y = ((sy + r) % ROWS + ROWS) % ROWS;
+              grid[idx(x, y)] = 1;
+            }
+          }
+        }
+      }
+
+      // Patterns
+      const PRESETS = {
+        glider: [
+          [0,1,0],
+          [0,0,1],
+          [1,1,1]
+        ],
+        lwss: [
+          [0,1,0,0,1],
+          [1,0,0,0,0],
+          [1,0,0,0,1],
+          [1,1,1,1,0]
+        ],
+        pulsar: (function() {
+          const p = [];
+          for (let i = 0; i < 15; i++) p.push(new Array(15).fill(0));
+          const coords = [
+            [1,2],[1,3],[1,4],[1,8],[1,9],[1,10],
+            [3,0],[3,5],[3,7],[3,12],
+            [4,0],[4,5],[4,7],[4,12],
+            [5,0],[5,5],[5,7],[5,12],
+            [6,2],[6,3],[6,4],[6,8],[6,9],[6,10],
+            [8,2],[8,3],[8,4],[8,8],[8,9],[8,10],
+            [9,0],[9,5],[9,7],[9,12],
+            [10,0],[10,5],[10,7],[10,12],
+            [11,0],[11,5],[11,7],[11,12],
+            [13,2],[13,3],[13,4],[13,8],[13,9],[13,10]
+          ];
+          coords.forEach(function(c) { p[c[0]][c[1]] = 1; });
+          return p;
+        })(),
+        pentadecathlon: [
+          [0,0,1,0,0,0,0,1,0,0],
+          [1,1,0,1,1,1,1,0,1,1],
+          [0,0,1,0,0,0,0,1,0,0]
+        ],
+        gun: (function() {
+          // Gosper Glider Gun
+          const p = [];
+          for (let i = 0; i < 11; i++) p.push(new Array(38).fill(0));
+          const coords = [
+            [0,24],
+            [1,22],[1,24],
+            [2,12],[2,13],[2,20],[2,21],[2,34],[2,35],
+            [3,11],[3,15],[3,20],[3,21],[3,34],[3,35],
+            [4,0],[4,1],[4,10],[4,16],[4,20],[4,21],
+            [5,0],[5,1],[5,10],[5,14],[5,16],[5,17],[5,22],[5,24],
+            [6,10],[6,16],[6,24],
+            [7,11],[7,15],
+            [8,12],[8,13]
+          ];
+          coords.forEach(function(c) { p[c[0]][c[1]] = 1; });
+          return p;
+        })(),
+        rpentomino: [
+          [0,1,1],
+          [1,1,0],
+          [0,1,0]
+        ],
+        acorn: [
+          [0,1,0,0,0,0,0],
+          [0,0,0,1,0,0,0],
+          [1,1,0,0,1,1,1]
+        ],
+        diehard: [
+          [0,0,0,0,0,0,1,0],
+          [1,1,0,0,0,0,0,0],
+          [0,1,0,0,0,1,1,1]
+        ]
+      };
+
+      // Button handlers
+      btnPlay.addEventListener('click', toggleSim);
+      document.getElementById('btnStep').addEventListener('click', function() {
+        stopSim();
+        step();
+        draw();
+      });
+      document.getElementById('btnClear').addEventListener('click', clear);
+      document.getElementById('btnRandom').addEventListener('click', randomize);
+
+      speedSlider.addEventListener('input', function() {
+        speedVal.textContent = speedSlider.value;
+      });
+
+      // Preset buttons
+      document.querySelectorAll('[data-preset]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          const name = btn.getAttribute('data-preset');
+          const pattern = PRESETS[name];
+          if (!pattern) return;
+          clear();
+          placePattern(pattern, Math.floor(COLS / 2), Math.floor(ROWS / 2));
+          updateStats();
+          draw();
+        });
+      });
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', function(e) {
+        if (e.target.tagName === 'INPUT') return;
+        switch(e.key.toLowerCase()) {
+          case ' ':
+            e.preventDefault();
+            toggleSim();
+            break;
+          case 'n':
+            stopSim();
+            step();
+            draw();
+            break;
+          case 'c':
+            clear();
+            break;
+          case 'r':
+            randomize();
+            break;
+        }
+      });
+
+      // Initial draw
+      updateStats();
+      draw();
+    })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

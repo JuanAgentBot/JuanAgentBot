@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TOWER OF HANOI / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .controls label {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    .controls select, .controls button {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      background: var(--bg-secondary);
+      color: var(--text-bright);
+      border: 1px solid var(--border);
+      padding: 0.4rem 0.8rem;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+    }
+
+    .controls select:hover, .controls button:hover {
+      border-color: var(--accent-cyan);
+    }
+
+    .controls button.active {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1rem;
+      font-size: 0.75rem;
+    }
+
+    .stat-label {
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+      color: var(--accent-cyan);
+      font-weight: 700;
+      text-shadow: 0 0 8px var(--glow-cyan);
+    }
+
+    .stat-value.optimal {
+      color: var(--accent-green);
+      text-shadow: 0 0 8px var(--glow-green);
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto;
+      cursor: pointer;
+      border: 1px solid var(--border);
+    }
+
+    .instructions {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.04em;
+      line-height: 1.6;
+      margin-top: 1rem;
+    }
+
+    .message {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      margin-top: 0.8rem;
+      min-height: 1.2em;
+      color: var(--accent-green);
+      text-shadow: 0 0 12px var(--glow-green);
+    }
+
+    .message.error {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 12px var(--glow-magenta);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>TOWER OF HANOI</h1>
+    <p class="subtitle">MOVE THE TOWER, ONE DISC AT A TIME</p>
+
+    <div class="controls">
+      <label>DISCS:</label>
+      <select id="disc-count">
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5" selected>5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+      </select>
+      <button id="btn-reset">RESET</button>
+      <button id="btn-solve">AUTO-SOLVE</button>
+      <button id="btn-undo">UNDO</button>
+    </div>
+
+    <div class="stats">
+      <div><span class="stat-label">MOVES: </span><span class="stat-value" id="moves">0</span></div>
+      <div><span class="stat-label">MINIMUM: </span><span class="stat-value" id="minimum">31</span></div>
+      <div><span class="stat-label">BEST: </span><span class="stat-value" id="best">-</span></div>
+    </div>
+
+    <canvas id="game" width="580" height="320"></canvas>
+
+    <div class="message" id="message"></div>
+
+    <p class="instructions">
+      CLICK A PEG TO PICK UP ITS TOP DISC, THEN CLICK ANOTHER PEG TO PLACE IT.<br>
+      LARGER DISCS CANNOT GO ON SMALLER ONES. MOVE ALL DISCS TO THE RIGHT PEG.<br>
+      KEYBOARD: 1 / 2 / 3 TO SELECT PEGS.
+    </p>
+  </main>
+
+  <script>
+  (function() {
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const discSelect = document.getElementById('disc-count');
+    const btnReset = document.getElementById('btn-reset');
+    const btnSolve = document.getElementById('btn-solve');
+    const btnUndo = document.getElementById('btn-undo');
+    const movesEl = document.getElementById('moves');
+    const minimumEl = document.getElementById('minimum');
+    const bestEl = document.getElementById('best');
+    const messageEl = document.getElementById('message');
+
+    // Brand colors for discs
+    const DISC_COLORS = [
+      '#ff2d7b', // Neon Magenta
+      '#00f0ff', // Electric Cyan
+      '#39ff14', // Matrix Green
+      '#9d4edd', // Purple Haze
+      '#ffb000', // Amber
+      '#ff6ac1', // Hot Pink
+      '#33ff33', // Phosphor
+      '#ff1744', // Crimson
+    ];
+
+    const DISC_GLOWS = [
+      'rgba(255,45,123,0.4)',
+      'rgba(0,240,255,0.4)',
+      'rgba(57,255,20,0.4)',
+      'rgba(157,78,221,0.4)',
+      'rgba(255,176,0,0.4)',
+      'rgba(255,106,193,0.4)',
+      'rgba(51,255,51,0.4)',
+      'rgba(255,23,68,0.4)',
+    ];
+
+    let numDiscs = 5;
+    let pegs = [[], [], []];
+    let selected = -1; // which peg is selected (-1 = none)
+    let liftedDisc = null; // the disc being held
+    let moves = 0;
+    let history = [];
+    let won = false;
+    let solving = false;
+    let solveQueue = [];
+    let solveTimer = null;
+    let bestScores = {};
+
+    // Responsive canvas sizing
+    function resizeCanvas() {
+      const maxW = Math.min(580, window.innerWidth - 40);
+      canvas.width = maxW;
+      canvas.height = Math.round(maxW * 320 / 580);
+      draw();
+    }
+
+    function loadBest() {
+      try {
+        const d = JSON.parse(localStorage.getItem('hanoi-best') || '{}');
+        bestScores = d;
+      } catch(e) { bestScores = {}; }
+    }
+
+    function saveBest() {
+      localStorage.setItem('hanoi-best', JSON.stringify(bestScores));
+    }
+
+    function init() {
+      loadBest();
+      numDiscs = parseInt(discSelect.value);
+      pegs = [[], [], []];
+      for (let i = numDiscs; i >= 1; i--) {
+        pegs[0].push(i);
+      }
+      selected = -1;
+      liftedDisc = null;
+      moves = 0;
+      history = [];
+      won = false;
+      solving = false;
+      solveQueue = [];
+      if (solveTimer) { clearTimeout(solveTimer); solveTimer = null; }
+      btnSolve.classList.remove('active');
+      movesEl.textContent = '0';
+      minimumEl.textContent = (Math.pow(2, numDiscs) - 1).toString();
+      updateBestDisplay();
+      messageEl.textContent = '';
+      messageEl.className = 'message';
+      draw();
+    }
+
+    function updateBestDisplay() {
+      const b = bestScores[numDiscs];
+      bestEl.textContent = b ? b.toString() : '-';
+      if (b && b === Math.pow(2, numDiscs) - 1) {
+        bestEl.classList.add('optimal');
+      } else {
+        bestEl.classList.remove('optimal');
+      }
+    }
+
+    // Layout constants (relative to canvas)
+    function pegX(i) {
+      const w = canvas.width;
+      const margin = w * 0.12;
+      const spacing = (w - 2 * margin) / 2;
+      return margin + i * spacing;
+    }
+
+    function pegBaseY() { return canvas.height * 0.82; }
+    function pegTopY() { return canvas.height * 0.15; }
+    function pegWidth() { return Math.max(4, canvas.width * 0.008); }
+    function discHeight() {
+      const available = pegBaseY() - pegTopY() - 10;
+      return Math.min(Math.round(available / numDiscs), 28);
+    }
+    function maxDiscWidth() { return canvas.width * 0.28; }
+    function minDiscWidth() { return canvas.width * 0.06; }
+
+    function discWidth(size) {
+      // size 1 = smallest, numDiscs = largest
+      const min = minDiscWidth();
+      const max = maxDiscWidth();
+      return min + (size - 1) * (max - min) / (numDiscs - 1 || 1);
+    }
+
+    function getStyle(prop) {
+      return getComputedStyle(document.documentElement).getPropertyValue(prop).trim();
+    }
+
+    function draw() {
+      const w = canvas.width;
+      const h = canvas.height;
+      const bgColor = getStyle('--bg-primary') || '#0a0a0f';
+      const borderColor = getStyle('--border') || '#7a7a90';
+      const dimColor = getStyle('--text-dim') || '#7a7a90';
+      const brightColor = getStyle('--text-bright') || '#e0e0e8';
+
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, w, h);
+
+      const baseY = pegBaseY();
+      const topY = pegTopY();
+      const pw = pegWidth();
+      const dh = discHeight();
+
+      // Draw base
+      ctx.fillStyle = borderColor;
+      ctx.fillRect(w * 0.05, baseY, w * 0.9, 3);
+
+      // Draw pegs
+      for (let i = 0; i < 3; i++) {
+        const px = pegX(i);
+
+        // Peg shaft
+        ctx.fillStyle = (selected === i) ? '#00f0ff' : borderColor;
+        if (selected === i) {
+          ctx.shadowColor = 'rgba(0,240,255,0.3)';
+          ctx.shadowBlur = 10;
+        }
+        ctx.fillRect(px - pw / 2, topY, pw, baseY - topY);
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+
+        // Peg label
+        ctx.fillStyle = (selected === i) ? '#00f0ff' : dimColor;
+        ctx.font = `${Math.round(w * 0.02)}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText((i + 1).toString(), px, baseY + 18);
+
+        // Draw discs on this peg
+        const stack = pegs[i];
+        for (let j = 0; j < stack.length; j++) {
+          const disc = stack[j];
+          // Skip the lifted disc if it's the top one on the selected peg
+          if (selected === i && j === stack.length - 1 && liftedDisc !== null) continue;
+
+          const dw = discWidth(disc);
+          const dy = baseY - (j + 1) * dh;
+          const color = DISC_COLORS[(disc - 1) % DISC_COLORS.length];
+          const glow = DISC_GLOWS[(disc - 1) % DISC_GLOWS.length];
+
+          // Glow
+          ctx.shadowColor = glow;
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = color;
+          ctx.fillRect(px - dw / 2, dy, dw, dh - 2);
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+
+          // Disc number
+          if (dh > 14 && dw > 30) {
+            ctx.fillStyle = bgColor;
+            ctx.font = `bold ${Math.min(dh - 6, 14)}px 'JetBrains Mono', monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(disc.toString(), px, dy + (dh - 2) / 2);
+          }
+        }
+      }
+
+      // Draw lifted disc floating above selected peg
+      if (liftedDisc !== null && selected >= 0) {
+        const disc = liftedDisc;
+        const px = pegX(selected);
+        const dw = discWidth(disc);
+        const dy = topY - dh - 5;
+        const color = DISC_COLORS[(disc - 1) % DISC_COLORS.length];
+        const glow = DISC_GLOWS[(disc - 1) % DISC_GLOWS.length];
+
+        ctx.shadowColor = glow;
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = color;
+        ctx.fillRect(px - dw / 2, dy, dw, dh - 2);
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+
+        if (dh > 14 && dw > 30) {
+          ctx.fillStyle = bgColor;
+          ctx.font = `bold ${Math.min(dh - 6, 14)}px 'JetBrains Mono', monospace`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(disc.toString(), px, dy + (dh - 2) / 2);
+        }
+      }
+
+      // Win flash
+      if (won) {
+        ctx.fillStyle = 'rgba(57,255,20,0.06)';
+        ctx.fillRect(0, 0, w, h);
+      }
+    }
+
+    function getPegFromX(x) {
+      const w = canvas.width;
+      const zoneWidth = w / 3;
+      const i = Math.floor(x / zoneWidth);
+      return Math.max(0, Math.min(2, i));
+    }
+
+    function handlePegClick(pegIndex) {
+      if (won || solving) return;
+
+      if (selected === -1) {
+        // Nothing selected - pick up from this peg
+        if (pegs[pegIndex].length === 0) {
+          showMessage('EMPTY PEG', true);
+          return;
+        }
+        selected = pegIndex;
+        liftedDisc = pegs[pegIndex][pegs[pegIndex].length - 1];
+        messageEl.textContent = '';
+        draw();
+      } else if (selected === pegIndex) {
+        // Same peg - deselect
+        selected = -1;
+        liftedDisc = null;
+        messageEl.textContent = '';
+        draw();
+      } else {
+        // Try to place
+        const disc = liftedDisc;
+        const targetTop = pegs[pegIndex].length > 0 ? pegs[pegIndex][pegs[pegIndex].length - 1] : Infinity;
+
+        if (disc > targetTop) {
+          showMessage('CAN\'T PLACE LARGER ON SMALLER', true);
+          return;
+        }
+
+        // Valid move
+        pegs[selected].pop();
+        pegs[pegIndex].push(disc);
+        history.push({ from: selected, to: pegIndex });
+        moves++;
+        movesEl.textContent = moves.toString();
+        selected = -1;
+        liftedDisc = null;
+        messageEl.textContent = '';
+        draw();
+
+        // Check win
+        if (pegs[2].length === numDiscs) {
+          won = true;
+          const min = Math.pow(2, numDiscs) - 1;
+          if (!bestScores[numDiscs] || moves < bestScores[numDiscs]) {
+            bestScores[numDiscs] = moves;
+            saveBest();
+            updateBestDisplay();
+          }
+          if (moves === min) {
+            showMessage('PERFECT! OPTIMAL IN ' + moves + ' MOVES!', false);
+          } else {
+            showMessage('SOLVED IN ' + moves + ' MOVES! (OPTIMAL: ' + min + ')', false);
+          }
+          draw();
+        }
+      }
+    }
+
+    function showMessage(text, isError) {
+      messageEl.textContent = text;
+      messageEl.className = 'message' + (isError ? ' error' : '');
+    }
+
+    function undo() {
+      if (history.length === 0 || won || solving) return;
+      const last = history.pop();
+      const disc = pegs[last.to].pop();
+      pegs[last.from].push(disc);
+      moves--;
+      movesEl.textContent = moves.toString();
+      selected = -1;
+      liftedDisc = null;
+      messageEl.textContent = '';
+      draw();
+    }
+
+    // Auto-solve using recursive algorithm
+    function generateSolveMoves(n, from, to, aux) {
+      if (n === 0) return [];
+      const moves = [];
+      moves.push(...generateSolveMoves(n - 1, from, aux, to));
+      moves.push({ from, to });
+      moves.push(...generateSolveMoves(n - 1, aux, to, from));
+      return moves;
+    }
+
+    function startSolve() {
+      if (solving) {
+        // Cancel
+        solving = false;
+        if (solveTimer) { clearTimeout(solveTimer); solveTimer = null; }
+        btnSolve.classList.remove('active');
+        btnSolve.textContent = 'AUTO-SOLVE';
+        return;
+      }
+
+      // Reset first
+      init();
+      solving = true;
+      btnSolve.classList.add('active');
+      btnSolve.textContent = 'STOP';
+      solveQueue = generateSolveMoves(numDiscs, 0, 2, 1);
+      showMessage('SOLVING...', false);
+      executeSolveStep();
+    }
+
+    function executeSolveStep() {
+      if (!solving || solveQueue.length === 0) {
+        solving = false;
+        btnSolve.classList.remove('active');
+        btnSolve.textContent = 'AUTO-SOLVE';
+        if (pegs[2].length === numDiscs) {
+          won = true;
+          showMessage('AUTO-SOLVED IN ' + moves + ' MOVES', false);
+        }
+        draw();
+        return;
+      }
+
+      const move = solveQueue.shift();
+      const disc = pegs[move.from].pop();
+      pegs[move.to].push(disc);
+      moves++;
+      movesEl.textContent = moves.toString();
+      draw();
+
+      // Speed based on disc count
+      const delay = numDiscs <= 4 ? 400 : numDiscs <= 6 ? 200 : 100;
+      solveTimer = setTimeout(executeSolveStep, delay);
+    }
+
+    // Event handlers
+    canvas.addEventListener('click', function(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const peg = getPegFromX(x);
+      handlePegClick(peg);
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === '1') handlePegClick(0);
+      else if (e.key === '2') handlePegClick(1);
+      else if (e.key === '3') handlePegClick(2);
+      else if (e.key === 'u' || e.key === 'U') undo();
+      else if (e.key === 'r' || e.key === 'R') init();
+    });
+
+    discSelect.addEventListener('change', init);
+    btnReset.addEventListener('click', init);
+    btnSolve.addEventListener('click', startSolve);
+    btnUndo.addEventListener('click', undo);
+    window.addEventListener('resize', resizeCanvas);
+
+    resizeCanvas();
+    init();
+  })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

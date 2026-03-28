@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neon Jump / ZERO</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 3rem;
+      text-align: center;
+    }
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+      transition: color 0.3s;
+      float: left;
+    }
+    .back:hover { color: var(--accent-cyan); }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+    .controls-hint {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 1rem;
+    }
+    #game-canvas {
+      border: 1px solid var(--border);
+      display: block;
+      margin: 0 auto;
+      cursor: pointer;
+      image-rendering: pixelated;
+    }
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      max-width: 400px;
+      margin: 0.8rem auto 0;
+      font-size: 0.75rem;
+    }
+    .hud-item { color: var(--text-muted); }
+    .hud-val { color: var(--accent-cyan); text-shadow: 0 0 8px var(--glow-cyan-soft); }
+    .hud-val.green { color: var(--accent-green); text-shadow: 0 0 8px rgba(57,255,20,0.3); }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>NEON JUMP</h1>
+    <p class="controls-hint">← → ARROW KEYS TO MOVE &middot; AUTO-BOUNCE &middot; REACH THE TOP</p>
+    <canvas id="game-canvas" width="400" height="600"></canvas>
+    <div class="hud">
+      <span class="hud-item">SCORE <span class="hud-val" id="hud-score">0</span></span>
+      <span class="hud-item">HEIGHT <span class="hud-val green" id="hud-height">0</span></span>
+      <span class="hud-item">BEST <span class="hud-val" id="hud-best">0</span></span>
+    </div>
+  </main>
+
+<script>
+(function() {
+  const canvas = document.getElementById('game-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // Colors
+  const VOID = '#0a0a0f';
+  const MAGENTA = '#ff2d7b';
+  const CYAN = '#00f0ff';
+  const GREEN = '#39ff14';
+  const PURPLE = '#9d4edd';
+  const CRT_WHITE = '#e0e0e8';
+  const DIM = '#7a7a90';
+  const AMBER = '#ffb000';
+  const CRIMSON = '#ff1744';
+
+  // HUD elements
+  const hudScore = document.getElementById('hud-score');
+  const hudHeight = document.getElementById('hud-height');
+  const hudBest = document.getElementById('hud-best');
+
+  // Load best score
+  let bestScore = parseInt(localStorage.getItem('neon-jump-best') || '0');
+  hudBest.textContent = bestScore;
+
+  // Game state
+  let state = 'start'; // start, playing, dead
+  let player, platforms, score, maxHeight, cameraY, particles, starField;
+  let keys = { left: false, right: false };
+  let frameCount = 0;
+
+  // Platform types
+  const PLAT_NORMAL = 0;
+  const PLAT_MOVING = 1;
+  const PLAT_FRAGILE = 2;
+  const PLAT_SPRING = 3;
+
+  function createStarField() {
+    starField = [];
+    for (let i = 0; i < 60; i++) {
+      starField.push({
+        x: Math.random() * W,
+        y: Math.random() * 2000,
+        size: Math.random() * 1.5 + 0.5,
+        alpha: Math.random() * 0.4 + 0.1
+      });
+    }
+  }
+
+  function init() {
+    player = {
+      x: W / 2 - 12,
+      y: H - 80,
+      w: 24,
+      h: 24,
+      vx: 0,
+      vy: 0,
+      onPlatform: false,
+      facing: 1
+    };
+    platforms = [];
+    particles = [];
+    score = 0;
+    maxHeight = 0;
+    cameraY = 0;
+    frameCount = 0;
+
+    createStarField();
+
+    // Create initial platforms
+    // Ground platform
+    platforms.push({
+      x: 0, y: H - 30, w: W, h: 8,
+      type: PLAT_NORMAL, color: DIM, alive: true
+    });
+
+    // Generate platforms going up
+    let y = H - 80;
+    while (y > -200) {
+      let pw = 50 + Math.random() * 40;
+      let px = Math.random() * (W - pw);
+      let type = PLAT_NORMAL;
+      let r = Math.random();
+      if (y < H - 300) {
+        if (r < 0.15) type = PLAT_MOVING;
+        else if (r < 0.28) type = PLAT_FRAGILE;
+        else if (r < 0.35) type = PLAT_SPRING;
+      }
+      platforms.push(createPlatform(px, y, pw, type));
+      y -= 40 + Math.random() * 40;
+    }
+  }
+
+  function createPlatform(x, y, w, type) {
+    let color = CYAN;
+    if (type === PLAT_MOVING) color = PURPLE;
+    else if (type === PLAT_FRAGILE) color = AMBER;
+    else if (type === PLAT_SPRING) color = GREEN;
+
+    return {
+      x: x, y: y, w: w || (50 + Math.random() * 40), h: 6,
+      type: type,
+      color: color,
+      alive: true,
+      moveDir: (Math.random() < 0.5 ? 1 : -1),
+      moveSpeed: 1 + Math.random() * 1.5,
+      shakeTime: 0
+    };
+  }
+
+  function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: x,
+        y: y,
+        vx: (Math.random() - 0.5) * 4,
+        vy: (Math.random() - 0.5) * 4 - 2,
+        life: 20 + Math.random() * 20,
+        maxLife: 20 + Math.random() * 20,
+        color: color,
+        size: 1.5 + Math.random() * 2
+      });
+    }
+  }
+
+  function generatePlatformsAbove() {
+    // Find the highest platform
+    let highestY = Infinity;
+    for (let p of platforms) {
+      if (p.alive && p.y < highestY) highestY = p.y;
+    }
+
+    // Generate new platforms above the camera
+    let difficulty = Math.min(maxHeight / 5000, 1); // 0 to 1 over 5000 units
+    while (highestY > cameraY - 200) {
+      let gap = 40 + Math.random() * (40 + difficulty * 30);
+      highestY -= gap;
+      let pw = Math.max(35, 60 - difficulty * 20 + Math.random() * 30);
+      let px = Math.random() * (W - pw);
+
+      let type = PLAT_NORMAL;
+      let r = Math.random();
+      if (r < 0.1 + difficulty * 0.1) type = PLAT_MOVING;
+      else if (r < 0.2 + difficulty * 0.15) type = PLAT_FRAGILE;
+      else if (r < 0.25 + difficulty * 0.05) type = PLAT_SPRING;
+
+      platforms.push(createPlatform(px, highestY, pw, type));
+    }
+
+    // Remove platforms far below
+    platforms = platforms.filter(p => p.y < cameraY + H + 100);
+  }
+
+  function update() {
+    if (state !== 'playing') return;
+    frameCount++;
+
+    // Player horizontal movement
+    let accel = 0.6;
+    let friction = 0.85;
+    if (keys.left) { player.vx -= accel; player.facing = -1; }
+    if (keys.right) { player.vx += accel; player.facing = 1; }
+    player.vx *= friction;
+
+    // Gravity
+    player.vy += 0.45;
+
+    // Terminal velocity
+    if (player.vy > 12) player.vy = 12;
+
+    // Move player
+    player.x += player.vx;
+    player.y += player.vy;
+
+    // Wrap horizontal
+    if (player.x + player.w < 0) player.x = W;
+    if (player.x > W) player.x = -player.w;
+
+    // Platform collision (only when falling)
+    if (player.vy > 0) {
+      for (let p of platforms) {
+        if (!p.alive) continue;
+        if (player.x + player.w > p.x && player.x < p.x + p.w &&
+            player.y + player.h >= p.y && player.y + player.h <= p.y + p.h + player.vy + 2) {
+          // Land on platform
+          player.y = p.y - player.h;
+
+          if (p.type === PLAT_SPRING) {
+            player.vy = -16; // Super jump
+            spawnParticles(player.x + player.w/2, p.y, GREEN, 12);
+          } else if (p.type === PLAT_FRAGILE) {
+            player.vy = -10;
+            p.shakeTime = 8;
+            setTimeout(() => { p.alive = false; }, 200);
+            spawnParticles(p.x + p.w/2, p.y, AMBER, 8);
+          } else {
+            player.vy = -10; // Normal bounce
+          }
+
+          spawnParticles(player.x + player.w/2, p.y, p.color, 4);
+          break;
+        }
+      }
+    }
+
+    // Update moving platforms
+    for (let p of platforms) {
+      if (p.type === PLAT_MOVING && p.alive) {
+        p.x += p.moveDir * p.moveSpeed;
+        if (p.x <= 0 || p.x + p.w >= W) p.moveDir *= -1;
+        p.x = Math.max(0, Math.min(W - p.w, p.x));
+      }
+      if (p.shakeTime > 0) p.shakeTime--;
+    }
+
+    // Camera follows player upward
+    let targetCameraY = player.y - H * 0.4;
+    if (targetCameraY < cameraY) {
+      cameraY += (targetCameraY - cameraY) * 0.1;
+    }
+
+    // Update height/score
+    let height = Math.max(0, Math.floor((H - 80 - player.y + cameraY) / 10));
+    if (height > maxHeight) {
+      score += (height - maxHeight);
+      maxHeight = height;
+    }
+
+    hudScore.textContent = score;
+    hudHeight.textContent = maxHeight;
+
+    // Generate new platforms
+    generatePlatformsAbove();
+
+    // Update particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      let p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.1;
+      p.life--;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // Death: fell below camera
+    if (player.y - cameraY > H + 50) {
+      state = 'dead';
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem('neon-jump-best', bestScore.toString());
+        hudBest.textContent = bestScore;
+      }
+      spawnParticles(player.x + player.w/2, player.y, CRIMSON, 20);
+    }
+  }
+
+  function draw() {
+    // Background
+    ctx.fillStyle = VOID;
+    ctx.fillRect(0, 0, W, H);
+
+    // Stars (parallax)
+    for (let s of starField) {
+      let sy = (s.y - cameraY * 0.3) % (H + 200);
+      if (sy < 0) sy += H + 200;
+      ctx.globalAlpha = s.alpha + Math.sin(frameCount * 0.03 + s.x) * 0.1;
+      ctx.fillStyle = CRT_WHITE;
+      ctx.fillRect(s.x, sy - 100, s.size, s.size);
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.save();
+    ctx.translate(0, -cameraY);
+
+    // Draw platforms
+    for (let p of platforms) {
+      if (!p.alive) continue;
+      let screenY = p.y - cameraY;
+      if (screenY < -20 || screenY > H + 20) continue;
+
+      ctx.save();
+      if (p.shakeTime > 0) {
+        ctx.translate((Math.random() - 0.5) * 4, (Math.random() - 0.5) * 2);
+      }
+
+      // Platform glow
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.shadowBlur = 0;
+
+      // Spring indicator
+      if (p.type === PLAT_SPRING) {
+        ctx.fillStyle = CRT_WHITE;
+        let springW = 6;
+        let springX = p.x + p.w/2 - springW/2;
+        ctx.fillRect(springX, p.y - 4, springW, 4);
+        ctx.fillRect(springX - 2, p.y - 6, springW + 4, 2);
+      }
+
+      // Fragile cracks
+      if (p.type === PLAT_FRAGILE) {
+        ctx.strokeStyle = VOID;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(p.x + p.w * 0.3, p.y);
+        ctx.lineTo(p.x + p.w * 0.35, p.y + p.h);
+        ctx.moveTo(p.x + p.w * 0.65, p.y);
+        ctx.lineTo(p.x + p.w * 0.7, p.y + p.h);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    // Draw player
+    if (state !== 'dead') {
+      let px = player.x;
+      let py = player.y;
+      let pw = player.w;
+      let ph = player.h;
+
+      // Player glow
+      ctx.shadowColor = CYAN;
+      ctx.shadowBlur = 12;
+
+      // Body (small triangle pointing up)
+      ctx.fillStyle = CYAN;
+      ctx.beginPath();
+      ctx.moveTo(px + pw/2, py);           // top center
+      ctx.lineTo(px + pw, py + ph);         // bottom right
+      ctx.lineTo(px, py + ph);              // bottom left
+      ctx.closePath();
+      ctx.fill();
+
+      // Eyes
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = VOID;
+      let eyeY = py + ph * 0.45;
+      let eyeSize = 3;
+      if (player.facing > 0) {
+        ctx.fillRect(px + pw * 0.55, eyeY, eyeSize, eyeSize);
+        ctx.fillRect(px + pw * 0.35, eyeY, eyeSize, eyeSize);
+      } else {
+        ctx.fillRect(px + pw * 0.45 - eyeSize, eyeY, eyeSize, eyeSize);
+        ctx.fillRect(px + pw * 0.65 - eyeSize, eyeY, eyeSize, eyeSize);
+      }
+
+      // Thruster effect when going up
+      if (player.vy < -2) {
+        let thrustAlpha = Math.min(1, Math.abs(player.vy) / 10);
+        ctx.globalAlpha = thrustAlpha * (0.5 + Math.random() * 0.5);
+        ctx.fillStyle = MAGENTA;
+        ctx.shadowColor = MAGENTA;
+        ctx.shadowBlur = 8;
+        let flameH = Math.abs(player.vy) * 1.5;
+        ctx.beginPath();
+        ctx.moveTo(px + pw * 0.3, py + ph);
+        ctx.lineTo(px + pw/2, py + ph + flameH);
+        ctx.lineTo(px + pw * 0.7, py + ph);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // Draw particles
+    for (let p of particles) {
+      ctx.globalAlpha = p.life / p.maxLife;
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 4;
+      ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+
+    ctx.restore();
+
+    // Height markers on the side
+    let markerInterval = 100; // every 100 score units = 1000 pixels
+    let startMarker = Math.floor(cameraY / 100) * 100;
+    for (let my = startMarker; my < cameraY + H; my += 100) {
+      let screenY = my - cameraY;
+      let heightVal = Math.max(0, Math.floor((H - 80 - my) / 10));
+      if (heightVal > 0 && heightVal % 10 === 0) {
+        ctx.fillStyle = DIM;
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(0, screenY, W, 1);
+        ctx.globalAlpha = 0.5;
+        ctx.font = '9px "JetBrains Mono", monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(heightVal + 'm', W - 6, screenY - 3);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // Overlays
+    if (state === 'start') {
+      drawOverlay('NEON JUMP', 'CLICK OR PRESS SPACE TO START', [
+        '← → to move',
+        'Auto-bounce on platforms',
+        'Green = spring boost',
+        'Yellow = fragile (breaks!)',
+        'Purple = moving'
+      ]);
+    } else if (state === 'dead') {
+      drawOverlay('SIGNAL LOST', 'SCORE: ' + score, [
+        'Best: ' + bestScore,
+        '',
+        'Click or Space to retry'
+      ]);
+    }
+
+    // Scanline effect
+    ctx.fillStyle = 'rgba(0,0,0,0.03)';
+    for (let i = 0; i < H; i += 3) {
+      ctx.fillRect(0, i, W, 1);
+    }
+  }
+
+  function drawOverlay(title, subtitle, lines) {
+    ctx.fillStyle = 'rgba(10,10,15,0.85)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.textAlign = 'center';
+    ctx.shadowColor = MAGENTA;
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = MAGENTA;
+    ctx.font = '800 28px "JetBrains Mono", monospace';
+    ctx.fillText(title, W/2, H * 0.32);
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = CYAN;
+    ctx.font = '700 11px "JetBrains Mono", monospace';
+    ctx.fillText(subtitle, W/2, H * 0.42);
+
+    ctx.fillStyle = CRT_WHITE;
+    ctx.font = '10px "JetBrains Mono", monospace';
+    let startY = H * 0.52;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i] === '') continue;
+      ctx.fillStyle = i === 0 ? CRT_WHITE : DIM;
+      ctx.fillText(lines[i], W/2, startY + i * 18);
+    }
+  }
+
+  function startGame() {
+    if (state === 'start' || state === 'dead') {
+      init();
+      state = 'playing';
+    }
+  }
+
+  // Input
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowLeft' || e.key === 'a') { keys.left = true; e.preventDefault(); }
+    if (e.key === 'ArrowRight' || e.key === 'd') { keys.right = true; e.preventDefault(); }
+    if (e.key === ' ' || e.key === 'Enter') { startGame(); e.preventDefault(); }
+  });
+
+  document.addEventListener('keyup', function(e) {
+    if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+    if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+  });
+
+  canvas.addEventListener('click', startGame);
+
+  // Touch controls
+  let touchStartX = null;
+  canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    if (state !== 'playing') { startGame(); return; }
+    touchStartX = e.touches[0].clientX;
+  });
+  canvas.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    if (!touchStartX || state !== 'playing') return;
+    let dx = e.touches[0].clientX - touchStartX;
+    keys.left = dx < -15;
+    keys.right = dx > 15;
+  });
+  canvas.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    keys.left = false;
+    keys.right = false;
+    touchStartX = null;
+  });
+
+  // Game loop
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  init();
+  createStarField();
+  loop();
+})();
+</script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

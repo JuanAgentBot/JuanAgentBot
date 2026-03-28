@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAZE RUNNER / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.2rem;
+    }
+
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 0.5rem 0.8rem;
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+    }
+
+    .hud-item { color: var(--text-muted); }
+    .hud-val { color: var(--accent-cyan); font-weight: 700; }
+    .hud-val.green { color: var(--accent-green); }
+
+    .controls {
+      display: flex;
+      gap: 0.6rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .controls button {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.35rem 0.8rem;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .controls button:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .controls button.active {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+    }
+
+    #maze-canvas {
+      display: block;
+      margin: 0 auto 1rem;
+      border: 1px solid var(--border);
+      image-rendering: pixelated;
+    }
+
+    .info {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      line-height: 1.6;
+      margin-top: 0.8rem;
+    }
+
+    .msg {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent-green);
+      text-shadow: 0 0 15px rgba(57, 255, 20, 0.5);
+      margin: 0.8rem 0;
+      min-height: 1.5rem;
+    }
+
+    .fog-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    .fog-toggle label { cursor: pointer; }
+
+    .fog-toggle input {
+      accent-color: #9d4edd;
+      cursor: pointer;
+    }
+
+    /* Touch controls */
+    .touch-pad {
+      display: none;
+      margin: 0.8rem auto 0;
+      width: 150px;
+      height: 150px;
+      position: relative;
+    }
+
+    .touch-btn {
+      position: absolute;
+      width: 46px;
+      height: 46px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: border-color 0.15s;
+    }
+
+    .touch-btn:active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .touch-btn.up    { top: 0; left: 52px; }
+    .touch-btn.down  { bottom: 0; left: 52px; }
+    .touch-btn.left  { top: 52px; left: 0; }
+    .touch-btn.right { top: 52px; right: 0; }
+
+    @media (hover: none) and (pointer: coarse) {
+      .touch-pad { display: block; }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>MAZE RUNNER</h1>
+    <p class="subtitle">FIND YOUR WAY THROUGH THE NEON LABYRINTH</p>
+
+    <div class="controls">
+      <button data-size="small" class="active">SMALL</button>
+      <button data-size="medium">MEDIUM</button>
+      <button data-size="large">LARGE</button>
+      <button id="new-btn">NEW MAZE</button>
+    </div>
+
+    <div class="fog-toggle">
+      <input type="checkbox" id="fog-check" checked>
+      <label for="fog-check">FOG OF WAR</label>
+    </div>
+
+    <div class="hud">
+      <span class="hud-item">MOVES <span class="hud-val" id="moves">0</span></span>
+      <span class="hud-item">TIME <span class="hud-val" id="timer">0.0s</span></span>
+      <span class="hud-item">BEST <span class="hud-val green" id="best">--</span></span>
+    </div>
+
+    <div class="msg" id="msg"></div>
+    <canvas id="maze-canvas"></canvas>
+
+    <div class="touch-pad">
+      <button class="touch-btn up" data-dir="up">▲</button>
+      <button class="touch-btn down" data-dir="down">▼</button>
+      <button class="touch-btn left" data-dir="left">◀</button>
+      <button class="touch-btn right" data-dir="right">▶</button>
+    </div>
+
+    <p class="info">ARROW KEYS or WASD to move &middot; reach the green exit<br>fog hides what you haven't explored yet</p>
+  </main>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // --- Brand colors ---
+    const C = {
+      void: '#0a0a0f',
+      wall: '#2a2a38',
+      path: '#14141e',
+      player: '#00f0ff',
+      playerGlow: 'rgba(0, 240, 255, 0.3)',
+      trail: '#9d4edd',
+      trailFade: 'rgba(157, 78, 221, 0.15)',
+      goal: '#39ff14',
+      goalGlow: 'rgba(57, 255, 20, 0.35)',
+      fog: '#0a0a0f',
+      fogEdge: 'rgba(10, 10, 15, 0.6)',
+      visited: '#181824',
+    };
+
+    // Detect light theme
+    function isLight() {
+      return document.documentElement.getAttribute('data-theme') === 'light';
+    }
+
+    function getColors() {
+      if (isLight()) {
+        return {
+          void: '#f0eff5',
+          wall: '#c8c8d6',
+          path: '#e4e3ec',
+          player: '#00717f',
+          playerGlow: 'rgba(0, 113, 127, 0.3)',
+          trail: '#7b30b8',
+          trailFade: 'rgba(123, 48, 184, 0.12)',
+          goal: '#1a7a12',
+          goalGlow: 'rgba(26, 122, 18, 0.3)',
+          fog: '#f0eff5',
+          fogEdge: 'rgba(240, 239, 245, 0.6)',
+          visited: '#e8e7f0',
+        };
+      }
+      return C;
+    }
+
+    // --- Sizes ---
+    const SIZES = {
+      small:  { cols: 12, rows: 10, cell: 32 },
+      medium: { cols: 20, rows: 16, cell: 22 },
+      large:  { cols: 30, rows: 24, cell: 16 },
+    };
+
+    // --- State ---
+    let size = 'small';
+    let maze = null;
+    let cols, rows, cellSize;
+    let playerX, playerY;
+    let goalX, goalY;
+    let moves = 0;
+    let startTime = 0;
+    let elapsed = 0;
+    let timerInterval = null;
+    let won = false;
+    let visited = null;
+    let trail = null;
+    let fogEnabled = true;
+    let bestTimes = {};
+
+    const canvas = document.getElementById('maze-canvas');
+    const ctx = canvas.getContext('2d');
+    const movesEl = document.getElementById('moves');
+    const timerEl = document.getElementById('timer');
+    const bestEl = document.getElementById('best');
+    const msgEl = document.getElementById('msg');
+
+    // Load best times from localStorage
+    try {
+      bestTimes = JSON.parse(localStorage.getItem('zero-maze-best') || '{}');
+    } catch(e) { bestTimes = {}; }
+
+    // --- Maze generation (recursive backtracker) ---
+    function generateMaze(w, h) {
+      // Each cell: { top, right, bottom, left } - true means wall exists
+      const grid = [];
+      for (let y = 0; y < h; y++) {
+        grid[y] = [];
+        for (let x = 0; x < w; x++) {
+          grid[y][x] = { top: true, right: true, bottom: true, left: true, visited: false };
+        }
+      }
+
+      const stack = [];
+      const startX = 0, startY = 0;
+      grid[startY][startX].visited = true;
+      stack.push([startX, startY]);
+
+      const dirs = [
+        [0, -1, 'top', 'bottom'],
+        [1, 0, 'right', 'left'],
+        [0, 1, 'bottom', 'top'],
+        [-1, 0, 'left', 'right'],
+      ];
+
+      while (stack.length > 0) {
+        const [cx, cy] = stack[stack.length - 1];
+        const neighbors = [];
+
+        for (const [dx, dy, wall, opposite] of dirs) {
+          const nx = cx + dx, ny = cy + dy;
+          if (nx >= 0 && nx < w && ny >= 0 && ny < h && !grid[ny][nx].visited) {
+            neighbors.push([nx, ny, wall, opposite]);
+          }
+        }
+
+        if (neighbors.length === 0) {
+          stack.pop();
+        } else {
+          const [nx, ny, wall, opposite] = neighbors[Math.floor(Math.random() * neighbors.length)];
+          grid[cy][cx][wall] = false;
+          grid[ny][nx][opposite] = false;
+          grid[ny][nx].visited = true;
+          stack.push([nx, ny]);
+        }
+      }
+
+      return grid;
+    }
+
+    // --- Init game ---
+    function init() {
+      const s = SIZES[size];
+      cols = s.cols;
+      rows = s.rows;
+      cellSize = s.cell;
+
+      // Responsive: shrink cell if canvas would be too wide
+      const maxWidth = Math.min(560, window.innerWidth - 48);
+      if (cols * cellSize > maxWidth) {
+        cellSize = Math.floor(maxWidth / cols);
+      }
+
+      canvas.width = cols * cellSize;
+      canvas.height = rows * cellSize;
+
+      maze = generateMaze(cols, rows);
+      playerX = 0;
+      playerY = 0;
+      goalX = cols - 1;
+      goalY = rows - 1;
+      moves = 0;
+      elapsed = 0;
+      won = false;
+      startTime = 0;
+      msgEl.textContent = '';
+
+      // Visited and trail tracking
+      visited = [];
+      trail = [];
+      for (let y = 0; y < rows; y++) {
+        visited[y] = [];
+        trail[y] = [];
+        for (let x = 0; x < cols; x++) {
+          visited[y][x] = false;
+          trail[y][x] = false;
+        }
+      }
+      visited[0][0] = true;
+      trail[0][0] = true;
+
+      // Reveal area around start
+      revealAround(playerX, playerY);
+
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+
+      updateHUD();
+      draw();
+    }
+
+    function revealAround(x, y) {
+      const radius = 2;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
+            // Only reveal if within Manhattan distance for diamond shape
+            if (Math.abs(dx) + Math.abs(dy) <= radius) {
+              visited[ny][nx] = true;
+            }
+          }
+        }
+      }
+    }
+
+    // --- Movement ---
+    function movePlayer(dx, dy) {
+      if (won) return;
+      const cell = maze[playerY][playerX];
+
+      // Check walls
+      if (dx === 0 && dy === -1 && cell.top) return;
+      if (dx === 1 && dy === 0 && cell.right) return;
+      if (dx === 0 && dy === 1 && cell.bottom) return;
+      if (dx === -1 && dy === 0 && cell.left) return;
+
+      const nx = playerX + dx;
+      const ny = playerY + dy;
+      if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) return;
+
+      playerX = nx;
+      playerY = ny;
+      moves++;
+      trail[ny][nx] = true;
+      revealAround(nx, ny);
+
+      // Start timer on first move
+      if (!startTime) {
+        startTime = performance.now();
+        timerInterval = setInterval(updateTimer, 50);
+      }
+
+      // Check win
+      if (playerX === goalX && playerY === goalY) {
+        won = true;
+        elapsed = (performance.now() - startTime) / 1000;
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = null;
+
+        const key = size + (fogEnabled ? '-fog' : '');
+        if (!bestTimes[key] || elapsed < bestTimes[key]) {
+          bestTimes[key] = elapsed;
+          localStorage.setItem('zero-maze-best', JSON.stringify(bestTimes));
+        }
+
+        msgEl.textContent = '[ MAZE COMPLETE ] ' + elapsed.toFixed(1) + 's / ' + moves + ' moves';
+      }
+
+      updateHUD();
+      draw();
+    }
+
+    function updateTimer() {
+      if (!startTime || won) return;
+      elapsed = (performance.now() - startTime) / 1000;
+      timerEl.textContent = elapsed.toFixed(1) + 's';
+    }
+
+    function updateHUD() {
+      movesEl.textContent = moves;
+      timerEl.textContent = elapsed.toFixed(1) + 's';
+      const key = size + (fogEnabled ? '-fog' : '');
+      bestEl.textContent = bestTimes[key] ? bestTimes[key].toFixed(1) + 's' : '--';
+    }
+
+    // --- Drawing ---
+    function draw() {
+      const col = getColors();
+      ctx.fillStyle = col.void;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const cs = cellSize;
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const px = x * cs;
+          const py = y * cs;
+
+          // Fog check
+          if (fogEnabled && !visited[y][x]) {
+            ctx.fillStyle = col.fog;
+            ctx.fillRect(px, py, cs, cs);
+            continue;
+          }
+
+          const cell = maze[y][x];
+
+          // Cell background
+          if (trail[y][x]) {
+            ctx.fillStyle = col.trailFade;
+            ctx.fillRect(px, py, cs, cs);
+          } else {
+            ctx.fillStyle = col.path;
+            ctx.fillRect(px, py, cs, cs);
+          }
+
+          // Walls
+          ctx.strokeStyle = col.wall;
+          ctx.lineWidth = Math.max(1, cs / 10);
+          ctx.beginPath();
+
+          if (cell.top) {
+            ctx.moveTo(px, py);
+            ctx.lineTo(px + cs, py);
+          }
+          if (cell.right) {
+            ctx.moveTo(px + cs, py);
+            ctx.lineTo(px + cs, py + cs);
+          }
+          if (cell.bottom) {
+            ctx.moveTo(px, py + cs);
+            ctx.lineTo(px + cs, py + cs);
+          }
+          if (cell.left) {
+            ctx.moveTo(px, py);
+            ctx.lineTo(px, py + cs);
+          }
+
+          ctx.stroke();
+        }
+      }
+
+      // Goal glow
+      const gx = goalX * cs + cs / 2;
+      const gy = goalY * cs + cs / 2;
+      if (!fogEnabled || visited[goalY][goalX]) {
+        const goalGrad = ctx.createRadialGradient(gx, gy, 0, gx, gy, cs);
+        goalGrad.addColorStop(0, col.goalGlow);
+        goalGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = goalGrad;
+        ctx.fillRect(goalX * cs, goalY * cs, cs, cs);
+
+        ctx.fillStyle = col.goal;
+        const gs = cs * 0.35;
+        ctx.fillRect(gx - gs / 2, gy - gs / 2, gs, gs);
+      }
+
+      // Player
+      const ppx = playerX * cs + cs / 2;
+      const ppy = playerY * cs + cs / 2;
+
+      // Player glow
+      const playerGrad = ctx.createRadialGradient(ppx, ppy, 0, ppx, ppy, cs * 0.9);
+      playerGrad.addColorStop(0, col.playerGlow);
+      playerGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = playerGrad;
+      ctx.fillRect(playerX * cs, playerY * cs - cs * 0.4, cs * 1.8, cs * 1.8);
+
+      // Player dot
+      ctx.fillStyle = col.player;
+      ctx.beginPath();
+      ctx.arc(ppx, ppy, cs * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Trail dots
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (trail[y][x] && !(x === playerX && y === playerY) && !(x === goalX && y === goalY)) {
+            if (fogEnabled && !visited[y][x]) continue;
+            ctx.fillStyle = col.trail;
+            ctx.globalAlpha = 0.35;
+            ctx.beginPath();
+            ctx.arc(x * cs + cs / 2, y * cs + cs / 2, cs * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+
+      // Fog edge overlay (soft gradient at edges of revealed area)
+      if (fogEnabled) {
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            if (!visited[y][x]) continue;
+            // Check if adjacent to fog
+            const neighbors = [[0,-1],[1,0],[0,1],[-1,0]];
+            for (const [dx, dy] of neighbors) {
+              const nx = x + dx, ny = y + dy;
+              if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && !visited[ny][nx]) {
+                // Draw soft fog edge on this cell's border side
+                const px = x * cs;
+                const py2 = y * cs;
+                ctx.fillStyle = col.fogEdge;
+                if (dx === 1) ctx.fillRect(px + cs - cs/4, py2, cs/4, cs);
+                if (dx === -1) ctx.fillRect(px, py2, cs/4, cs);
+                if (dy === 1) ctx.fillRect(px, py2 + cs - cs/4, cs, cs/4);
+                if (dy === -1) ctx.fillRect(px, py2, cs, cs/4);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // --- Input ---
+    document.addEventListener('keydown', function(e) {
+      switch (e.key) {
+        case 'ArrowUp': case 'w': case 'W':
+          e.preventDefault(); movePlayer(0, -1); break;
+        case 'ArrowDown': case 's': case 'S':
+          e.preventDefault(); movePlayer(0, 1); break;
+        case 'ArrowLeft': case 'a': case 'A':
+          e.preventDefault(); movePlayer(-1, 0); break;
+        case 'ArrowRight': case 'd': case 'D':
+          e.preventDefault(); movePlayer(1, 0); break;
+      }
+    });
+
+    // Size buttons
+    document.querySelectorAll('[data-size]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('[data-size]').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        size = btn.dataset.size;
+        init();
+      });
+    });
+
+    // New maze button
+    document.getElementById('new-btn').addEventListener('click', init);
+
+    // Fog toggle
+    document.getElementById('fog-check').addEventListener('change', function() {
+      fogEnabled = this.checked;
+      updateHUD();
+      draw();
+    });
+
+    // Touch controls
+    document.querySelectorAll('.touch-btn').forEach(function(btn) {
+      btn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        switch (btn.dataset.dir) {
+          case 'up': movePlayer(0, -1); break;
+          case 'down': movePlayer(0, 1); break;
+          case 'left': movePlayer(-1, 0); break;
+          case 'right': movePlayer(1, 0); break;
+        }
+      });
+      btn.addEventListener('click', function() {
+        switch (btn.dataset.dir) {
+          case 'up': movePlayer(0, -1); break;
+          case 'down': movePlayer(0, 1); break;
+          case 'left': movePlayer(-1, 0); break;
+          case 'right': movePlayer(1, 0); break;
+        }
+      });
+    });
+
+    // Responsive resize
+    window.addEventListener('resize', function() {
+      const s = SIZES[size];
+      cellSize = s.cell;
+      const maxWidth = Math.min(560, window.innerWidth - 48);
+      if (cols * cellSize > maxWidth) {
+        cellSize = Math.floor(maxWidth / cols);
+      }
+      canvas.width = cols * cellSize;
+      canvas.height = rows * cellSize;
+      draw();
+    });
+
+    // Start
+    init();
+  })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

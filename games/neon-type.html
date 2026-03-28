@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON TYPE / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    #hud {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.6rem 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1rem;
+      font-size: 0.75rem;
+    }
+
+    .hud-item {
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+    }
+
+    .hud-item span {
+      font-weight: 700;
+    }
+
+    .hud-score span { color: var(--accent-cyan); text-shadow: 0 0 8px var(--glow-cyan); }
+    .hud-wpm span { color: var(--accent-green); text-shadow: 0 0 8px var(--glow-green); }
+    .hud-lives span { color: var(--accent-magenta); text-shadow: 0 0 8px var(--glow-magenta); }
+    .hud-level span { color: var(--accent-purple); text-shadow: 0 0 8px var(--glow-purple); }
+
+    #game-canvas {
+      width: 100%;
+      border: 1px solid var(--border);
+      display: block;
+      background: var(--bg-void);
+      cursor: text;
+    }
+
+    #input-row {
+      display: flex;
+      margin-top: 0.8rem;
+      gap: 0;
+    }
+
+    #input-row .prompt {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-right: none;
+      padding: 0.6rem 0.8rem;
+      color: var(--accent-green);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+    }
+
+    #type-input {
+      flex: 1;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      padding: 0.6rem;
+      outline: none;
+      caret-color: var(--accent-green);
+    }
+
+    #type-input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 12px var(--glow-cyan-soft);
+    }
+
+    #type-input::placeholder {
+      color: var(--text-faint);
+    }
+
+    .controls {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      margin-top: 1rem;
+      line-height: 1.8;
+    }
+
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 15, 0.88);
+      z-index: 2;
+    }
+
+    #overlay.hidden { display: none; }
+
+    #overlay h2 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    #overlay .info {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-bottom: 0.4rem;
+      line-height: 1.6;
+    }
+
+    #overlay .info.score-line {
+      color: var(--accent-cyan);
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-shadow: 0 0 8px var(--glow-cyan);
+    }
+
+    #overlay .start-hint {
+      color: var(--accent-green);
+      font-size: 0.7rem;
+      margin-top: 1rem;
+      letter-spacing: 0.08em;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    .difficulty-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.8rem;
+      justify-content: center;
+    }
+
+    .diff-btn {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      padding: 0.3rem 0.8rem;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .diff-btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .diff-btn.active {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>NEON TYPE</h1>
+    <p class="subtitle">TYPE THE FALLING WORDS BEFORE THEY HIT THE BOTTOM</p>
+
+    <div id="hud">
+      <div class="hud-item hud-score">SCORE <span id="score">0</span></div>
+      <div class="hud-item hud-wpm">WPM <span id="wpm">0</span></div>
+      <div class="hud-item hud-level">WAVE <span id="level">1</span></div>
+      <div class="hud-item hud-lives">LIVES <span id="lives">♥♥♥</span></div>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="game-canvas" width="608" height="420"></canvas>
+      <div id="overlay">
+        <h2 id="overlay-title">NEON TYPE</h2>
+        <div class="info" id="overlay-info">Type falling words to destroy them</div>
+        <div class="info" id="overlay-extra">Don't let them reach the bottom</div>
+        <div class="difficulty-row" id="diff-row">
+          <button class="diff-btn active" data-diff="easy">EASY</button>
+          <button class="diff-btn" data-diff="normal">NORMAL</button>
+          <button class="diff-btn" data-diff="hard">HARD</button>
+        </div>
+        <div class="start-hint" id="start-hint">PRESS ENTER TO START</div>
+      </div>
+    </div>
+
+    <div id="input-row">
+      <div class="prompt">&gt;</div>
+      <input type="text" id="type-input" placeholder="type here..." autocomplete="off" autocapitalize="off" spellcheck="false">
+    </div>
+
+    <div class="controls">
+      TYPE WORDS + ENTER TO DESTROY &middot; PARTIAL MATCHES HIGHLIGHT &middot; SPEED INCREASES EACH WAVE
+    </div>
+  </main>
+
+  <script>
+  (function() {
+    // ── Word bank ──
+    const WORDS_SHORT = [
+      'neon','void','glow','hack','code','byte','loop','node','flux','null',
+      'data','sync','ping','root','zero','core','grid','port','link','task',
+      'fire','dark','beam','scan','wire','chip','disk','echo','fuse','gate',
+      'halt','heap','jump','key','lock','mask','net','open','pipe','quit',
+      'ram','set','tag','user','vex','warp','xor','zip','aim','bit'
+    ];
+    const WORDS_MED = [
+      'cipher','matrix','binary','vector','signal','kernel','buffer','module',
+      'system','daemon','render','shader','script','static','thread','socket',
+      'cursor','syntax','packet','server','client','stream','bridge','filter',
+      'crypto','debug','deploy','driver','encode','format','global','handle',
+      'invoke','lambda','method','object','parse','query','return','struct',
+      'token','update','vortex','widget','zombie','anchor','breach','chrome',
+      'defrag','export'
+    ];
+    const WORDS_LONG = [
+      'firewall','protocol','terminal','overflow','compiler','database',
+      'electron','function','hardware','iterator','keyboard','linuxbox',
+      'malware','network','operator','pipeline','sequence','variable',
+      'debugger','cyberpunk','algorithm','bootstrap','construct','downlink',
+      'endpoint','fragment','generate','hashcode','infinity','junction',
+      'skeleton','timestamp','upstream','volatile','wildcard','crossbar'
+    ];
+
+    // ── Difficulty settings ──
+    const DIFFICULTY = {
+      easy:   { baseSpeed: 0.35, spawnInterval: 2800, speedUp: 0.03, spawnSpeedUp: 80,  lives: 5, wordsPerWave: 10 },
+      normal: { baseSpeed: 0.55, spawnInterval: 2200, speedUp: 0.05, spawnSpeedUp: 100, lives: 3, wordsPerWave: 12 },
+      hard:   { baseSpeed: 0.75, spawnInterval: 1600, speedUp: 0.07, spawnSpeedUp: 120, lives: 2, wordsPerWave: 15 }
+    };
+
+    let difficulty = 'easy';
+
+    // ── Canvas setup ──
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const input = document.getElementById('type-input');
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlayInfo = document.getElementById('overlay-info');
+    const overlayExtra = document.getElementById('overlay-extra');
+    const startHint = document.getElementById('start-hint');
+    const diffRow = document.getElementById('diff-row');
+    const scoreEl = document.getElementById('score');
+    const wpmEl = document.getElementById('wpm');
+    const levelEl = document.getElementById('level');
+    const livesEl = document.getElementById('lives');
+
+    // Responsive canvas
+    function resizeCanvas() {
+      const wrap = canvas.parentElement;
+      const w = wrap.clientWidth;
+      canvas.style.width = w + 'px';
+      canvas.style.height = (w * 420 / 608) + 'px';
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // ── Brand colors (read CSS vars for theme support) ──
+    function getColor(varName) {
+      return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    }
+
+    // ── Game state ──
+    let words = [];
+    let score = 0;
+    let lives = 3;
+    let wave = 1;
+    let wordsDestroyed = 0;
+    let wordsThisWave = 0;
+    let running = false;
+    let gameOver = false;
+    let lastSpawn = 0;
+    let startTime = 0;
+    let totalCharsTyped = 0;
+    let particles = [];
+    let currentInput = '';
+    let spawnInterval = 2200;
+    let fallSpeed = 0.55;
+
+    // ── Particles ──
+    function spawnParticles(x, y, color, count) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1 + Math.random() * 3;
+        particles.push({
+          x: x, y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 1,
+          life: 1,
+          decay: 0.02 + Math.random() * 0.03,
+          color: color,
+          size: 1.5 + Math.random() * 2.5
+        });
+      }
+    }
+
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.05;
+        p.life -= p.decay;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function drawParticles() {
+      for (const p of particles) {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 6;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      }
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+    }
+
+    // ── Word selection ──
+    function pickWord() {
+      const r = Math.random();
+      let pool;
+      if (wave <= 2) {
+        pool = r < 0.7 ? WORDS_SHORT : WORDS_MED;
+      } else if (wave <= 5) {
+        pool = r < 0.4 ? WORDS_SHORT : r < 0.8 ? WORDS_MED : WORDS_LONG;
+      } else {
+        pool = r < 0.2 ? WORDS_SHORT : r < 0.6 ? WORDS_MED : WORDS_LONG;
+      }
+      // Avoid duplicates currently on screen
+      let word;
+      let attempts = 0;
+      do {
+        word = pool[Math.floor(Math.random() * pool.length)];
+        attempts++;
+      } while (words.some(w => w.text === word) && attempts < 20);
+      return word;
+    }
+
+    // ── Spawn word ──
+    function spawnWord() {
+      const text = pickWord();
+      // Measure width to place within bounds
+      ctx.font = '700 16px JetBrains Mono, monospace';
+      const tw = ctx.measureText(text).width;
+      const x = 20 + Math.random() * (canvas.width - tw - 40);
+      const colors = [
+        getColor('--accent-cyan'),
+        getColor('--accent-green'),
+        getColor('--accent-purple'),
+        getColor('--accent-pink') || '#ff6ac1'
+      ];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      words.push({
+        text: text,
+        x: x,
+        y: -10,
+        speed: fallSpeed + (Math.random() - 0.5) * 0.15,
+        color: color,
+        matched: 0, // chars matched
+        flash: 0 // flash timer for destruction
+      });
+    }
+
+    // ── Update matched chars for all words ──
+    function updateMatches(typed) {
+      for (const w of words) {
+        if (typed.length > 0 && w.text.startsWith(typed)) {
+          w.matched = typed.length;
+        } else {
+          w.matched = 0;
+        }
+      }
+    }
+
+    // ── Try to destroy a word ──
+    function tryDestroy(typed) {
+      // Find the word closest to the bottom that matches
+      let best = null;
+      let bestY = -1;
+      for (const w of words) {
+        if (w.text === typed && w.y > bestY) {
+          best = w;
+          bestY = w.y;
+        }
+      }
+      if (best) {
+        // Score: longer words worth more, bonus for lower words (close calls)
+        const lengthScore = best.text.length * 10;
+        const dangerBonus = Math.floor((best.y / canvas.height) * 20);
+        score += lengthScore + dangerBonus;
+        totalCharsTyped += best.text.length;
+        wordsDestroyed++;
+        wordsThisWave++;
+
+        // Particles
+        ctx.font = '700 16px JetBrains Mono, monospace';
+        const tw = ctx.measureText(best.text).width;
+        spawnParticles(best.x + tw / 2, best.y, getColor('--accent-green'), 15);
+
+        // Remove
+        words.splice(words.indexOf(best), 1);
+
+        // Check wave progress
+        const diff = DIFFICULTY[difficulty];
+        if (wordsThisWave >= diff.wordsPerWave) {
+          wave++;
+          wordsThisWave = 0;
+          fallSpeed += diff.speedUp;
+          spawnInterval = Math.max(600, spawnInterval - diff.spawnSpeedUp);
+        }
+
+        return true;
+      }
+      return false;
+    }
+
+    // ── Draw ──
+    function draw() {
+      // Background
+      ctx.fillStyle = getColor('--bg-void') || '#0a0a0f';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Danger zone line at bottom
+      const dangerY = canvas.height - 30;
+      ctx.strokeStyle = getColor('--accent-crimson') || '#ff1744';
+      ctx.globalAlpha = 0.25;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(0, dangerY);
+      ctx.lineTo(canvas.width, dangerY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+
+      // Danger zone label
+      ctx.fillStyle = getColor('--accent-crimson') || '#ff1744';
+      ctx.globalAlpha = 0.3;
+      ctx.font = '400 9px JetBrains Mono, monospace';
+      ctx.fillText('DANGER ZONE', 10, canvas.height - 12);
+      ctx.globalAlpha = 1;
+
+      // Words
+      ctx.font = '700 16px JetBrains Mono, monospace';
+      for (const w of words) {
+        if (w.matched > 0) {
+          // Draw matched portion in green
+          const matchedText = w.text.substring(0, w.matched);
+          const restText = w.text.substring(w.matched);
+
+          ctx.fillStyle = getColor('--accent-green') || '#39ff14';
+          ctx.shadowColor = getColor('--accent-green') || '#39ff14';
+          ctx.shadowBlur = 10;
+          ctx.fillText(matchedText, w.x, w.y);
+          ctx.shadowBlur = 0;
+
+          const matchedWidth = ctx.measureText(matchedText).width;
+          ctx.fillStyle = w.color;
+          ctx.shadowColor = w.color;
+          ctx.shadowBlur = 6;
+          ctx.fillText(restText, w.x + matchedWidth, w.y);
+          ctx.shadowBlur = 0;
+        } else {
+          ctx.fillStyle = w.color;
+          ctx.shadowColor = w.color;
+          ctx.shadowBlur = 6;
+          ctx.fillText(w.text, w.x, w.y);
+          ctx.shadowBlur = 0;
+        }
+      }
+
+      // Particles
+      drawParticles();
+
+      // Wave progress bar (subtle)
+      const diff = DIFFICULTY[difficulty];
+      const progress = wordsThisWave / diff.wordsPerWave;
+      ctx.fillStyle = getColor('--accent-purple') || '#9d4edd';
+      ctx.globalAlpha = 0.2;
+      ctx.fillRect(0, 0, canvas.width * progress, 2);
+      ctx.globalAlpha = 1;
+    }
+
+    // ── Game loop ──
+    let lastFrame = 0;
+
+    function gameLoop(timestamp) {
+      if (!running) return;
+
+      const dt = timestamp - lastFrame;
+      lastFrame = timestamp;
+
+      // Spawn words
+      if (timestamp - lastSpawn > spawnInterval) {
+        spawnWord();
+        lastSpawn = timestamp;
+      }
+
+      // Move words
+      for (let i = words.length - 1; i >= 0; i--) {
+        words[i].y += words[i].speed;
+
+        // Word reached bottom
+        if (words[i].y > canvas.height - 10) {
+          spawnParticles(words[i].x + 30, canvas.height - 20, getColor('--accent-crimson') || '#ff1744', 10);
+          words.splice(i, 1);
+          lives--;
+          if (lives <= 0) {
+            endGame();
+            return;
+          }
+        }
+      }
+
+      // Update particles
+      updateParticles();
+
+      // Update HUD
+      scoreEl.textContent = score;
+      levelEl.textContent = wave;
+
+      const heartStr = '♥'.repeat(Math.max(0, lives)) + '♡'.repeat(Math.max(0, DIFFICULTY[difficulty].lives - lives));
+      livesEl.textContent = heartStr;
+
+      // WPM calculation
+      const elapsed = (Date.now() - startTime) / 60000; // minutes
+      if (elapsed > 0.05) {
+        const wpm = Math.round(totalCharsTyped / 5 / elapsed);
+        wpmEl.textContent = wpm;
+      }
+
+      // Draw
+      draw();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // ── Start / End ──
+    function startGame() {
+      const diff = DIFFICULTY[difficulty];
+      words = [];
+      particles = [];
+      score = 0;
+      lives = diff.lives;
+      wave = 1;
+      wordsDestroyed = 0;
+      wordsThisWave = 0;
+      fallSpeed = diff.baseSpeed;
+      spawnInterval = diff.spawnInterval;
+      totalCharsTyped = 0;
+      startTime = Date.now();
+      lastSpawn = 0;
+      gameOver = false;
+      running = true;
+      currentInput = '';
+      input.value = '';
+      input.disabled = false;
+      input.focus();
+      overlay.classList.add('hidden');
+
+      scoreEl.textContent = '0';
+      wpmEl.textContent = '0';
+      levelEl.textContent = '1';
+      const heartStr = '♥'.repeat(diff.lives);
+      livesEl.textContent = heartStr;
+
+      lastFrame = performance.now();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function endGame() {
+      running = false;
+      gameOver = true;
+      input.disabled = true;
+
+      const elapsed = (Date.now() - startTime) / 60000;
+      const wpm = elapsed > 0.05 ? Math.round(totalCharsTyped / 5 / elapsed) : 0;
+
+      overlayTitle.textContent = 'GAME OVER';
+      overlayInfo.textContent = 'SCORE: ' + score;
+      overlayInfo.classList.add('score-line');
+      overlayExtra.textContent = wordsDestroyed + ' words destroyed · ' + wpm + ' WPM · wave ' + wave;
+      startHint.textContent = 'PRESS ENTER TO RETRY';
+      diffRow.style.display = 'flex';
+      overlay.classList.remove('hidden');
+    }
+
+    // ── Input handling ──
+    input.addEventListener('input', function() {
+      currentInput = input.value.toLowerCase().trim();
+      updateMatches(currentInput);
+    });
+
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        if (!running && !gameOver) {
+          // Start
+          startGame();
+          return;
+        }
+        if (gameOver) {
+          // Restart
+          overlayInfo.classList.remove('score-line');
+          startGame();
+          return;
+        }
+        // Try to destroy word
+        const typed = input.value.toLowerCase().trim();
+        if (typed.length > 0) {
+          tryDestroy(typed);
+          input.value = '';
+          currentInput = '';
+          updateMatches('');
+        }
+      }
+    });
+
+    // Global enter to start
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !running) {
+        if (document.activeElement !== input) {
+          overlayInfo.classList.remove('score-line');
+          startGame();
+        }
+      }
+      // Focus input if typing and game is running
+      if (running && document.activeElement !== input && e.key.length === 1) {
+        input.focus();
+      }
+    });
+
+    // Difficulty buttons
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        difficulty = this.dataset.diff;
+      });
+    });
+
+    // Click canvas to focus input
+    canvas.addEventListener('click', function() {
+      if (running) input.focus();
+    });
+
+    // Initial draw
+    draw();
+    input.focus();
+  })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

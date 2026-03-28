@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YAHTZEE / ZERO</title>
+  <meta name="description" content="Yahtzee dice game with neon style. Roll, hold, score. 13 rounds of strategy.">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0f;
+      color: #e0e0e8;
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .top-bar {
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #7a7a90;
+    }
+
+    .back {
+      color: #7a7a90;
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      transition: color 0.3s;
+    }
+
+    .back:hover { color: #00f0ff; }
+
+    .title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #ff2d7b;
+      letter-spacing: 0.12em;
+      text-shadow: 0 0 10px rgba(255, 45, 123, 0.5);
+    }
+
+    .game-wrap {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 1.2rem 1rem 2rem;
+    }
+
+    /* Round / Score display */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+    }
+
+    .status-bar .round { color: #9d4edd; }
+    .status-bar .total-score { color: #39ff14; text-shadow: 0 0 8px rgba(57, 255, 20, 0.4); }
+
+    /* Dice area */
+    .dice-area {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 0.8rem;
+      flex-wrap: wrap;
+    }
+
+    .die {
+      width: 64px;
+      height: 64px;
+      border: 2px solid #7a7a90;
+      background: #121218;
+      cursor: pointer;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+      user-select: none;
+    }
+
+    .die:hover { border-color: #00f0ff; }
+
+    .die.held {
+      border-color: #00f0ff;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+    }
+
+    .die.held::after {
+      content: 'HOLD';
+      position: absolute;
+      bottom: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.55rem;
+      color: #00f0ff;
+      letter-spacing: 0.1em;
+    }
+
+    .die.rolling {
+      animation: diceRoll 0.08s infinite alternate;
+    }
+
+    @keyframes diceRoll {
+      0% { transform: rotate(-8deg) scale(1.05); }
+      100% { transform: rotate(8deg) scale(0.95); }
+    }
+
+    .die canvas {
+      width: 56px;
+      height: 56px;
+    }
+
+    /* Roll button */
+    .roll-area {
+      text-align: center;
+      margin-bottom: 1.2rem;
+    }
+
+    .roll-btn {
+      background: transparent;
+      border: 2px solid #ff2d7b;
+      color: #ff2d7b;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      padding: 0.6rem 2rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-shadow: 0 0 8px rgba(255, 45, 123, 0.4);
+    }
+
+    .roll-btn:hover:not(:disabled) {
+      background: #ff2d7b;
+      color: #0a0a0f;
+      box-shadow: 0 0 20px rgba(255, 45, 123, 0.5);
+    }
+
+    .roll-btn:disabled {
+      border-color: #7a7a90;
+      color: #7a7a90;
+      cursor: default;
+      text-shadow: none;
+    }
+
+    .rolls-left {
+      font-size: 0.65rem;
+      color: #7a7a90;
+      margin-top: 0.4rem;
+      letter-spacing: 0.06em;
+    }
+
+    /* Scorecard */
+    .scorecard {
+      border: 1px solid #7a7a90;
+      margin-bottom: 1rem;
+    }
+
+    .score-section-header {
+      background: #121218;
+      padding: 0.5rem 0.8rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #9d4edd;
+      border-bottom: 1px solid #7a7a90;
+    }
+
+    .score-row {
+      display: flex;
+      border-bottom: 1px solid rgba(122, 122, 144, 0.3);
+      transition: background 0.15s;
+    }
+
+    .score-row:last-child { border-bottom: none; }
+
+    .score-row.clickable:hover {
+      background: rgba(0, 240, 255, 0.06);
+    }
+
+    .score-row.clickable { cursor: pointer; }
+
+    .score-row.used {
+      cursor: default;
+    }
+
+    .score-row.used:hover { background: transparent; }
+
+    .score-name {
+      flex: 1;
+      padding: 0.45rem 0.8rem;
+      font-size: 0.72rem;
+      color: #e0e0e8;
+      letter-spacing: 0.03em;
+    }
+
+    .score-val {
+      width: 60px;
+      text-align: center;
+      padding: 0.45rem 0.4rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .score-val.empty { color: #7a7a90; }
+    .score-val.preview { color: #00f0ff; text-shadow: 0 0 6px rgba(0, 240, 255, 0.3); }
+    .score-val.scored { color: #39ff14; }
+    .score-val.zero-scored { color: #7a7a90; }
+
+    .score-row.bonus-row .score-name { color: #9d4edd; }
+    .score-row.bonus-row .score-val { color: #9d4edd; }
+    .score-row.total-row { border-top: 1px solid #7a7a90; }
+    .score-row.total-row .score-name {
+      font-weight: 700;
+      color: #ff2d7b;
+    }
+    .score-row.total-row .score-val {
+      color: #ff2d7b;
+      text-shadow: 0 0 8px rgba(255, 45, 123, 0.4);
+    }
+
+    /* Game over overlay */
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10, 10, 15, 0.92);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .overlay.active { display: flex; }
+
+    .overlay-box {
+      border: 2px solid #ff2d7b;
+      padding: 2.5rem;
+      text-align: center;
+      max-width: 360px;
+      background: #0a0a0f;
+    }
+
+    .overlay-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #ff2d7b;
+      letter-spacing: 0.12em;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 20px rgba(255, 45, 123, 0.5);
+    }
+
+    .overlay-score {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #39ff14;
+      text-shadow: 0 0 30px rgba(57, 255, 20, 0.5);
+      margin-bottom: 0.5rem;
+    }
+
+    .overlay-label {
+      font-size: 0.7rem;
+      color: #7a7a90;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+    }
+
+    .overlay-best {
+      font-size: 0.85rem;
+      color: #9d4edd;
+      margin-bottom: 1.5rem;
+    }
+
+    .overlay-btn {
+      background: transparent;
+      border: 2px solid #00f0ff;
+      color: #00f0ff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      padding: 0.6rem 2rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .overlay-btn:hover {
+      background: #00f0ff;
+      color: #0a0a0f;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+    }
+
+    /* Controls hint */
+    .controls {
+      text-align: center;
+      font-size: 0.6rem;
+      color: #7a7a90;
+      letter-spacing: 0.06em;
+      line-height: 1.6;
+      padding: 0.8rem;
+      border-top: 1px solid rgba(122, 122, 144, 0.3);
+    }
+
+    .controls span { color: #00f0ff; }
+
+    @media (max-width: 400px) {
+      .die { width: 52px; height: 52px; }
+      .die canvas { width: 46px; height: 46px; }
+      .dice-area { gap: 8px; }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <div class="title">YAHTZEE</div>
+  </div>
+
+  <div class="game-wrap">
+    <div class="status-bar">
+      <div class="round" id="round-display">ROUND 1 / 13</div>
+      <div class="total-score" id="total-display">TOTAL: 0</div>
+    </div>
+
+    <div class="dice-area" id="dice-area"></div>
+
+    <div class="roll-area">
+      <button class="roll-btn" id="roll-btn">ROLL DICE</button>
+      <div class="rolls-left" id="rolls-left">3 ROLLS LEFT</div>
+    </div>
+
+    <div class="scorecard" id="scorecard"></div>
+
+    <div class="controls">
+      <span>CLICK DICE</span> TO HOLD &middot; <span>CLICK CATEGORY</span> TO SCORE<br>
+      3 ROLLS PER TURN &middot; 13 ROUNDS &middot; BONUS AT 63+ UPPER
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="overlay-box">
+      <div class="overlay-title">GAME OVER</div>
+      <div class="overlay-label">FINAL SCORE</div>
+      <div class="overlay-score" id="final-score">0</div>
+      <div class="overlay-best" id="best-score"></div>
+      <button class="overlay-btn" id="new-game-btn">NEW GAME</button>
+    </div>
+  </div>
+
+  <script>
+    // ── Yahtzee Game Engine ──
+
+    const CATEGORIES = [
+      { id: 'ones',    name: 'Ones',    section: 'upper', desc: 'Sum of 1s' },
+      { id: 'twos',    name: 'Twos',    section: 'upper', desc: 'Sum of 2s' },
+      { id: 'threes',  name: 'Threes',  section: 'upper', desc: 'Sum of 3s' },
+      { id: 'fours',   name: 'Fours',   section: 'upper', desc: 'Sum of 4s' },
+      { id: 'fives',   name: 'Fives',   section: 'upper', desc: 'Sum of 5s' },
+      { id: 'sixes',   name: 'Sixes',   section: 'upper', desc: 'Sum of 6s' },
+      { id: 'three_kind', name: 'Three of a Kind', section: 'lower', desc: 'Sum all dice' },
+      { id: 'four_kind',  name: 'Four of a Kind',  section: 'lower', desc: 'Sum all dice' },
+      { id: 'full_house', name: 'Full House',       section: 'lower', desc: '25 pts' },
+      { id: 'sm_straight', name: 'Sm. Straight',    section: 'lower', desc: '30 pts' },
+      { id: 'lg_straight', name: 'Lg. Straight',    section: 'lower', desc: '40 pts' },
+      { id: 'yahtzee',     name: 'YAHTZEE',         section: 'lower', desc: '50 pts' },
+      { id: 'chance',      name: 'Chance',           section: 'lower', desc: 'Sum all dice' },
+    ];
+
+    let dice = [0, 0, 0, 0, 0];
+    let held = [false, false, false, false, false];
+    let rollsLeft = 3;
+    let scores = {};
+    let round = 1;
+    let rolling = false;
+    let bestScore = parseInt(localStorage.getItem('yahtzee-best') || '0');
+
+    // ── Scoring Functions ──
+
+    function countDice(d) {
+      const c = [0, 0, 0, 0, 0, 0, 0];
+      d.forEach(v => c[v]++);
+      return c;
+    }
+
+    function sumAll(d) { return d.reduce((a, b) => a + b, 0); }
+
+    function calcScore(catId, d) {
+      const counts = countDice(d);
+      const total = sumAll(d);
+      const vals = counts.slice(1);
+
+      switch (catId) {
+        case 'ones':   return counts[1] * 1;
+        case 'twos':   return counts[2] * 2;
+        case 'threes': return counts[3] * 3;
+        case 'fours':  return counts[4] * 4;
+        case 'fives':  return counts[5] * 5;
+        case 'sixes':  return counts[6] * 6;
+        case 'three_kind': return vals.some(c => c >= 3) ? total : 0;
+        case 'four_kind':  return vals.some(c => c >= 4) ? total : 0;
+        case 'full_house': return (vals.includes(3) && vals.includes(2)) ? 25 : 0;
+        case 'sm_straight': {
+          const u = [...new Set(d)].sort();
+          const s = u.join('');
+          return (s.includes('1234') || s.includes('2345') || s.includes('3456')) ? 30 : 0;
+        }
+        case 'lg_straight': {
+          const u = [...new Set(d)].sort();
+          const s = u.join('');
+          return (s === '12345' || s === '23456') ? 40 : 0;
+        }
+        case 'yahtzee': return vals.some(c => c >= 5) ? 50 : 0;
+        case 'chance': return total;
+        default: return 0;
+      }
+    }
+
+    // ── Dice Drawing ──
+
+    const PIP_POSITIONS = {
+      1: [[0.5, 0.5]],
+      2: [[0.25, 0.25], [0.75, 0.75]],
+      3: [[0.25, 0.25], [0.5, 0.5], [0.75, 0.75]],
+      4: [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]],
+      5: [[0.25, 0.25], [0.75, 0.25], [0.5, 0.5], [0.25, 0.75], [0.75, 0.75]],
+      6: [[0.25, 0.25], [0.75, 0.25], [0.25, 0.5], [0.75, 0.5], [0.25, 0.75], [0.75, 0.75]],
+    };
+
+    function drawDie(canvas, value, isHeld) {
+      const ctx = canvas.getContext('2d');
+      const s = canvas.width;
+      ctx.clearRect(0, 0, s, s);
+
+      const color = isHeld ? '#00f0ff' : '#e0e0e8';
+      const glow = isHeld ? 'rgba(0, 240, 255, 0.6)' : 'rgba(224, 224, 232, 0.3)';
+      const r = s * 0.08;
+
+      if (value < 1 || value > 6) return;
+
+      PIP_POSITIONS[value].forEach(([px, py]) => {
+        const x = px * s;
+        const y = py * s;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.shadowColor = glow;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+    }
+
+    // ── DOM Setup ──
+
+    const diceArea = document.getElementById('dice-area');
+    const rollBtn = document.getElementById('roll-btn');
+    const rollsLeftEl = document.getElementById('rolls-left');
+    const roundDisplay = document.getElementById('round-display');
+    const totalDisplay = document.getElementById('total-display');
+    const scorecardEl = document.getElementById('scorecard');
+    const overlay = document.getElementById('overlay');
+    const finalScoreEl = document.getElementById('final-score');
+    const bestScoreEl = document.getElementById('best-score');
+    const newGameBtn = document.getElementById('new-game-btn');
+
+    // Create dice elements
+    const dieElements = [];
+    for (let i = 0; i < 5; i++) {
+      const div = document.createElement('div');
+      div.className = 'die';
+      const cvs = document.createElement('canvas');
+      cvs.width = 112;
+      cvs.height = 112;
+      div.appendChild(cvs);
+      div.addEventListener('click', () => toggleHold(i));
+      diceArea.appendChild(div);
+      dieElements.push({ div, canvas: cvs });
+    }
+
+    function toggleHold(i) {
+      if (rollsLeft === 3 || rollsLeft === 0 && round > 13) return;
+      if (dice[i] === 0) return;
+      held[i] = !held[i];
+      render();
+    }
+
+    // ── Rolling ──
+
+    function doRoll() {
+      if (rolling || rollsLeft <= 0) return;
+      rolling = true;
+      rollBtn.disabled = true;
+
+      // Start animation
+      dieElements.forEach((de, i) => {
+        if (!held[i]) de.div.classList.add('rolling');
+      });
+
+      let ticks = 0;
+      const maxTicks = 10;
+      const interval = setInterval(() => {
+        for (let i = 0; i < 5; i++) {
+          if (!held[i]) {
+            dice[i] = Math.floor(Math.random() * 6) + 1;
+          }
+        }
+        renderDice();
+        ticks++;
+        if (ticks >= maxTicks) {
+          clearInterval(interval);
+          dieElements.forEach(de => de.div.classList.remove('rolling'));
+          rollsLeft--;
+          rolling = false;
+          render();
+        }
+      }, 50);
+    }
+
+    rollBtn.addEventListener('click', doRoll);
+
+    // ── Scoring ──
+
+    function scoreCategory(catId) {
+      if (scores[catId] !== undefined) return;
+      if (rollsLeft === 3) return; // must roll first
+      scores[catId] = calcScore(catId, dice);
+      round++;
+      rollsLeft = 3;
+      dice = [0, 0, 0, 0, 0];
+      held = [false, false, false, false, false];
+
+      if (round > 13) {
+        endGame();
+      }
+      render();
+    }
+
+    function getUpperTotal() {
+      let t = 0;
+      ['ones', 'twos', 'threes', 'fours', 'fives', 'sixes'].forEach(id => {
+        if (scores[id] !== undefined) t += scores[id];
+      });
+      return t;
+    }
+
+    function getUpperBonus() {
+      return getUpperTotal() >= 63 ? 35 : 0;
+    }
+
+    function getLowerTotal() {
+      let t = 0;
+      ['three_kind', 'four_kind', 'full_house', 'sm_straight', 'lg_straight', 'yahtzee', 'chance'].forEach(id => {
+        if (scores[id] !== undefined) t += scores[id];
+      });
+      return t;
+    }
+
+    function getGrandTotal() {
+      return getUpperTotal() + getUpperBonus() + getLowerTotal();
+    }
+
+    function endGame() {
+      const total = getGrandTotal();
+      finalScoreEl.textContent = total;
+      if (total > bestScore) {
+        bestScore = total;
+        localStorage.setItem('yahtzee-best', bestScore.toString());
+        bestScoreEl.textContent = 'NEW BEST!';
+        bestScoreEl.style.color = '#39ff14';
+      } else {
+        bestScoreEl.textContent = 'BEST: ' + bestScore;
+        bestScoreEl.style.color = '#9d4edd';
+      }
+      overlay.classList.add('active');
+    }
+
+    function newGame() {
+      dice = [0, 0, 0, 0, 0];
+      held = [false, false, false, false, false];
+      rollsLeft = 3;
+      scores = {};
+      round = 1;
+      rolling = false;
+      overlay.classList.remove('active');
+      render();
+    }
+
+    newGameBtn.addEventListener('click', newGame);
+
+    // ── Rendering ──
+
+    function renderDice() {
+      for (let i = 0; i < 5; i++) {
+        drawDie(dieElements[i].canvas, dice[i], held[i]);
+        dieElements[i].div.classList.toggle('held', held[i]);
+      }
+    }
+
+    function buildScorecard() {
+      scorecardEl.innerHTML = '';
+      const canScore = rollsLeft < 3 && round <= 13;
+
+      // Upper section
+      const upperHeader = document.createElement('div');
+      upperHeader.className = 'score-section-header';
+      upperHeader.textContent = 'UPPER SECTION';
+      scorecardEl.appendChild(upperHeader);
+
+      CATEGORIES.filter(c => c.section === 'upper').forEach(cat => {
+        const row = document.createElement('div');
+        row.className = 'score-row';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'score-name';
+        nameEl.textContent = cat.name;
+        const valEl = document.createElement('div');
+        valEl.className = 'score-val';
+
+        if (scores[cat.id] !== undefined) {
+          valEl.textContent = scores[cat.id];
+          valEl.classList.add(scores[cat.id] > 0 ? 'scored' : 'zero-scored');
+          row.classList.add('used');
+        } else if (canScore) {
+          const preview = calcScore(cat.id, dice);
+          valEl.textContent = preview;
+          valEl.classList.add('preview');
+          row.classList.add('clickable');
+          row.addEventListener('click', () => scoreCategory(cat.id));
+        } else {
+          valEl.textContent = '—';
+          valEl.classList.add('empty');
+        }
+
+        row.appendChild(nameEl);
+        row.appendChild(valEl);
+        scorecardEl.appendChild(row);
+      });
+
+      // Upper subtotal
+      const subRow = document.createElement('div');
+      subRow.className = 'score-row bonus-row';
+      const subName = document.createElement('div');
+      subName.className = 'score-name';
+      subName.textContent = 'Upper Total';
+      const subVal = document.createElement('div');
+      subVal.className = 'score-val';
+      subVal.textContent = getUpperTotal() + ' / 63';
+      subRow.appendChild(subName);
+      subRow.appendChild(subVal);
+      scorecardEl.appendChild(subRow);
+
+      // Bonus row
+      const bonusRow = document.createElement('div');
+      bonusRow.className = 'score-row bonus-row';
+      const bonusName = document.createElement('div');
+      bonusName.className = 'score-name';
+      bonusName.textContent = 'Bonus';
+      const bonusVal = document.createElement('div');
+      bonusVal.className = 'score-val';
+      bonusVal.textContent = getUpperBonus() > 0 ? '+35' : '—';
+      if (getUpperBonus() > 0) bonusVal.style.color = '#39ff14';
+      bonusRow.appendChild(bonusName);
+      bonusRow.appendChild(bonusVal);
+      scorecardEl.appendChild(bonusRow);
+
+      // Lower section
+      const lowerHeader = document.createElement('div');
+      lowerHeader.className = 'score-section-header';
+      lowerHeader.textContent = 'LOWER SECTION';
+      scorecardEl.appendChild(lowerHeader);
+
+      CATEGORIES.filter(c => c.section === 'lower').forEach(cat => {
+        const row = document.createElement('div');
+        row.className = 'score-row';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'score-name';
+        nameEl.textContent = cat.name;
+        const valEl = document.createElement('div');
+        valEl.className = 'score-val';
+
+        if (scores[cat.id] !== undefined) {
+          valEl.textContent = scores[cat.id];
+          valEl.classList.add(scores[cat.id] > 0 ? 'scored' : 'zero-scored');
+          row.classList.add('used');
+        } else if (canScore) {
+          const preview = calcScore(cat.id, dice);
+          valEl.textContent = preview;
+          valEl.classList.add('preview');
+          row.classList.add('clickable');
+          row.addEventListener('click', () => scoreCategory(cat.id));
+        } else {
+          valEl.textContent = '—';
+          valEl.classList.add('empty');
+        }
+
+        row.appendChild(nameEl);
+        row.appendChild(valEl);
+        scorecardEl.appendChild(row);
+      });
+
+      // Grand total
+      const totalRow = document.createElement('div');
+      totalRow.className = 'score-row total-row';
+      const totalName = document.createElement('div');
+      totalName.className = 'score-name';
+      totalName.textContent = 'GRAND TOTAL';
+      const totalVal = document.createElement('div');
+      totalVal.className = 'score-val';
+      totalVal.textContent = getGrandTotal();
+      totalRow.appendChild(totalName);
+      totalRow.appendChild(totalVal);
+      scorecardEl.appendChild(totalRow);
+    }
+
+    function render() {
+      renderDice();
+      buildScorecard();
+
+      roundDisplay.textContent = round <= 13 ? `ROUND ${round} / 13` : 'COMPLETE';
+      totalDisplay.textContent = 'TOTAL: ' + getGrandTotal();
+
+      rollBtn.disabled = rollsLeft <= 0 || round > 13 || rolling;
+      rollBtn.textContent = rollsLeft === 3 ? 'ROLL DICE' : 'RE-ROLL';
+      rollsLeftEl.textContent = rollsLeft === 0 ? 'PICK A CATEGORY' :
+        rollsLeft + ' ROLL' + (rollsLeft !== 1 ? 'S' : '') + ' LEFT';
+    }
+
+    // ── Keyboard shortcut ──
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault();
+        if (!rollBtn.disabled) doRoll();
+      }
+      if (e.key >= '1' && e.key <= '5') {
+        toggleHold(parseInt(e.key) - 1);
+      }
+    });
+
+    // ── Init ──
+    render();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

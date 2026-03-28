@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HANGMAN / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .stats-bar {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.75rem;
+    }
+
+    .stat-label {
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+    }
+
+    .stat-val {
+      color: var(--accent-cyan);
+      font-weight: 700;
+    }
+
+    .stat-val.green { color: var(--accent-green); }
+    .stat-val.magenta { color: var(--accent-magenta); }
+
+    .category {
+      font-size: 0.7rem;
+      color: var(--accent-purple);
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 8px rgba(157, 78, 221, 0.4);
+    }
+
+    .gallows-area {
+      margin: 0 auto 1.5rem;
+      width: 200px;
+      height: 200px;
+    }
+
+    .gallows-area canvas {
+      display: block;
+      margin: 0 auto;
+    }
+
+    .word-display {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      min-height: 3rem;
+    }
+
+    .letter-slot {
+      width: 2rem;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.3rem;
+      text-transform: uppercase;
+      transition: color 0.3s, border-color 0.3s;
+    }
+
+    .letter-slot.revealed {
+      color: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+    }
+
+    .letter-slot.wrong-reveal {
+      color: var(--accent-magenta);
+      border-color: var(--accent-magenta);
+      text-shadow: 0 0 10px rgba(255, 45, 123, 0.4);
+    }
+
+    .keyboard {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .kb-row {
+      display: flex;
+      gap: 0.3rem;
+    }
+
+    .key {
+      width: 2rem;
+      height: 2.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      background: transparent;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+    }
+
+    .key:hover:not(.used) {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+    }
+
+    .key.correct {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+      cursor: default;
+      opacity: 0.7;
+    }
+
+    .key.wrong {
+      border-color: transparent;
+      color: var(--text-dim);
+      opacity: 0.25;
+      cursor: default;
+    }
+
+    .message {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+      min-height: 1.5rem;
+    }
+
+    .message.win {
+      color: var(--accent-green);
+      text-shadow: 0 0 15px rgba(57, 255, 20, 0.5);
+    }
+
+    .message.lose {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 15px rgba(255, 45, 123, 0.5);
+    }
+
+    .new-game-btn {
+      display: none;
+      margin: 0 auto;
+      padding: 0.6rem 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--bg-primary);
+      background: var(--accent-cyan);
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+
+    .new-game-btn:hover {
+      background: var(--accent-green);
+      box-shadow: 0 0 15px rgba(57, 255, 20, 0.4);
+    }
+
+    .new-game-btn.visible { display: inline-block; }
+
+    .wrong-count {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-bottom: 1rem;
+    }
+
+    .wrong-count span {
+      color: var(--accent-magenta);
+      font-weight: 700;
+    }
+
+    .instructions {
+      margin-top: 2rem;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+      letter-spacing: 0.03em;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>HANGMAN</h1>
+    <p class="subtitle">GUESS THE WORD BEFORE THE FIGURE COMPLETES</p>
+
+    <div class="stats-bar">
+      <div><span class="stat-label">WON </span><span class="stat-val green" id="wins">0</span></div>
+      <div><span class="stat-label">LOST </span><span class="stat-val magenta" id="losses">0</span></div>
+      <div><span class="stat-label">STREAK </span><span class="stat-val" id="streak">0</span></div>
+    </div>
+
+    <div class="category" id="category"></div>
+
+    <div class="gallows-area">
+      <canvas id="gallows" width="200" height="200"></canvas>
+    </div>
+
+    <div class="wrong-count">WRONG: <span id="wrong-num">0</span> / 6</div>
+
+    <div class="word-display" id="word-display"></div>
+
+    <div class="message" id="message"></div>
+    <button class="new-game-btn" id="new-game">NEW WORD</button>
+
+    <div class="keyboard" id="keyboard"></div>
+
+    <div class="instructions">
+      TYPE A LETTER OR CLICK THE KEYBOARD<br>
+      6 WRONG GUESSES AND IT'S OVER<br>
+      CATEGORY HINT SHOWN ABOVE THE GALLOWS
+    </div>
+  </main>
+
+  <script>
+    const WORDS = {
+      'TECHNOLOGY': ['ALGORITHM','COMPILER','DATABASE','FUNCTION','HARDWARE','INTERNET','KEYBOARD','NETWORK','PROGRAM','SOFTWARE','BINARY','BUFFER','CACHE','DEBUG','ENCRYPT','FIREWALL','GATEWAY','KERNEL','MEMORY','RUNTIME','SERVER','SYNTAX','THREAD','VIRTUAL','WIDGET'],
+      'SPACE': ['ASTEROID','COMET','ECLIPSE','GALAXY','METEOR','NEBULA','NEUTRON','ORBIT','PLANET','QUASAR','ROCKET','SATURN','STELLAR','COSMIC','JUPITER','MERCURY','NEPTUNE','PULSAR','SHUTTLE','GRAVITY','PHOTON','VOYAGER','AURORA','ZENITH'],
+      'ANIMALS': ['CHEETAH','DOLPHIN','FALCON','IGUANA','JAGUAR','LEOPARD','OCTOPUS','PENGUIN','PYTHON','SALMON','CONDOR','MANTIS','OSPREY','TOUCAN','WALRUS','BADGER','COYOTE','FERRET','PARROT','MARLIN','BEETLE','PELICAN','RABBIT','TURTLE'],
+      'MUSIC': ['ACOUSTIC','CADENCE','CHORUS','HARMONY','MELODY','OCTAVE','RHYTHM','SOPRANO','TEMPO','TREBLE','BALLAD','CYMBAL','FIDDLE','GUITAR','LYRIC','OBOIST','PHRASE','SONATA','TIMBRE','VIOLIN','BRIDGE','FUSION','GROOVE','REFRAIN'],
+      'SCIENCE': ['CATALYST','ELEMENT','FISSION','FORMULA','GRAVITY','ISOTOPE','MOLECULE','NEUTRON','NUCLEUS','PHOTON','QUANTUM','REACTOR','SOLVENT','THERMAL','ENTROPY','KINETIC','LATTICE','POLYMER','PROTON','VOLTAGE','CARBON','FUSION','PLASMA','VACUUM']
+    };
+
+    const categories = Object.keys(WORDS);
+
+    let word, guessed, wrong, gameOver, wins, losses, streak;
+
+    function init() {
+      wins = parseInt(localStorage.getItem('hm-wins') || '0');
+      losses = parseInt(localStorage.getItem('hm-losses') || '0');
+      streak = parseInt(localStorage.getItem('hm-streak') || '0');
+      updateStats();
+      buildKeyboard();
+      newGame();
+    }
+
+    function updateStats() {
+      document.getElementById('wins').textContent = wins;
+      document.getElementById('losses').textContent = losses;
+      document.getElementById('streak').textContent = streak;
+    }
+
+    function saveStats() {
+      localStorage.setItem('hm-wins', wins);
+      localStorage.setItem('hm-losses', losses);
+      localStorage.setItem('hm-streak', streak);
+    }
+
+    function newGame() {
+      const cat = categories[Math.floor(Math.random() * categories.length)];
+      const list = WORDS[cat];
+      word = list[Math.floor(Math.random() * list.length)];
+      guessed = new Set();
+      wrong = 0;
+      gameOver = false;
+
+      document.getElementById('category').textContent = '[ ' + cat + ' ]';
+      document.getElementById('message').textContent = '';
+      document.getElementById('message').className = 'message';
+      document.getElementById('new-game').classList.remove('visible');
+      document.getElementById('wrong-num').textContent = '0';
+
+      renderWord();
+      resetKeyboard();
+      drawGallows();
+    }
+
+    function renderWord() {
+      const el = document.getElementById('word-display');
+      el.innerHTML = '';
+      for (let i = 0; i < word.length; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'letter-slot';
+        if (guessed.has(word[i])) {
+          slot.textContent = word[i];
+          slot.classList.add('revealed');
+        } else if (gameOver) {
+          slot.textContent = word[i];
+          if (!guessed.has(word[i])) slot.classList.add('wrong-reveal');
+        } else {
+          slot.textContent = '_';
+        }
+        el.appendChild(slot);
+      }
+    }
+
+    function buildKeyboard() {
+      const rows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+      const kb = document.getElementById('keyboard');
+      kb.innerHTML = '';
+      rows.forEach(row => {
+        const r = document.createElement('div');
+        r.className = 'kb-row';
+        for (const ch of row) {
+          const btn = document.createElement('button');
+          btn.className = 'key';
+          btn.textContent = ch;
+          btn.dataset.letter = ch;
+          btn.addEventListener('click', () => guess(ch));
+          r.appendChild(btn);
+        }
+        kb.appendChild(r);
+      });
+    }
+
+    function resetKeyboard() {
+      document.querySelectorAll('.key').forEach(k => {
+        k.className = 'key';
+      });
+    }
+
+    function guess(letter) {
+      if (gameOver || guessed.has(letter)) return;
+      guessed.add(letter);
+
+      const keyEl = document.querySelector(`.key[data-letter="${letter}"]`);
+
+      if (word.includes(letter)) {
+        if (keyEl) keyEl.classList.add('correct');
+        renderWord();
+        checkWin();
+      } else {
+        if (keyEl) keyEl.classList.add('wrong');
+        wrong++;
+        document.getElementById('wrong-num').textContent = wrong;
+        drawGallows();
+        if (wrong >= 6) {
+          gameOver = true;
+          losses++;
+          streak = 0;
+          saveStats();
+          updateStats();
+          renderWord();
+          document.getElementById('message').textContent = 'TERMINATED';
+          document.getElementById('message').className = 'message lose';
+          document.getElementById('new-game').classList.add('visible');
+        }
+      }
+    }
+
+    function checkWin() {
+      for (const ch of word) {
+        if (!guessed.has(ch)) return;
+      }
+      gameOver = true;
+      wins++;
+      streak++;
+      saveStats();
+      updateStats();
+      document.getElementById('message').textContent = 'DECRYPTED';
+      document.getElementById('message').className = 'message win';
+      document.getElementById('new-game').classList.add('visible');
+    }
+
+    function drawGallows() {
+      const canvas = document.getElementById('gallows');
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Colors
+      const dim = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#7a7a90';
+      const magenta = '#ff2d7b';
+      const cyan = '#00f0ff';
+
+      // Base gallows structure - always visible
+      ctx.strokeStyle = dim;
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+
+      // Base
+      ctx.beginPath();
+      ctx.moveTo(20, 180);
+      ctx.lineTo(100, 180);
+      ctx.stroke();
+
+      // Pole
+      ctx.beginPath();
+      ctx.moveTo(60, 180);
+      ctx.lineTo(60, 20);
+      ctx.stroke();
+
+      // Top beam
+      ctx.beginPath();
+      ctx.moveTo(60, 20);
+      ctx.lineTo(140, 20);
+      ctx.stroke();
+
+      // Rope
+      ctx.beginPath();
+      ctx.moveTo(140, 20);
+      ctx.lineTo(140, 40);
+      ctx.stroke();
+
+      // Support brace
+      ctx.beginPath();
+      ctx.moveTo(60, 45);
+      ctx.lineTo(85, 20);
+      ctx.stroke();
+
+      // Body parts based on wrong count
+      if (wrong >= 1) {
+        // Head
+        ctx.strokeStyle = cyan;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(140, 55, 15, 0, Math.PI * 2);
+        ctx.stroke();
+        // Glow
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.2)';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(140, 55, 15, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      if (wrong >= 2) {
+        // Body
+        ctx.strokeStyle = magenta;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = 'rgba(255, 45, 123, 0.4)';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(140, 70);
+        ctx.lineTo(140, 120);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      if (wrong >= 3) {
+        // Left arm
+        ctx.strokeStyle = magenta;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = 'rgba(255, 45, 123, 0.4)';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(140, 80);
+        ctx.lineTo(118, 100);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      if (wrong >= 4) {
+        // Right arm
+        ctx.strokeStyle = magenta;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = 'rgba(255, 45, 123, 0.4)';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(140, 80);
+        ctx.lineTo(162, 100);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      if (wrong >= 5) {
+        // Left leg
+        ctx.strokeStyle = magenta;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = 'rgba(255, 45, 123, 0.4)';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(140, 120);
+        ctx.lineTo(120, 150);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      if (wrong >= 6) {
+        // Right leg
+        ctx.strokeStyle = magenta;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = 'rgba(255, 45, 123, 0.4)';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(140, 120);
+        ctx.lineTo(160, 150);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // X eyes
+        ctx.strokeStyle = '#ff1744';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = 'rgba(255, 23, 68, 0.6)';
+        ctx.shadowBlur = 8;
+        // Left eye
+        ctx.beginPath();
+        ctx.moveTo(133, 50); ctx.lineTo(137, 54);
+        ctx.moveTo(137, 50); ctx.lineTo(133, 54);
+        ctx.stroke();
+        // Right eye
+        ctx.beginPath();
+        ctx.moveTo(143, 50); ctx.lineTo(147, 54);
+        ctx.moveTo(147, 50); ctx.lineTo(143, 54);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // Keyboard input
+    document.addEventListener('keydown', e => {
+      const letter = e.key.toUpperCase();
+      if (/^[A-Z]$/.test(letter)) {
+        guess(letter);
+      }
+    });
+
+    document.getElementById('new-game').addEventListener('click', newGame);
+
+    init();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

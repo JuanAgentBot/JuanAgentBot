@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIMON / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+    }
+
+    .stat-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      letter-spacing: 0.04em;
+    }
+
+    .stat-value.highlight {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 10px var(--glow-cyan);
+    }
+
+    .stat-value.best {
+      color: #39ff14;
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      width: 300px;
+      height: 300px;
+      margin: 0 auto 1.5rem;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .pad {
+      position: relative;
+      cursor: pointer;
+      transition: filter 0.08s;
+      overflow: hidden;
+    }
+
+    .pad.disabled {
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .pad canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Pad base colors (dimmed) */
+    .pad-0 { background: rgba(255, 45, 123, 0.2); border: 1px solid rgba(255, 45, 123, 0.35); }
+    .pad-1 { background: rgba(0, 240, 255, 0.2); border: 1px solid rgba(0, 240, 255, 0.35); }
+    .pad-2 { background: rgba(57, 255, 20, 0.2); border: 1px solid rgba(57, 255, 20, 0.35); }
+    .pad-3 { background: rgba(157, 78, 221, 0.2); border: 1px solid rgba(157, 78, 221, 0.35); }
+
+    /* Pad lit states */
+    .pad-0.lit { background: rgba(255, 45, 123, 0.7); border-color: #ff2d7b; box-shadow: 0 0 30px rgba(255, 45, 123, 0.5), inset 0 0 20px rgba(255, 45, 123, 0.3); }
+    .pad-1.lit { background: rgba(0, 240, 255, 0.7); border-color: #00f0ff; box-shadow: 0 0 30px rgba(0, 240, 255, 0.5), inset 0 0 20px rgba(0, 240, 255, 0.3); }
+    .pad-2.lit { background: rgba(57, 255, 20, 0.7); border-color: #39ff14; box-shadow: 0 0 30px rgba(57, 255, 20, 0.5), inset 0 0 20px rgba(57, 255, 20, 0.3); }
+    .pad-3.lit { background: rgba(157, 78, 221, 0.7); border-color: #9d4edd; box-shadow: 0 0 30px rgba(157, 78, 221, 0.5), inset 0 0 20px rgba(157, 78, 221, 0.3); }
+
+    /* Press effect */
+    .pad:active:not(.disabled) {
+      transform: scale(0.96);
+    }
+
+    .pad-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .pad-0 .pad-label { color: #ff2d7b; }
+    .pad-1 .pad-label { color: #00f0ff; }
+    .pad-2 .pad-label { color: #39ff14; }
+    .pad-3 .pad-label { color: #9d4edd; }
+
+    .pad.lit .pad-label { opacity: 1; }
+
+    .message {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      min-height: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .message .main-text {
+      margin-bottom: 0.3rem;
+    }
+
+    .message .sub-text {
+      font-size: 0.7rem;
+      font-weight: 400;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+    }
+
+    .message.watching .main-text {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 15px var(--glow-magenta);
+    }
+
+    .message.playing .main-text {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 15px var(--glow-cyan);
+    }
+
+    .message.success .main-text {
+      color: #39ff14;
+      text-shadow: 0 0 15px rgba(57, 255, 20, 0.5);
+    }
+
+    .message.fail .main-text {
+      color: #ff1744;
+      text-shadow: 0 0 15px rgba(255, 23, 68, 0.5);
+    }
+
+    .message.idle .main-text {
+      color: var(--text-bright);
+    }
+
+    .speed-select {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .speed-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      padding: 0.35rem 0.7rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .speed-btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--text-bright);
+    }
+
+    .speed-btn.active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      text-shadow: 0 0 8px var(--glow-cyan);
+    }
+
+    .controls {
+      margin-top: 1rem;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      line-height: 1.8;
+    }
+
+    .controls kbd {
+      display: inline-block;
+      border: 1px solid var(--border);
+      padding: 0.15em 0.45em;
+      font-family: inherit;
+      font-size: inherit;
+      color: var(--text-muted);
+    }
+
+    .progress-dots {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin-bottom: 1rem;
+      min-height: 12px;
+      flex-wrap: wrap;
+      max-width: 300px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border: 1px solid var(--border);
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .dot.done {
+      background: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 4px var(--glow-cyan);
+    }
+
+    .dot.current {
+      border-color: var(--accent-magenta);
+      box-shadow: 0 0 4px var(--glow-magenta);
+    }
+
+    .dot.wrong {
+      background: #ff1744;
+      border-color: #ff1744;
+      box-shadow: 0 0 4px rgba(255, 23, 68, 0.5);
+    }
+
+    @media (max-width: 400px) {
+      .board {
+        width: 260px;
+        height: 260px;
+      }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>SIMON</h1>
+    <p class="subtitle">REPEAT THE PATTERN</p>
+
+    <div class="status-bar">
+      <div class="stat">
+        <div class="stat-label">ROUND</div>
+        <div class="stat-value highlight" id="stat-round">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">BEST</div>
+        <div class="stat-value best" id="stat-best">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">SPEED</div>
+        <div class="stat-value" id="stat-speed">NORMAL</div>
+      </div>
+    </div>
+
+    <div class="progress-dots" id="progress"></div>
+
+    <div class="board" id="board">
+      <div class="pad pad-0 disabled" data-pad="0"><span class="pad-label">1</span></div>
+      <div class="pad pad-1 disabled" data-pad="1"><span class="pad-label">2</span></div>
+      <div class="pad pad-2 disabled" data-pad="2"><span class="pad-label">3</span></div>
+      <div class="pad pad-3 disabled" data-pad="3"><span class="pad-label">4</span></div>
+    </div>
+
+    <div class="message idle" id="message">
+      <div class="main-text">CLICK ANY PAD TO START</div>
+      <div class="sub-text">or press SPACE</div>
+    </div>
+
+    <div class="speed-select" id="speed-select">
+      <button class="speed-btn" data-speed="slow">SLOW</button>
+      <button class="speed-btn active" data-speed="normal">NORMAL</button>
+      <button class="speed-btn" data-speed="fast">FAST</button>
+    </div>
+
+    <div class="controls">
+      <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> pads &middot;
+      <kbd>SPACE</kbd> start / restart
+    </div>
+  </main>
+
+  <script>
+    (function() {
+      // Audio via Web Audio API
+      var audioCtx = null;
+      var padFreqs = [262, 330, 392, 523]; // C4, E4, G4, C5
+
+      function initAudio() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      }
+
+      function playTone(index, duration) {
+        if (!audioCtx) return;
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = padFreqs[index];
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration / 1000);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration / 1000);
+      }
+
+      function playBuzz() {
+        if (!audioCtx) return;
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.value = 80;
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+      }
+
+      // DOM
+      var pads = document.querySelectorAll('.pad');
+      var messageEl = document.getElementById('message');
+      var progressEl = document.getElementById('progress');
+      var statRound = document.getElementById('stat-round');
+      var statBest = document.getElementById('stat-best');
+      var statSpeed = document.getElementById('stat-speed');
+      var speedBtns = document.querySelectorAll('.speed-btn');
+
+      // Speed settings: [show ms, gap ms]
+      var speeds = {
+        slow:   { show: 600, gap: 300, label: 'SLOW' },
+        normal: { show: 420, gap: 200, label: 'NORMAL' },
+        fast:   { show: 250, gap: 120, label: 'FAST' }
+      };
+
+      // Game state
+      var sequence = [];
+      var playerPos = 0;
+      var round = 0;
+      var best = 0;
+      var speed = 'normal';
+      var phase = 'idle'; // idle, showing, playing, fail
+      var showTimeout = null;
+
+      // Load best from localStorage
+      try {
+        var saved = localStorage.getItem('zero-simon-best');
+        if (saved) { best = parseInt(saved, 10) || 0; statBest.textContent = best; }
+      } catch(e) {}
+
+      function saveBest() {
+        try { localStorage.setItem('zero-simon-best', best.toString()); } catch(e) {}
+      }
+
+      function setMessage(cls, main, sub) {
+        messageEl.className = 'message ' + cls;
+        messageEl.innerHTML = '<div class="main-text">' + main + '</div>' +
+          (sub ? '<div class="sub-text">' + sub + '</div>' : '');
+      }
+
+      function lightPad(index, duration) {
+        pads[index].classList.add('lit');
+        playTone(index, duration);
+        setTimeout(function() {
+          pads[index].classList.remove('lit');
+        }, duration);
+      }
+
+      function setPadsEnabled(enabled) {
+        for (var i = 0; i < pads.length; i++) {
+          if (enabled) {
+            pads[i].classList.remove('disabled');
+          } else {
+            pads[i].classList.add('disabled');
+          }
+        }
+      }
+
+      function updateProgress() {
+        var html = '';
+        for (var i = 0; i < sequence.length; i++) {
+          var cls = 'dot';
+          if (phase === 'playing') {
+            if (i < playerPos) cls += ' done';
+            else if (i === playerPos) cls += ' current';
+          } else if (phase === 'fail') {
+            if (i < playerPos) cls += ' done';
+            else if (i === playerPos) cls += ' wrong';
+          }
+          html += '<div class="' + cls + '"></div>';
+        }
+        progressEl.innerHTML = html;
+      }
+
+      function showSequence() {
+        phase = 'showing';
+        setPadsEnabled(false);
+        setMessage('watching', 'WATCH...', 'round ' + round);
+        updateProgress();
+
+        var s = speeds[speed];
+        var i = 0;
+
+        function showNext() {
+          if (i >= sequence.length) {
+            // Done showing, player's turn
+            setTimeout(function() {
+              phase = 'playing';
+              playerPos = 0;
+              setPadsEnabled(true);
+              setMessage('playing', 'YOUR TURN', 'repeat the pattern');
+              updateProgress();
+            }, s.gap);
+            return;
+          }
+
+          lightPad(sequence[i], s.show);
+          i++;
+          showTimeout = setTimeout(showNext, s.show + s.gap);
+        }
+
+        showTimeout = setTimeout(showNext, 400);
+      }
+
+      function addToSequence() {
+        sequence.push(Math.floor(Math.random() * 4));
+      }
+
+      function startGame() {
+        initAudio();
+        sequence = [];
+        round = 0;
+        playerPos = 0;
+        nextRound();
+      }
+
+      function nextRound() {
+        round++;
+        statRound.textContent = round;
+        addToSequence();
+        showSequence();
+      }
+
+      function handlePadClick(index) {
+        if (phase !== 'playing') return;
+
+        lightPad(index, 200);
+
+        if (sequence[playerPos] === index) {
+          // Correct
+          playerPos++;
+          updateProgress();
+
+          if (playerPos >= sequence.length) {
+            // Completed the round
+            setPadsEnabled(false);
+
+            if (round > best) {
+              best = round;
+              statBest.textContent = best;
+              saveBest();
+            }
+
+            setMessage('success', 'CORRECT', round >= 10 ? 'incredible!' : 'nice!');
+
+            setTimeout(function() {
+              nextRound();
+            }, 800);
+          }
+        } else {
+          // Wrong
+          phase = 'fail';
+          setPadsEnabled(false);
+          playBuzz();
+          updateProgress();
+
+          var finalRound = round;
+          var newBest = false;
+          if (round - 1 > best) {
+            best = round - 1;
+            statBest.textContent = best;
+            saveBest();
+            newBest = true;
+          }
+
+          // Flash the correct pad
+          setTimeout(function() {
+            lightPad(sequence[playerPos], 600);
+          }, 300);
+
+          var subText = 'reached round ' + finalRound;
+          if (newBest) subText = 'new best! ' + subText;
+
+          setMessage('fail', 'WRONG', subText);
+
+          setTimeout(function() {
+            phase = 'idle';
+            round = 0;
+            statRound.textContent = 0;
+            progressEl.innerHTML = '';
+            setMessage('idle', 'CLICK TO PLAY AGAIN', 'or press SPACE');
+          }, 2000);
+        }
+      }
+
+      // Pad click handlers
+      for (var p = 0; p < pads.length; p++) {
+        (function(idx) {
+          pads[idx].addEventListener('click', function() {
+            if (phase === 'idle') {
+              startGame();
+            } else {
+              handlePadClick(idx);
+            }
+          });
+          pads[idx].addEventListener('touchend', function(e) {
+            e.preventDefault();
+            if (phase === 'idle') {
+              startGame();
+            } else {
+              handlePadClick(idx);
+            }
+          });
+        })(p);
+      }
+
+      // Keyboard
+      document.addEventListener('keydown', function(e) {
+        if (e.key === ' ' || e.code === 'Space') {
+          e.preventDefault();
+          if (phase === 'idle' || phase === 'fail') {
+            if (showTimeout) clearTimeout(showTimeout);
+            startGame();
+          }
+        }
+        var keyMap = { '1': 0, '2': 1, '3': 2, '4': 3 };
+        if (keyMap[e.key] !== undefined) {
+          e.preventDefault();
+          if (phase === 'idle') {
+            startGame();
+          } else if (phase === 'playing') {
+            handlePadClick(keyMap[e.key]);
+          }
+        }
+      });
+
+      // Speed buttons
+      for (var s = 0; s < speedBtns.length; s++) {
+        (function(btn) {
+          btn.addEventListener('click', function() {
+            if (phase !== 'idle') return; // can't change mid-game
+            for (var j = 0; j < speedBtns.length; j++) speedBtns[j].classList.remove('active');
+            btn.classList.add('active');
+            speed = btn.getAttribute('data-speed');
+            statSpeed.textContent = speeds[speed].label;
+          });
+        })(speedBtns[s]);
+      }
+    })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

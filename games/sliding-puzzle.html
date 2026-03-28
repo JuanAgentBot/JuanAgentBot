@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SLIDING PUZZLE / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+    }
+
+    .stat-label {
+      color: var(--text-dim);
+      margin-bottom: 0.2rem;
+    }
+
+    .stat-value {
+      color: var(--accent-cyan);
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-shadow: 0 0 8px var(--glow-cyan-soft);
+    }
+
+    .size-selector {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .size-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.35rem 0.8rem;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: all 0.2s;
+    }
+
+    .size-btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .size-btn.active {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+      text-shadow: 0 0 8px var(--glow-magenta);
+    }
+
+    .board {
+      display: inline-grid;
+      gap: 3px;
+      margin: 0 auto 1.2rem;
+      padding: 3px;
+      border: 1px solid var(--border);
+      background: var(--border);
+      user-select: none;
+    }
+
+    .tile {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.12s ease-out, background 0.15s, box-shadow 0.15s;
+      background: var(--bg-secondary, #121218);
+    }
+
+    .tile:not(.empty):hover {
+      background: #1a1a28;
+    }
+
+    .tile:not(.empty):active {
+      transform: scale(0.95);
+    }
+
+    .tile.empty {
+      background: var(--bg-primary, #0a0a0f);
+      cursor: default;
+    }
+
+    .tile.correct {
+      color: var(--accent-green);
+      text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+    }
+
+    .tile.solved {
+      animation: solvedPulse 0.6s ease-out;
+    }
+
+    @keyframes solvedPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    .controls {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      margin-bottom: 1rem;
+      line-height: 1.8;
+    }
+
+    .controls kbd {
+      display: inline-block;
+      border: 1px solid var(--border);
+      padding: 0.1rem 0.4rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--text-muted, #e0e0e8);
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--accent-magenta);
+      color: var(--accent-magenta);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.5rem 1.5rem;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      transition: all 0.2s;
+      text-shadow: 0 0 8px var(--glow-magenta);
+    }
+
+    .btn:hover {
+      background: rgba(255, 45, 123, 0.1);
+      box-shadow: 0 0 16px var(--glow-magenta);
+    }
+
+    .win-msg {
+      color: var(--accent-green);
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 12px rgba(57, 255, 20, 0.5);
+      display: none;
+    }
+
+    .win-msg.show {
+      display: block;
+    }
+
+    .best {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 0.5rem;
+      letter-spacing: 0.06em;
+    }
+
+    .best span {
+      color: var(--accent-purple, #9d4edd);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>SLIDING PUZZLE</h1>
+    <p class="subtitle">ARRANGE TILES IN ORDER. SLIDE INTO THE GAP.</p>
+
+    <div class="size-selector">
+      <button class="size-btn active" data-size="3">3×3</button>
+      <button class="size-btn" data-size="4">4×4</button>
+      <button class="size-btn" data-size="5">5×5</button>
+    </div>
+
+    <div class="stats">
+      <div>
+        <div class="stat-label">MOVES</div>
+        <div class="stat-value" id="moves">0</div>
+      </div>
+      <div>
+        <div class="stat-label">TIME</div>
+        <div class="stat-value" id="timer">0:00</div>
+      </div>
+    </div>
+
+    <div class="board" id="board"></div>
+
+    <div class="win-msg" id="win-msg">▓ SOLVED ▓</div>
+
+    <div class="best" id="best-display"></div>
+
+    <div style="margin-top: 1rem;">
+      <button class="btn" id="shuffle-btn">SHUFFLE</button>
+    </div>
+
+    <div class="controls" style="margin-top: 1.5rem;">
+      <kbd>CLICK</kbd> tile to slide &nbsp;|&nbsp;
+      <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> arrow keys
+    </div>
+  </main>
+
+  <script>
+    (function() {
+      'use strict';
+
+      const COLORS = {
+        magenta: '#ff2d7b',
+        cyan: '#00f0ff',
+        green: '#39ff14',
+        purple: '#9d4edd',
+        white: '#e0e0e8',
+        dim: '#7a7a90',
+        void: '#0a0a0f',
+        dark: '#121218'
+      };
+
+      let gridSize = 3;
+      let tiles = [];
+      let emptyIndex;
+      let moves = 0;
+      let timerInterval = null;
+      let startTime = null;
+      let elapsed = 0;
+      let solved = false;
+      let bestScores = JSON.parse(localStorage.getItem('sliding-puzzle-best') || '{}');
+
+      const boardEl = document.getElementById('board');
+      const movesEl = document.getElementById('moves');
+      const timerEl = document.getElementById('timer');
+      const winEl = document.getElementById('win-msg');
+      const bestEl = document.getElementById('best-display');
+      const shuffleBtn = document.getElementById('shuffle-btn');
+
+      // Size selector
+      document.querySelectorAll('.size-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          gridSize = parseInt(btn.dataset.size);
+          initGame();
+        });
+      });
+
+      shuffleBtn.addEventListener('click', initGame);
+
+      function initGame() {
+        stopTimer();
+        moves = 0;
+        elapsed = 0;
+        solved = false;
+        startTime = null;
+        movesEl.textContent = '0';
+        timerEl.textContent = '0:00';
+        winEl.classList.remove('show');
+
+        // Create solved state then shuffle
+        const total = gridSize * gridSize;
+        tiles = [];
+        for (let i = 1; i < total; i++) tiles.push(i);
+        tiles.push(0); // 0 = empty
+        emptyIndex = total - 1;
+
+        // Shuffle by making random valid moves (ensures solvability)
+        const shuffleMoves = gridSize * gridSize * 40;
+        for (let i = 0; i < shuffleMoves; i++) {
+          const neighbors = getNeighbors(emptyIndex);
+          const pick = neighbors[Math.floor(Math.random() * neighbors.length)];
+          tiles[emptyIndex] = tiles[pick];
+          tiles[pick] = 0;
+          emptyIndex = pick;
+        }
+
+        renderBoard();
+        updateBestDisplay();
+      }
+
+      function getNeighbors(index) {
+        const row = Math.floor(index / gridSize);
+        const col = index % gridSize;
+        const neighbors = [];
+        if (row > 0) neighbors.push(index - gridSize);
+        if (row < gridSize - 1) neighbors.push(index + gridSize);
+        if (col > 0) neighbors.push(index - 1);
+        if (col < gridSize - 1) neighbors.push(index + 1);
+        return neighbors;
+      }
+
+      function renderBoard() {
+        const tileSize = gridSize === 3 ? 90 : gridSize === 4 ? 72 : 58;
+        const fontSize = gridSize === 3 ? 1.4 : gridSize === 4 ? 1.1 : 0.85;
+
+        boardEl.style.gridTemplateColumns = `repeat(${gridSize}, ${tileSize}px)`;
+        boardEl.style.gridTemplateRows = `repeat(${gridSize}, ${tileSize}px)`;
+        boardEl.innerHTML = '';
+
+        tiles.forEach((val, i) => {
+          const tile = document.createElement('div');
+          tile.className = 'tile';
+          tile.style.width = tileSize + 'px';
+          tile.style.height = tileSize + 'px';
+          tile.style.fontSize = fontSize + 'rem';
+
+          if (val === 0) {
+            tile.classList.add('empty');
+          } else {
+            tile.textContent = val;
+
+            // Color by value range
+            const total = gridSize * gridSize - 1;
+            const ratio = (val - 1) / Math.max(total - 1, 1);
+            if (ratio < 0.25) {
+              tile.style.color = COLORS.cyan;
+            } else if (ratio < 0.5) {
+              tile.style.color = COLORS.green;
+            } else if (ratio < 0.75) {
+              tile.style.color = COLORS.magenta;
+            } else {
+              tile.style.color = COLORS.purple;
+            }
+
+            // Highlight correctly placed tiles
+            if (val === i + 1) {
+              tile.classList.add('correct');
+            }
+
+            tile.addEventListener('click', () => slideTile(i));
+          }
+
+          boardEl.appendChild(tile);
+        });
+      }
+
+      function slideTile(index) {
+        if (solved) return;
+
+        const neighbors = getNeighbors(index);
+        if (!neighbors.includes(emptyIndex)) return;
+
+        // Swap
+        tiles[emptyIndex] = tiles[index];
+        tiles[index] = 0;
+        emptyIndex = index;
+        moves++;
+        movesEl.textContent = moves;
+
+        if (!startTime) {
+          startTime = Date.now();
+          startTimer();
+        }
+
+        renderBoard();
+        checkWin();
+      }
+
+      function handleKey(e) {
+        if (solved) return;
+
+        // Arrow keys move the tile INTO the empty space
+        // So pressing right means the tile to the LEFT of empty slides right
+        let targetIndex = -1;
+        const emptyRow = Math.floor(emptyIndex / gridSize);
+        const emptyCol = emptyIndex % gridSize;
+
+        switch (e.key) {
+          case 'ArrowUp':
+            // Move tile below empty upward
+            if (emptyRow < gridSize - 1) targetIndex = emptyIndex + gridSize;
+            break;
+          case 'ArrowDown':
+            // Move tile above empty downward
+            if (emptyRow > 0) targetIndex = emptyIndex - gridSize;
+            break;
+          case 'ArrowLeft':
+            // Move tile right of empty leftward
+            if (emptyCol < gridSize - 1) targetIndex = emptyIndex + 1;
+            break;
+          case 'ArrowRight':
+            // Move tile left of empty rightward
+            if (emptyCol > 0) targetIndex = emptyIndex - 1;
+            break;
+          default:
+            return;
+        }
+
+        if (targetIndex >= 0) {
+          e.preventDefault();
+          slideTile(targetIndex);
+        }
+      }
+
+      document.addEventListener('keydown', handleKey);
+
+      function checkWin() {
+        const total = gridSize * gridSize;
+        for (let i = 0; i < total - 1; i++) {
+          if (tiles[i] !== i + 1) return;
+        }
+
+        // Solved
+        solved = true;
+        stopTimer();
+        winEl.classList.add('show');
+
+        // Animate tiles
+        const tileEls = boardEl.querySelectorAll('.tile:not(.empty)');
+        tileEls.forEach((t, i) => {
+          setTimeout(() => t.classList.add('solved'), i * 50);
+        });
+
+        // Save best score
+        const key = gridSize + 'x' + gridSize;
+        const current = bestScores[key];
+        if (!current || moves < current.moves || (moves === current.moves && elapsed < current.time)) {
+          bestScores[key] = { moves: moves, time: elapsed };
+          localStorage.setItem('sliding-puzzle-best', JSON.stringify(bestScores));
+        }
+        updateBestDisplay();
+      }
+
+      function startTimer() {
+        timerInterval = setInterval(() => {
+          elapsed = Math.floor((Date.now() - startTime) / 1000);
+          const mins = Math.floor(elapsed / 60);
+          const secs = elapsed % 60;
+          timerEl.textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
+        }, 200);
+      }
+
+      function stopTimer() {
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+      }
+
+      function updateBestDisplay() {
+        const key = gridSize + 'x' + gridSize;
+        const best = bestScores[key];
+        if (best) {
+          const mins = Math.floor(best.time / 60);
+          const secs = best.time % 60;
+          bestEl.innerHTML = 'BEST ' + key.toUpperCase() + ': <span>' + best.moves + ' moves</span> in ' + mins + ':' + (secs < 10 ? '0' : '') + secs;
+        } else {
+          bestEl.innerHTML = '';
+        }
+      }
+
+      // Touch support for swipe
+      let touchStartX = 0, touchStartY = 0;
+      boardEl.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+
+      boardEl.addEventListener('touchend', (e) => {
+        if (solved) return;
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        const dy = e.changedTouches[0].clientY - touchStartY;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+
+        if (Math.max(absDx, absDy) < 20) return; // too small, ignore
+
+        const emptyRow = Math.floor(emptyIndex / gridSize);
+        const emptyCol = emptyIndex % gridSize;
+        let targetIndex = -1;
+
+        if (absDx > absDy) {
+          // Horizontal swipe
+          if (dx > 0 && emptyCol > 0) targetIndex = emptyIndex - 1; // swipe right = move left tile right
+          else if (dx < 0 && emptyCol < gridSize - 1) targetIndex = emptyIndex + 1; // swipe left
+        } else {
+          // Vertical swipe
+          if (dy > 0 && emptyRow > 0) targetIndex = emptyIndex - gridSize; // swipe down
+          else if (dy < 0 && emptyRow < gridSize - 1) targetIndex = emptyIndex + gridSize; // swipe up
+        }
+
+        if (targetIndex >= 0) {
+          slideTile(targetIndex);
+        }
+      }, { passive: true });
+
+      // Init
+      initGame();
+    })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WORD SEARCH / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+    }
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .sub {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 0.6rem;
+      margin-bottom: 1.2rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .controls button {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.4rem 0.8rem;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: all 0.2s;
+    }
+    .controls button:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+    .controls button.active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--glow-cyan-soft);
+    }
+
+    .info-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      font-size: 0.75rem;
+    }
+    .info-bar .timer { color: var(--accent-cyan); }
+    .info-bar .found-count { color: var(--accent-green); }
+    .info-bar .category { color: var(--accent-purple); }
+
+    .game-area {
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-start;
+    }
+
+    @media (max-width: 600px) {
+      .game-area { flex-direction: column; align-items: center; }
+    }
+
+    .grid-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .grid {
+      display: grid;
+      gap: 0;
+      user-select: none;
+      border: 1px solid var(--border);
+    }
+
+    .cell {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+      position: relative;
+    }
+    .cell:hover {
+      color: var(--text-bright);
+      background: rgba(0, 240, 255, 0.06);
+    }
+    .cell.selecting {
+      color: var(--accent-cyan);
+      background: rgba(0, 240, 255, 0.15);
+      text-shadow: 0 0 8px var(--glow-cyan-soft);
+    }
+    .cell.found {
+      color: var(--accent-green);
+      text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+    }
+    .cell.found-1 { color: var(--accent-magenta); text-shadow: 0 0 8px var(--glow-magenta); }
+    .cell.found-2 { color: var(--accent-cyan); text-shadow: 0 0 8px var(--glow-cyan-soft); }
+    .cell.found-3 { color: var(--accent-green); text-shadow: 0 0 8px rgba(57, 255, 20, 0.4); }
+    .cell.found-4 { color: var(--accent-purple); text-shadow: 0 0 8px rgba(157, 78, 221, 0.4); }
+    .cell.found-5 { color: #ff6ac1; text-shadow: 0 0 8px rgba(255, 106, 193, 0.4); }
+    .cell.found-6 { color: #ffb000; text-shadow: 0 0 8px rgba(255, 176, 0, 0.4); }
+
+    .word-list {
+      flex: 1;
+      min-width: 140px;
+    }
+    .word-list h3 {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.8rem;
+    }
+    .word-item {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      padding: 0.25rem 0;
+      letter-spacing: 0.06em;
+      transition: all 0.3s;
+    }
+    .word-item.found {
+      text-decoration: line-through;
+      color: var(--accent-green);
+      text-shadow: 0 0 6px rgba(57, 255, 20, 0.3);
+    }
+
+    .win-msg {
+      text-align: center;
+      margin-top: 1.5rem;
+      padding: 1.2rem;
+      border: 1px solid var(--accent-green);
+      display: none;
+    }
+    .win-msg.show { display: block; }
+    .win-msg h2 {
+      font-size: 1.1rem;
+      color: var(--accent-green);
+      text-shadow: 0 0 15px rgba(57, 255, 20, 0.5);
+      margin-bottom: 0.4rem;
+    }
+    .win-msg p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .help {
+      margin-top: 1.5rem;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      line-height: 1.6;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+    .help kbd {
+      border: 1px solid var(--border);
+      padding: 0.1rem 0.3rem;
+      font-size: 0.6rem;
+      color: var(--text-muted);
+    }
+
+    /* SVG overlay for lines */
+    .line-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .line-overlay line {
+      stroke-width: 3;
+      stroke-linecap: round;
+      opacity: 0.35;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>WORD SEARCH</h1>
+    <p class="sub">FIND HIDDEN WORDS IN THE GRID</p>
+
+    <div class="controls">
+      <button data-size="10" class="active">10x10</button>
+      <button data-size="12">12x12</button>
+      <button data-size="14">14x14</button>
+      <button id="btn-new">NEW PUZZLE</button>
+    </div>
+
+    <div class="info-bar">
+      <span class="category" id="cat-label">CATEGORY: ---</span>
+      <span class="found-count" id="found-label">0 / 0</span>
+      <span class="timer" id="timer">00:00</span>
+    </div>
+
+    <div class="game-area">
+      <div class="grid-wrap">
+        <div class="grid" id="grid"></div>
+        <svg class="line-overlay" id="line-overlay"></svg>
+      </div>
+      <div class="word-list">
+        <h3>FIND THESE</h3>
+        <div id="words"></div>
+      </div>
+    </div>
+
+    <div class="win-msg" id="win-msg">
+      <h2>ALL FOUND</h2>
+      <p id="win-text"></p>
+    </div>
+
+    <div class="help">
+      Click a letter to start selecting. Drag to highlight a word in any direction
+      (horizontal, vertical, diagonal). Release to check. Words can go forward or backward.
+    </div>
+  </main>
+  <script src="../theme-toggle.js"></script>
+  <script>
+(function() {
+  const CATEGORIES = [
+    { name: 'HACKER', words: ['KERNEL', 'BINARY', 'CIPHER', 'DAEMON', 'EXPLOIT', 'PACKET', 'SOCKET', 'THREAD', 'BUFFER', 'MALLOC', 'STDOUT', 'PARSE', 'TOKEN', 'SCRIPT', 'PROXY'] },
+    { name: 'SPACE', words: ['NEBULA', 'PULSAR', 'QUASAR', 'COMET', 'ORBIT', 'GALAXY', 'PHOTON', 'PLASMA', 'SOLAR', 'CRATER', 'LAUNCH', 'THRUST', 'COSMIC', 'ASTRAL', 'METEOR'] },
+    { name: 'NEON', words: ['GLOW', 'LASER', 'PRISM', 'FLUX', 'VOLT', 'SPARK', 'PULSE', 'SURGE', 'BEAM', 'PHASE', 'SIGNAL', 'WAVE', 'DIODE', 'NEON', 'PIXEL'] },
+    { name: 'RETRO', words: ['ARCADE', 'SPRITE', 'VECTOR', 'RENDER', 'PIXEL', 'GLITCH', 'VOXEL', 'BITMAP', 'RASTER', 'SHADER', 'CODEC', 'MODEM', 'BAUD', 'EPOCH', 'CACHE'] },
+    { name: 'CYBER', words: ['MATRIX', 'NEURAL', 'SYNTH', 'CLONE', 'DRONE', 'BLADE', 'CRYPT', 'NEXUS', 'VIRUS', 'WORM', 'TROJAN', 'PATCH', 'DEBUG', 'STACK', 'QUEUE'] },
+    { name: 'OCEAN', words: ['CORAL', 'SHARK', 'WHALE', 'DEPTH', 'TRENCH', 'DRIFT', 'TIDAL', 'STORM', 'ANCHOR', 'FLEET', 'HARBOR', 'VOYAGE', 'SAILOR', 'BEACON', 'COAST'] },
+  ];
+
+  const FOUND_COLORS = ['found-1', 'found-2', 'found-3', 'found-4', 'found-5', 'found-6'];
+  const LINE_COLORS = ['#ff2d7b', '#00f0ff', '#39ff14', '#9d4edd', '#ff6ac1', '#ffb000'];
+
+  const DIRS = [
+    [0, 1], [0, -1], [1, 0], [-1, 0],
+    [1, 1], [1, -1], [-1, 1], [-1, -1]
+  ];
+
+  let gridSize = 10;
+  let grid = [];
+  let words = [];
+  let wordPositions = [];
+  let foundWords = new Set();
+  let foundColorIndex = 0;
+  let selecting = false;
+  let selStart = null;
+  let selCells = [];
+  let timerInterval = null;
+  let seconds = 0;
+  let currentCategory = null;
+
+  const gridEl = document.getElementById('grid');
+  const wordsEl = document.getElementById('words');
+  const timerEl = document.getElementById('timer');
+  const foundLabel = document.getElementById('found-label');
+  const catLabel = document.getElementById('cat-label');
+  const winMsg = document.getElementById('win-msg');
+  const winText = document.getElementById('win-text');
+  const lineOverlay = document.getElementById('line-overlay');
+  const btnNew = document.getElementById('btn-new');
+
+  // Size buttons
+  document.querySelectorAll('[data-size]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-size]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      gridSize = parseInt(btn.dataset.size);
+      newGame();
+    });
+  });
+  btnNew.addEventListener('click', newGame);
+
+  function newGame() {
+    clearInterval(timerInterval);
+    seconds = 0;
+    foundWords.clear();
+    foundColorIndex = 0;
+    selecting = false;
+    selStart = null;
+    selCells = [];
+    winMsg.classList.remove('show');
+    lineOverlay.innerHTML = '';
+
+    // Pick category
+    currentCategory = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
+    catLabel.textContent = 'CATEGORY: ' + currentCategory.name;
+
+    // Pick words that fit the grid
+    let pool = currentCategory.words.filter(w => w.length <= gridSize);
+    shuffle(pool);
+    let wordCount = gridSize <= 10 ? 6 : gridSize <= 12 ? 8 : 10;
+    words = pool.slice(0, wordCount);
+    wordPositions = [];
+
+    // Create empty grid
+    grid = [];
+    for (let r = 0; r < gridSize; r++) {
+      grid[r] = [];
+      for (let c = 0; c < gridSize; c++) {
+        grid[r][c] = '';
+      }
+    }
+
+    // Place words
+    let placed = [];
+    for (let w of words) {
+      let ok = placeWord(w);
+      if (ok) placed.push(w);
+    }
+    words = placed;
+
+    // Fill blanks
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (let r = 0; r < gridSize; r++) {
+      for (let c = 0; c < gridSize; c++) {
+        if (!grid[r][c]) grid[r][c] = letters[Math.floor(Math.random() * 26)];
+      }
+    }
+
+    renderGrid();
+    renderWords();
+    updateFoundLabel();
+    startTimer();
+  }
+
+  function placeWord(word) {
+    let attempts = 200;
+    while (attempts-- > 0) {
+      let dir = DIRS[Math.floor(Math.random() * DIRS.length)];
+      let dr = dir[0], dc = dir[1];
+      let maxR = dr === 0 ? gridSize - 1 : (dr > 0 ? gridSize - word.length : word.length - 1);
+      let maxC = dc === 0 ? gridSize - 1 : (dc > 0 ? gridSize - word.length : word.length - 1);
+      let minR = dr === 0 ? 0 : (dr > 0 ? 0 : word.length - 1);
+      let minC = dc === 0 ? 0 : (dc > 0 ? 0 : word.length - 1);
+
+      if (minR > maxR || minC > maxC) continue;
+
+      let sr = minR + Math.floor(Math.random() * (maxR - minR + 1));
+      let sc = minC + Math.floor(Math.random() * (maxC - minC + 1));
+
+      let ok = true;
+      let cells = [];
+      for (let i = 0; i < word.length; i++) {
+        let r = sr + dr * i;
+        let c = sc + dc * i;
+        if (r < 0 || r >= gridSize || c < 0 || c >= gridSize) { ok = false; break; }
+        if (grid[r][c] && grid[r][c] !== word[i]) { ok = false; break; }
+        cells.push([r, c]);
+      }
+      if (!ok) continue;
+
+      // Place
+      for (let i = 0; i < word.length; i++) {
+        grid[cells[i][0]][cells[i][1]] = word[i];
+      }
+      wordPositions.push({ word, cells });
+      return true;
+    }
+    return false;
+  }
+
+  function renderGrid() {
+    gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 32px)`;
+    gridEl.innerHTML = '';
+    for (let r = 0; r < gridSize; r++) {
+      for (let c = 0; c < gridSize; c++) {
+        let cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.textContent = grid[r][c];
+        cell.dataset.r = r;
+        cell.dataset.c = c;
+        gridEl.appendChild(cell);
+      }
+    }
+  }
+
+  function renderWords() {
+    wordsEl.innerHTML = '';
+    for (let w of words) {
+      let div = document.createElement('div');
+      div.className = 'word-item';
+      div.textContent = w;
+      div.id = 'word-' + w;
+      wordsEl.appendChild(div);
+    }
+  }
+
+  function updateFoundLabel() {
+    foundLabel.textContent = foundWords.size + ' / ' + words.length;
+  }
+
+  function startTimer() {
+    clearInterval(timerInterval);
+    timerEl.textContent = '00:00';
+    timerInterval = setInterval(() => {
+      seconds++;
+      let m = Math.floor(seconds / 60);
+      let s = seconds % 60;
+      timerEl.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }, 1000);
+  }
+
+  function getCellEl(r, c) {
+    return gridEl.children[r * gridSize + c];
+  }
+
+  function getLineCells(r1, c1, r2, c2) {
+    let dr = Math.sign(r2 - r1);
+    let dc = Math.sign(c2 - c1);
+    let len = Math.max(Math.abs(r2 - r1), Math.abs(c2 - c1)) + 1;
+    // Validate it's a straight line
+    if (r1 !== r2 && c1 !== c2 && Math.abs(r2 - r1) !== Math.abs(c2 - c1)) return [];
+    let cells = [];
+    for (let i = 0; i < len; i++) {
+      cells.push([r1 + dr * i, c1 + dc * i]);
+    }
+    return cells;
+  }
+
+  function clearSelection() {
+    for (let [r, c] of selCells) {
+      let el = getCellEl(r, c);
+      if (el) el.classList.remove('selecting');
+    }
+    selCells = [];
+  }
+
+  function checkSelection() {
+    let text = selCells.map(([r, c]) => grid[r][c]).join('');
+    let reversed = text.split('').reverse().join('');
+
+    for (let wp of wordPositions) {
+      if (foundWords.has(wp.word)) continue;
+      if (text === wp.word || reversed === wp.word) {
+        // Found!
+        foundWords.add(wp.word);
+        let colorClass = FOUND_COLORS[foundColorIndex % FOUND_COLORS.length];
+        let lineColor = LINE_COLORS[foundColorIndex % LINE_COLORS.length];
+        foundColorIndex++;
+
+        for (let [r, c] of wp.cells) {
+          let el = getCellEl(r, c);
+          el.classList.add('found', colorClass);
+        }
+
+        // Draw line
+        drawLine(wp.cells, lineColor);
+
+        let wordEl = document.getElementById('word-' + wp.word);
+        if (wordEl) wordEl.classList.add('found');
+
+        updateFoundLabel();
+
+        if (foundWords.size === words.length) {
+          clearInterval(timerInterval);
+          winMsg.classList.add('show');
+          let m = Math.floor(seconds / 60);
+          let s = seconds % 60;
+          winText.textContent = 'All ' + words.length + ' words found in ' +
+            String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        }
+        return;
+      }
+    }
+  }
+
+  function drawLine(cells, color) {
+    let first = cells[0];
+    let last = cells[cells.length - 1];
+    let x1 = first[1] * 32 + 16;
+    let y1 = first[0] * 32 + 16;
+    let x2 = last[1] * 32 + 16;
+    let y2 = last[0] * 32 + 16;
+
+    let line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x1);
+    line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2);
+    line.setAttribute('y2', y2);
+    line.setAttribute('stroke', color);
+    lineOverlay.appendChild(line);
+  }
+
+  // Mouse/touch handling
+  function cellFromEvent(e) {
+    let target = e.target;
+    if (target.classList.contains('cell')) {
+      return [parseInt(target.dataset.r), parseInt(target.dataset.c)];
+    }
+    // For touch, use elementFromPoint
+    if (e.touches) {
+      let touch = e.touches[0];
+      let el = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (el && el.classList.contains('cell')) {
+        return [parseInt(el.dataset.r), parseInt(el.dataset.c)];
+      }
+    }
+    return null;
+  }
+
+  gridEl.addEventListener('mousedown', (e) => {
+    let pos = cellFromEvent(e);
+    if (!pos) return;
+    e.preventDefault();
+    selecting = true;
+    selStart = pos;
+    clearSelection();
+    selCells = [pos];
+    getCellEl(pos[0], pos[1]).classList.add('selecting');
+  });
+
+  gridEl.addEventListener('mousemove', (e) => {
+    if (!selecting || !selStart) return;
+    let pos = cellFromEvent(e);
+    if (!pos) return;
+    let newCells = getLineCells(selStart[0], selStart[1], pos[0], pos[1]);
+    if (newCells.length === 0) return;
+    clearSelection();
+    selCells = newCells;
+    for (let [r, c] of selCells) {
+      getCellEl(r, c).classList.add('selecting');
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (selecting && selCells.length > 1) {
+      checkSelection();
+    }
+    clearSelection();
+    selecting = false;
+    selStart = null;
+  });
+
+  // Touch support
+  gridEl.addEventListener('touchstart', (e) => {
+    let pos = cellFromEvent(e);
+    if (!pos) return;
+    e.preventDefault();
+    selecting = true;
+    selStart = pos;
+    clearSelection();
+    selCells = [pos];
+    getCellEl(pos[0], pos[1]).classList.add('selecting');
+  }, { passive: false });
+
+  gridEl.addEventListener('touchmove', (e) => {
+    if (!selecting || !selStart) return;
+    e.preventDefault();
+    let touch = e.touches[0];
+    let el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!el || !el.classList.contains('cell')) return;
+    let r = parseInt(el.dataset.r);
+    let c = parseInt(el.dataset.c);
+    let newCells = getLineCells(selStart[0], selStart[1], r, c);
+    if (newCells.length === 0) return;
+    clearSelection();
+    selCells = newCells;
+    for (let [rr, cc] of selCells) {
+      getCellEl(rr, cc).classList.add('selecting');
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchend', () => {
+    if (selecting && selCells.length > 1) {
+      checkSelection();
+    }
+    clearSelection();
+    selecting = false;
+    selStart = null;
+  });
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  // Resize SVG overlay
+  function resizeOverlay() {
+    lineOverlay.setAttribute('width', gridSize * 32);
+    lineOverlay.setAttribute('height', gridSize * 32);
+  }
+
+  // Init
+  newGame();
+  resizeOverlay();
+
+  // Watch for size changes
+  const origNewGame = newGame;
+  const _newGame = newGame;
+  newGame = function() {
+    _newGame();
+    resizeOverlay();
+  };
+  // Re-bind buttons with the wrapper
+  document.querySelectorAll('[data-size]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      resizeOverlay();
+    });
+  });
+})();
+  </script>
+</body>
+</html>

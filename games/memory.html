@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MEMORY / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .hud {
+      display: flex;
+      justify-content: center;
+      gap: 2.5rem;
+      margin-bottom: 1.2rem;
+      font-size: 0.8rem;
+    }
+
+    .hud-moves {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 10px var(--glow-cyan);
+    }
+
+    .hud-pairs {
+      color: var(--accent-green);
+      text-shadow: 0 0 10px var(--glow-green);
+    }
+
+    .hud-time {
+      color: var(--accent-purple);
+      text-shadow: 0 0 10px var(--glow-purple);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      max-width: 400px;
+      margin: 0 auto 1.2rem;
+      user-select: none;
+    }
+
+    .card {
+      aspect-ratio: 1;
+      border: 1px solid var(--border);
+      background: var(--bg-panel);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      color: transparent;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.15s;
+      position: relative;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .card:hover:not(.flipped):not(.matched) {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 12px var(--glow-cyan-soft);
+    }
+
+    .card .card-back {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      font-size: 1.2rem;
+      opacity: 0.4;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .card.flipped .card-back,
+    .card.matched .card-back {
+      opacity: 0;
+    }
+
+    .card.flipped {
+      color: var(--text-bright);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 16px var(--glow-cyan);
+    }
+
+    .card.matched {
+      border-color: var(--accent-green);
+      box-shadow: 0 0 16px var(--glow-green);
+      cursor: default;
+    }
+
+    .card.matched .card-symbol {
+      color: var(--accent-green);
+      text-shadow: 0 0 12px var(--glow-green);
+    }
+
+    .card.wrong {
+      border-color: var(--accent-magenta);
+      box-shadow: 0 0 16px var(--glow-magenta);
+    }
+
+    .card .card-symbol {
+      pointer-events: none;
+      transition: color 0.2s;
+    }
+
+    .card.flipped .card-symbol {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 10px var(--glow-cyan);
+    }
+
+    .card.wrong .card-symbol {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 10px var(--glow-magenta);
+    }
+
+    .controls {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      margin-top: 0.5rem;
+      line-height: 1.8;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 15, 0.9);
+      z-index: 5;
+    }
+
+    [data-theme="light"] .overlay {
+      background: rgba(240, 239, 245, 0.92);
+    }
+
+    .overlay-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.6rem;
+      text-shadow: 0 0 15px var(--glow-magenta);
+    }
+
+    .overlay-stats {
+      font-size: 0.8rem;
+      color: var(--accent-cyan);
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 10px var(--glow-cyan);
+    }
+
+    .overlay-text {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      margin-top: 0.6rem;
+    }
+
+    .btn-restart {
+      margin-top: 1rem;
+      background: none;
+      border: 1px solid var(--accent-magenta);
+      color: var(--accent-magenta);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0.6em 1.8em;
+      cursor: pointer;
+      transition: box-shadow 0.2s, background 0.2s;
+    }
+
+    .btn-restart:hover {
+      box-shadow: 0 0 16px var(--glow-magenta);
+      background: rgba(255, 45, 123, 0.08);
+    }
+
+    @media (max-width: 440px) {
+      .grid { gap: 6px; }
+      .card { font-size: 1.4rem; }
+      .hud { gap: 1.5rem; font-size: 0.7rem; }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>MEMORY</h1>
+    <p class="subtitle">FLIP CARDS. FIND MATCHING PAIRS.</p>
+
+    <div class="hud">
+      <span class="hud-moves">MOVES: <span id="moves">0</span></span>
+      <span class="hud-pairs">PAIRS: <span id="pairs">0</span>/8</span>
+      <span class="hud-time">TIME: <span id="timer">0:00</span></span>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="controls">
+      CLICK OR TAP TO FLIP &middot; MATCH ALL 8 PAIRS TO WIN
+    </div>
+
+    <div class="overlay" id="overlay" style="display:none">
+      <div class="overlay-title" id="overlay-title">MEMORY CLEARED</div>
+      <div class="overlay-stats" id="overlay-stats"></div>
+      <div class="overlay-text">ALL PAIRS MATCHED</div>
+      <button class="btn-restart" id="btn-restart">PLAY AGAIN</button>
+    </div>
+  </main>
+
+  <script>
+  (function() {
+    const SYMBOLS = ['◆', '▲', '■', '●', '★', '✦', '◈', '⬡'];
+    const SYMBOL_COLORS = [
+      'var(--accent-magenta)',
+      'var(--accent-cyan)',
+      'var(--accent-green)',
+      'var(--accent-purple)',
+      'var(--accent-pink)',
+      'var(--accent-amber)',
+      'var(--accent-crimson)',
+      'var(--accent-cyan)',
+    ];
+
+    const grid = document.getElementById('grid');
+    const movesEl = document.getElementById('moves');
+    const pairsEl = document.getElementById('pairs');
+    const timerEl = document.getElementById('timer');
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlayStats = document.getElementById('overlay-stats');
+    const btnRestart = document.getElementById('btn-restart');
+
+    let cards = [];
+    let flipped = [];
+    let matched = 0;
+    let moves = 0;
+    let locked = false;
+    let timerStart = null;
+    let timerInterval = null;
+    let elapsed = 0;
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return m + ':' + String(s).padStart(2, '0');
+    }
+
+    function startTimer() {
+      if (timerStart) return;
+      timerStart = Date.now();
+      timerInterval = setInterval(function() {
+        elapsed = Math.floor((Date.now() - timerStart) / 1000);
+        timerEl.textContent = formatTime(elapsed);
+      }, 200);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    function createBoard() {
+      grid.innerHTML = '';
+      cards = [];
+      flipped = [];
+      matched = 0;
+      moves = 0;
+      locked = false;
+      timerStart = null;
+      elapsed = 0;
+      stopTimer();
+
+      movesEl.textContent = '0';
+      pairsEl.textContent = '0';
+      timerEl.textContent = '0:00';
+      overlay.style.display = 'none';
+
+      // Create pairs
+      const deck = [];
+      for (let i = 0; i < SYMBOLS.length; i++) {
+        deck.push({ symbol: SYMBOLS[i], colorIdx: i, id: i });
+        deck.push({ symbol: SYMBOLS[i], colorIdx: i, id: i });
+      }
+      shuffle(deck);
+
+      deck.forEach(function(data, index) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.index = index;
+        card.dataset.id = data.id;
+
+        const back = document.createElement('div');
+        back.className = 'card-back';
+        back.textContent = '?';
+        card.appendChild(back);
+
+        const sym = document.createElement('div');
+        sym.className = 'card-symbol';
+        sym.textContent = data.symbol;
+        card.appendChild(sym);
+
+        card.addEventListener('click', function() {
+          onCardClick(card, data);
+        });
+
+        grid.appendChild(card);
+        cards.push({ el: card, data: data });
+      });
+    }
+
+    function onCardClick(card, data) {
+      if (locked) return;
+      if (card.classList.contains('flipped')) return;
+      if (card.classList.contains('matched')) return;
+
+      startTimer();
+
+      card.classList.add('flipped');
+      flipped.push({ el: card, data: data });
+
+      if (flipped.length === 2) {
+        moves++;
+        movesEl.textContent = moves;
+        locked = true;
+
+        const a = flipped[0];
+        const b = flipped[1];
+
+        if (a.data.id === b.data.id) {
+          // Match found
+          setTimeout(function() {
+            a.el.classList.remove('flipped');
+            a.el.classList.add('matched');
+            b.el.classList.remove('flipped');
+            b.el.classList.add('matched');
+
+            // Set matched color
+            const color = SYMBOL_COLORS[a.data.colorIdx];
+            a.el.querySelector('.card-symbol').style.color = color;
+            b.el.querySelector('.card-symbol').style.color = color;
+
+            matched++;
+            pairsEl.textContent = matched;
+            flipped = [];
+            locked = false;
+
+            if (matched === SYMBOLS.length) {
+              onWin();
+            }
+          }, 350);
+        } else {
+          // No match
+          setTimeout(function() {
+            a.el.classList.add('wrong');
+            b.el.classList.add('wrong');
+          }, 50);
+
+          setTimeout(function() {
+            a.el.classList.remove('flipped', 'wrong');
+            b.el.classList.remove('flipped', 'wrong');
+            flipped = [];
+            locked = false;
+          }, 800);
+        }
+      }
+    }
+
+    function onWin() {
+      stopTimer();
+
+      const rating = moves <= 12 ? 'PERFECT' : moves <= 16 ? 'GREAT' : moves <= 22 ? 'GOOD' : 'DONE';
+      overlayTitle.textContent = rating === 'PERFECT' ? '// PERFECT //' : 'MEMORY CLEARED';
+      overlayStats.textContent = moves + ' MOVES · ' + formatTime(elapsed);
+      overlay.style.display = 'flex';
+    }
+
+    btnRestart.addEventListener('click', createBoard);
+
+    document.addEventListener('keydown', function(e) {
+      if (e.code === 'KeyR') {
+        createBoard();
+      }
+    });
+
+    createBoard();
+  })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

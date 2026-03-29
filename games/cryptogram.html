@@ -70,6 +70,8 @@
       width: 1.4em;
       cursor: pointer;
       position: relative;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .cipher-char .guess {
@@ -158,6 +160,8 @@
       border: 1px solid var(--border);
       cursor: pointer;
       transition: border-color 0.2s, color 0.2s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .freq-cell .fc-letter { display: block; color: var(--text-dim); font-weight: 700; }
@@ -183,6 +187,8 @@
       cursor: pointer;
       letter-spacing: 0.06em;
       transition: border-color 0.2s, color 0.2s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .btn:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
     .btn.magenta:hover { border-color: var(--accent-magenta); color: var(--accent-magenta); }
@@ -199,6 +205,75 @@
       padding: 0.1em 0.4em;
       font-size: 0.65rem;
       color: var(--text-muted);
+    }
+
+    /* On-screen keyboard for mobile */
+    .touch-keyboard {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      margin-bottom: 1.5rem;
+    }
+    .touch-keyboard .kb-row {
+      display: flex;
+      gap: 0.25rem;
+      justify-content: center;
+    }
+    .touch-keyboard .kb-key {
+      min-width: 2rem;
+      min-height: 2.5rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      padding: 0 0.3rem;
+    }
+    .touch-keyboard .kb-key:active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      background: rgba(0, 255, 255, 0.05);
+    }
+    .touch-keyboard .kb-key.kb-backspace {
+      min-width: 3.5rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+      color: var(--accent-magenta);
+      border-color: var(--accent-magenta);
+    }
+    .touch-keyboard .kb-key.kb-backspace:active {
+      background: rgba(255, 0, 128, 0.08);
+    }
+    .touch-keyboard .kb-key.kb-used {
+      color: var(--text-dim);
+      border-color: rgba(255,255,255,0.05);
+    }
+
+    @media (max-width: 600px) {
+      main { padding: 1rem 0.8rem 3rem; }
+      h1 { font-size: 1.3rem; }
+      .puzzle-area { padding: 1rem 0.6rem; line-height: 2.6; }
+      .cipher-char { width: 1.2em; }
+      .cipher-char .guess { font-size: 0.9rem; }
+      .cipher-char .cipher { font-size: 0.6rem; }
+      .freq-cell { width: 1.7rem; }
+      .touch-keyboard { display: flex; }
+      .instructions { display: none; }
+      .controls { justify-content: center; }
+    }
+    @media (max-width: 380px) {
+      .cipher-char { width: 1.1em; }
+      .cipher-char .guess { font-size: 0.8rem; }
+      .touch-keyboard .kb-key { min-width: 1.7rem; min-height: 2.2rem; font-size: 0.75rem; }
     }
 
     .win-banner {
@@ -255,6 +330,42 @@
       <button class="btn" id="btn-hint">HINT</button>
       <button class="btn" id="btn-clear">CLEAR ALL</button>
       <button class="btn magenta" id="btn-next">NEXT PUZZLE &gt;</button>
+    </div>
+
+    <div class="touch-keyboard" id="touch-keyboard">
+      <div class="kb-row">
+        <button class="kb-key" data-key="Q">Q</button>
+        <button class="kb-key" data-key="W">W</button>
+        <button class="kb-key" data-key="E">E</button>
+        <button class="kb-key" data-key="R">R</button>
+        <button class="kb-key" data-key="T">T</button>
+        <button class="kb-key" data-key="Y">Y</button>
+        <button class="kb-key" data-key="U">U</button>
+        <button class="kb-key" data-key="I">I</button>
+        <button class="kb-key" data-key="O">O</button>
+        <button class="kb-key" data-key="P">P</button>
+      </div>
+      <div class="kb-row">
+        <button class="kb-key" data-key="A">A</button>
+        <button class="kb-key" data-key="S">S</button>
+        <button class="kb-key" data-key="D">D</button>
+        <button class="kb-key" data-key="F">F</button>
+        <button class="kb-key" data-key="G">G</button>
+        <button class="kb-key" data-key="H">H</button>
+        <button class="kb-key" data-key="J">J</button>
+        <button class="kb-key" data-key="K">K</button>
+        <button class="kb-key" data-key="L">L</button>
+      </div>
+      <div class="kb-row">
+        <button class="kb-key" data-key="Z">Z</button>
+        <button class="kb-key" data-key="X">X</button>
+        <button class="kb-key" data-key="C">C</button>
+        <button class="kb-key" data-key="V">V</button>
+        <button class="kb-key" data-key="B">B</button>
+        <button class="kb-key" data-key="N">N</button>
+        <button class="kb-key" data-key="M">M</button>
+        <button class="kb-key kb-backspace" data-key="Backspace">⌫ DEL</button>
+      </div>
     </div>
 
     <div class="instructions">
@@ -617,6 +728,36 @@
       renderFreqBar();
     }
 
+    function updateTouchKeyboard() {
+      const usedLetters = new Set(Object.values(guesses));
+      document.querySelectorAll('.touch-keyboard .kb-key[data-key]').forEach(btn => {
+        const k = btn.dataset.key;
+        if (k === 'Backspace') return;
+        if (usedLetters.has(k)) {
+          btn.classList.add('kb-used');
+        } else {
+          btn.classList.remove('kb-used');
+        }
+      });
+    }
+
+    function setupTouchKeyboard() {
+      document.querySelectorAll('.touch-keyboard .kb-key').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const key = btn.dataset.key;
+          handleKey({ key, preventDefault: () => {} });
+          updateTouchKeyboard();
+        });
+      });
+    }
+
+    // Patch render functions to also update the touch keyboard
+    const _origRenderPuzzle = renderPuzzle;
+    renderPuzzle = function() { _origRenderPuzzle(); updateTouchKeyboard(); };
+    const _origRenderFreqBar = renderFreqBar;
+    renderFreqBar = function() { _origRenderFreqBar(); updateTouchKeyboard(); };
+
     function init() {
       shuffledOrder = shuffle([...Array(QUOTES.length).keys()]);
       makeCipher();
@@ -629,6 +770,7 @@
       document.getElementById('btn-hint').addEventListener('click', giveHint);
       document.getElementById('btn-clear').addEventListener('click', clearAll);
       document.getElementById('btn-next').addEventListener('click', nextPuzzle);
+      setupTouchKeyboard();
     }
 
     init();

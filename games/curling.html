@@ -17,19 +17,19 @@
     .top-bar a:hover { color: var(--accent-cyan); }
     .title { font-size: 0.9rem; font-weight: 800; color: var(--accent-magenta); letter-spacing: 0.1em; text-shadow: 0 0 10px var(--glow-magenta); }
     #ui { position: fixed; top: 40px; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    canvas { display: block; image-rendering: pixelated; }
-    .scoreboard { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); display: flex; gap: 2rem; font-size: 0.75rem; z-index: 5; }
+    canvas { display: block; image-rendering: pixelated; touch-action: manipulation; max-width: 100%; }
+    .scoreboard { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); display: flex; gap: 1rem; font-size: 0.75rem; z-index: 5; white-space: nowrap; }
     .score-p { color: #00f0ff; text-shadow: 0 0 8px rgba(0,240,255,0.4); }
     .score-c { color: #ff2d7b; text-shadow: 0 0 8px rgba(255,45,123,0.4); }
     .end-info { color: var(--text-dim); font-size: 0.65rem; }
-    .info { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: var(--text-dim); text-align: center; white-space: nowrap; z-index: 5; }
-    .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10,10,15,0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
-    .overlay h2 { font-size: 1.6rem; font-weight: 800; color: var(--accent-magenta); letter-spacing: 0.1em; text-shadow: 0 0 20px var(--glow-magenta); margin-bottom: 1rem; }
-    .overlay p { font-size: 0.8rem; color: var(--text-muted); margin: 0.3rem 0; }
+    .info { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: var(--text-dim); text-align: center; white-space: nowrap; z-index: 5; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
+    .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10,10,15,0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; padding: 1rem; box-sizing: border-box; }
+    .overlay h2 { font-size: clamp(1.2rem, 5vw, 1.6rem); font-weight: 800; color: var(--accent-magenta); letter-spacing: 0.1em; text-shadow: 0 0 20px var(--glow-magenta); margin-bottom: 1rem; }
+    .overlay p { font-size: clamp(0.65rem, 2.5vw, 0.8rem); color: var(--text-muted); margin: 0.3rem 0; text-align: center; }
     .overlay .hl-cyan { color: #00f0ff; }
     .overlay .hl-mag { color: #ff2d7b; }
     .overlay .hl-green { color: #39ff14; }
-    .btn { margin-top: 1.5rem; padding: 0.7rem 2rem; background: none; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; cursor: pointer; letter-spacing: 0.08em; transition: all 0.2s; }
+    .btn { margin-top: 1.5rem; padding: 0.9rem 2.5rem; background: none; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; cursor: pointer; letter-spacing: 0.08em; transition: all 0.2s; min-height: 44px; min-width: 44px; touch-action: manipulation; }
     .btn:hover { background: rgba(0,240,255,0.1); box-shadow: 0 0 15px rgba(0,240,255,0.3); }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
@@ -77,7 +77,26 @@ const C = $('c'), ctx = C.getContext('2d');
 // Dimensions
 const W = 320, H = 680;
 C.width = W; C.height = H;
-C.style.width = W + 'px'; C.style.height = H + 'px';
+
+function resizeCanvas() {
+  const topOffset = 70; // top bar + scoreboard
+  const bottomOffset = 40; // info bar
+  const availW = window.innerWidth - 16; // small margin
+  const availH = window.innerHeight - topOffset - bottomOffset;
+  const aspect = W / H;
+  let dw, dh;
+  if (availW / availH < aspect) {
+    dw = availW;
+    dh = availW / aspect;
+  } else {
+    dh = availH;
+    dw = availH * aspect;
+  }
+  C.style.width = dw + 'px';
+  C.style.height = dh + 'px';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 // Colors
 const VOID = '#0a0a0f', CYAN = '#00f0ff', MAG = '#ff2d7b', GREEN = '#39ff14',
@@ -624,7 +643,9 @@ function getPos(e) {
   const r = rect();
   const cx = (e.touches ? e.touches[0].clientX : e.clientX);
   const cy = (e.touches ? e.touches[0].clientY : e.clientY);
-  return { x: cx - r.left, y: cy - r.top };
+  const scaleX = W / r.width;
+  const scaleY = H / r.height;
+  return { x: (cx - r.left) * scaleX, y: (cy - r.top) * scaleY };
 }
 
 C.addEventListener('mousedown', e => {

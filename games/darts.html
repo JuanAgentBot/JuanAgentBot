@@ -114,6 +114,9 @@
     }
     canvas {
       cursor: crosshair;
+      max-width: 100%;
+      height: auto;
+      touch-action: manipulation;
     }
     .controls-hint {
       font-size: 0.6rem;
@@ -214,11 +217,45 @@
       transition: opacity 0.3s;
       z-index: 5;
     }
+    #touch-controls {
+      display: none;
+      justify-content: center;
+      padding: 0.6rem;
+      width: 100%;
+    }
+    #throw-btn {
+      background: none;
+      border: 2px solid var(--accent-cyan, #00f0ff);
+      color: var(--accent-cyan, #00f0ff);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 0.8rem 2.5rem;
+      cursor: pointer;
+      letter-spacing: 0.1em;
+      min-height: 52px;
+      text-shadow: 0 0 8px rgba(0,240,255,0.4);
+      box-shadow: 0 0 12px rgba(0,240,255,0.2);
+      touch-action: manipulation;
+    }
+    #throw-btn:active {
+      background: rgba(0,240,255,0.15);
+      box-shadow: 0 0 20px rgba(0,240,255,0.4);
+    }
+    @media (pointer: coarse) {
+      #touch-controls { display: flex; }
+      .controls-hint { display: none; }
+    }
     @media (max-width: 700px) {
-      #game-area { flex-direction: column; gap: 0.5rem; padding: 0.5rem; }
+      body { overflow-y: auto; height: auto; min-height: 100vh; }
+      #game-area { flex-direction: column; gap: 0.5rem; padding: 0.5rem; height: auto; min-height: calc(100vh - 42px); }
       #sidebar { flex-direction: row; flex-wrap: wrap; min-width: unset; justify-content: center; }
       .panel { padding: 0.5rem 0.8rem; }
       .score-big { font-size: 1.4rem; }
+      .mode-select { height: auto; min-height: calc(100vh - 42px); padding: 2rem 1rem; }
+      .mode-buttons { flex-wrap: wrap; justify-content: center; }
+      .mode-btn { min-height: 48px; }
+      .game-over { width: 90vw; }
     }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
@@ -264,6 +301,9 @@
       <div class="controls-hint">CLICK TO THROW<br>AIM WOBBLES. TIME IT.</div>
     </div>
     <canvas id="board" width="500" height="500"></canvas>
+    <div id="touch-controls">
+      <button id="throw-btn">🎯 THROW</button>
+    </div>
   </div>
 
   <div class="bust-flash" id="bust-flash">BUST!</div>
@@ -649,21 +689,37 @@
       go.style.display = 'block';
     }
 
-    // Touch support
+    // Touch support: drag to aim, THROW button to throw
     C.addEventListener('touchstart', (e) => {
       e.preventDefault();
       const touch = e.touches[0];
       const rect = C.getBoundingClientRect();
-      const scaleX = 500 / rect.width;
-      const scaleY = 500 / rect.height;
-      mouseX = (touch.clientX - rect.left) * scaleX;
-      mouseY = (touch.clientY - rect.top) * scaleY;
+      mouseX = (touch.clientX - rect.left) * (500 / rect.width);
+      mouseY = (touch.clientY - rect.top) * (500 / rect.height);
+    });
+
+    C.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = C.getBoundingClientRect();
+      mouseX = (touch.clientX - rect.left) * (500 / rect.width);
+      mouseY = (touch.clientY - rect.top) * (500 / rect.height);
     });
 
     C.addEventListener('touchend', (e) => {
       e.preventDefault();
+      // If throw button is visible, don't auto-throw on lift
+      const tc = document.getElementById('touch-controls');
+      if (tc && getComputedStyle(tc).display !== 'none') return;
+      // Fallback: throw on lift if no throw button
       if (!gameActive || dartsThrown >= 3) return;
-      // Simulate click at current aim position
+      C.dispatchEvent(new MouseEvent('click'));
+    });
+
+    // Throw button for touch devices
+    document.getElementById('throw-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!gameActive || dartsThrown >= 3) return;
       C.dispatchEvent(new MouseEvent('click'));
     });
 

@@ -13,6 +13,9 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    html, body {
+      touch-action: manipulation;
+    }
     main {
       max-width: 520px;
       margin: 0 auto;
@@ -59,6 +62,8 @@
     canvas {
       display: block;
       margin: 0 auto;
+      max-width: 100%;
+      height: auto;
       border: 1px solid var(--border);
       cursor: crosshair;
       touch-action: none;
@@ -87,6 +92,28 @@
     #start-btn:hover {
       background: rgba(255,45,123,0.1);
       box-shadow: 0 0 16px rgba(255,45,123,0.3);
+    }
+    @media (max-width: 480px) {
+      main {
+        padding: 1rem 0.75rem 3rem;
+      }
+      h1 {
+        font-size: 1.25rem;
+      }
+      #hud {
+        font-size: 0.65rem;
+        flex-wrap: wrap;
+        gap: 0.2rem 0.5rem;
+        justify-content: center;
+      }
+      #start-btn {
+        padding: 0.75rem 2rem;
+        font-size: 0.85rem;
+        min-height: 44px;
+      }
+      .info {
+        font-size: 0.55rem;
+      }
     }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
@@ -696,10 +723,18 @@
   function resize() {
     const parent = canvas.parentElement;
     const maxW = Math.min(parent.clientWidth, 480);
-    canvas.style.width = maxW + 'px';
-    canvas.style.height = (maxW * H / W) + 'px';
+    const maxH = window.innerHeight * 0.7;
+    let cw = maxW;
+    let ch = cw * H / W;
+    if (ch > maxH) {
+      ch = maxH;
+      cw = ch * W / H;
+    }
+    canvas.style.width = cw + 'px';
+    canvas.style.height = ch + 'px';
   }
   window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 150));
   resize();
 
   loop();

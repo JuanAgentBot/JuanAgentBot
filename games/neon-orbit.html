@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON ORBIT / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    .back {
+      position: fixed;
+      top: 1rem;
+      left: 1.5rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      z-index: 100;
+      transition: color 0.3s;
+    }
+    .back:hover { color: var(--accent-cyan); }
+
+    .title-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      padding: 1rem;
+      z-index: 90;
+      pointer-events: none;
+    }
+
+    .title-bar h1 {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.15em;
+      text-shadow: 0 0 15px var(--glow-magenta);
+    }
+
+    #hud {
+      position: fixed;
+      top: 3rem;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      z-index: 90;
+      pointer-events: none;
+    }
+
+    .hud-item {
+      text-align: center;
+    }
+
+    .hud-label {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.2rem;
+    }
+
+    .hud-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .hud-score { color: var(--accent-cyan); text-shadow: 0 0 10px var(--glow-cyan); }
+    .hud-best { color: var(--accent-green); text-shadow: 0 0 10px var(--glow-green); }
+    .hud-wave { color: var(--accent-purple); text-shadow: 0 0 10px var(--glow-purple); }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 80;
+      background: rgba(10, 10, 15, 0.85);
+    }
+
+    #overlay.hidden { display: none; }
+
+    .overlay-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .overlay-sub {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.06em;
+    }
+
+    .overlay-score {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent-cyan);
+      text-shadow: 0 0 15px var(--glow-cyan);
+      margin-bottom: 0.3rem;
+    }
+
+    .overlay-score-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-bottom: 2rem;
+    }
+
+    .overlay-controls {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      line-height: 1.8;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .key {
+      display: inline-block;
+      border: 1px solid var(--border);
+      padding: 0.15em 0.5em;
+      font-size: 0.65rem;
+      color: var(--accent-cyan);
+    }
+
+    .overlay-start {
+      font-size: 0.7rem;
+      color: var(--accent-green);
+      letter-spacing: 0.1em;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .shield-indicator {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.6rem;
+      color: var(--accent-green);
+      letter-spacing: 0.1em;
+      z-index: 90;
+      pointer-events: none;
+      text-shadow: 0 0 10px var(--glow-green);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .shield-indicator.visible { opacity: 1; }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <a href="./" class="back">&lt; GAME LAB</a>
+
+  <div class="title-bar">
+    <h1>NEON ORBIT</h1>
+  </div>
+
+  <div id="hud">
+    <div class="hud-item">
+      <div class="hud-label">SCORE</div>
+      <div class="hud-value hud-score" id="score">0</div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">WAVE</div>
+      <div class="hud-value hud-wave" id="wave">1</div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">BEST</div>
+      <div class="hud-value hud-best" id="best">0</div>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <div class="overlay-title">NEON ORBIT</div>
+    <div class="overlay-sub">SURVIVE THE ASTEROID FIELD</div>
+    <div class="overlay-controls">
+      <span class="key">SPACE</span> / <span class="key">CLICK</span> — reverse orbit<br>
+      dodge asteroids, collect pickups<br>
+      survive as long as you can
+    </div>
+    <div class="overlay-start">[ PRESS SPACE OR CLICK TO START ]</div>
+  </div>
+
+  <div class="shield-indicator" id="shield-ind">&#9632; SHIELD ACTIVE</div>
+
+  <canvas id="c"></canvas>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+
+    // Colors
+    const VOID = '#0a0a0f';
+    const MAGENTA = '#ff2d7b';
+    const CYAN = '#00f0ff';
+    const GREEN = '#39ff14';
+    const PURPLE = '#9d4edd';
+    const WHITE = '#e0e0e8';
+    const GRAY = '#7a7a90';
+    const AMBER = '#ffb000';
+    const CRIMSON = '#ff1744';
+
+    // State
+    let W, H, cx, cy;
+    let playing = false;
+    let gameOver = false;
+    let score = 0;
+    let bestScore = parseInt(localStorage.getItem('neon-orbit-best') || '0');
+    let waveNum = 1;
+    let waveTimer = 0;
+    let shieldTime = 0;
+    let slowTime = 0;
+
+    // Ship
+    const ship = {
+      angle: 0,
+      dir: 1,            // 1 = counter-clockwise, -1 = clockwise
+      speed: 1.8,        // radians per second
+      radius: 0,         // orbit radius, set on resize
+      size: 8,
+      trail: []
+    };
+
+    // Entities
+    let asteroids = [];
+    let pickups = [];
+    let particles = [];
+    let scorePopups = [];
+
+    // Timing
+    let lastTime = 0;
+    let spawnTimer = 0;
+    let pickupTimer = 0;
+    let scoreTimer = 0;
+
+    document.getElementById('best').textContent = bestScore;
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      canvas.style.width = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cx = W / 2;
+      cy = H / 2;
+      ship.radius = Math.min(W, H) * 0.25;
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Input
+    function handleInput() {
+      if (!playing) {
+        startGame();
+      } else if (!gameOver) {
+        ship.dir *= -1;
+        // Direction change particle burst
+        const sx = cx + Math.cos(ship.angle) * ship.radius;
+        const sy = cy + Math.sin(ship.angle) * ship.radius;
+        for (let i = 0; i < 6; i++) {
+          const a = Math.random() * Math.PI * 2;
+          particles.push({
+            x: sx, y: sy,
+            vx: Math.cos(a) * (30 + Math.random() * 40),
+            vy: Math.sin(a) * (30 + Math.random() * 40),
+            life: 0.4,
+            maxLife: 0.4,
+            color: CYAN,
+            size: 2
+          });
+        }
+      } else {
+        resetGame();
+      }
+    }
+
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Space') { e.preventDefault(); handleInput(); }
+    });
+    canvas.addEventListener('click', handleInput);
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); handleInput(); }, { passive: false });
+
+    function startGame() {
+      playing = true;
+      gameOver = false;
+      document.getElementById('overlay').classList.add('hidden');
+    }
+
+    function resetGame() {
+      score = 0;
+      waveNum = 1;
+      waveTimer = 0;
+      shieldTime = 0;
+      slowTime = 0;
+      ship.angle = -Math.PI / 2;
+      ship.dir = 1;
+      ship.speed = 1.8;
+      ship.trail = [];
+      asteroids = [];
+      pickups = [];
+      particles = [];
+      scorePopups = [];
+      spawnTimer = 0;
+      pickupTimer = 5;
+      scoreTimer = 0;
+      gameOver = false;
+      updateHUD();
+      document.getElementById('overlay').classList.add('hidden');
+    }
+
+    function endGame() {
+      gameOver = true;
+      playing = false;
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem('neon-orbit-best', bestScore);
+      }
+      // Death particles
+      const sx = cx + Math.cos(ship.angle) * ship.radius;
+      const sy = cy + Math.sin(ship.angle) * ship.radius;
+      for (let i = 0; i < 30; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const spd = 50 + Math.random() * 120;
+        particles.push({
+          x: sx, y: sy,
+          vx: Math.cos(a) * spd,
+          vy: Math.sin(a) * spd,
+          life: 0.6 + Math.random() * 0.6,
+          maxLife: 1.2,
+          color: [CYAN, MAGENTA, GREEN][Math.floor(Math.random() * 3)],
+          size: 2 + Math.random() * 3
+        });
+      }
+
+      // Show overlay after a brief delay
+      setTimeout(() => {
+        const ov = document.getElementById('overlay');
+        ov.querySelector('.overlay-title').textContent = 'GAME OVER';
+        ov.querySelector('.overlay-sub').textContent = 'ORBIT DESTABILIZED';
+        // Add score display
+        let scoreDiv = ov.querySelector('.overlay-score');
+        let scoreLabelDiv = ov.querySelector('.overlay-score-label');
+        if (!scoreDiv) {
+          scoreDiv = document.createElement('div');
+          scoreDiv.className = 'overlay-score';
+          scoreLabelDiv = document.createElement('div');
+          scoreLabelDiv.className = 'overlay-score-label';
+          const controls = ov.querySelector('.overlay-controls');
+          ov.insertBefore(scoreLabelDiv, controls);
+          ov.insertBefore(scoreDiv, scoreLabelDiv);
+        }
+        scoreDiv.textContent = score;
+        scoreLabelDiv.textContent = score >= bestScore ? 'NEW BEST' : 'SCORE';
+        ov.querySelector('.overlay-start').textContent = '[ PRESS SPACE OR CLICK TO RETRY ]';
+        ov.classList.remove('hidden');
+        document.getElementById('best').textContent = bestScore;
+      }, 800);
+    }
+
+    function updateHUD() {
+      document.getElementById('score').textContent = score;
+      document.getElementById('wave').textContent = waveNum;
+      document.getElementById('best').textContent = bestScore;
+    }
+
+    // Spawn asteroid from edge, aimed roughly toward center orbit path
+    function spawnAsteroid() {
+      const edge = Math.random() * (2 * (W + H));
+      let ax, ay;
+      if (edge < W) { ax = edge; ay = 0; }
+      else if (edge < W + H) { ax = W; ay = edge - W; }
+      else if (edge < 2 * W + H) { ax = 2 * W + H - edge; ay = H; }
+      else { ax = 0; ay = 2 * (W + H) - edge; }
+
+      // Aim toward center area with some randomness
+      const targetAngle = Math.atan2(cy - ay, cx - ax) + (Math.random() - 0.5) * 0.8;
+      const baseSpeed = 60 + waveNum * 8;
+      const speed = baseSpeed + Math.random() * 40;
+      const size = 4 + Math.random() * 8;
+      const colors = [MAGENTA, AMBER, CRIMSON, PURPLE];
+
+      asteroids.push({
+        x: ax, y: ay,
+        vx: Math.cos(targetAngle) * speed,
+        vy: Math.sin(targetAngle) * speed,
+        size: size,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 4,
+        vertices: generateAsteroidShape(size)
+      });
+    }
+
+    function generateAsteroidShape(size) {
+      const pts = [];
+      const n = 5 + Math.floor(Math.random() * 4);
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        const r = size * (0.6 + Math.random() * 0.4);
+        pts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
+      }
+      return pts;
+    }
+
+    function spawnPickup() {
+      // Place pickup on the orbit path
+      const angle = Math.random() * Math.PI * 2;
+      const types = ['shield', 'points', 'slow'];
+      const weights = [1, 3, 1];
+      const totalW = weights.reduce((a, b) => a + b, 0);
+      let r = Math.random() * totalW;
+      let type = types[0];
+      for (let i = 0; i < types.length; i++) {
+        r -= weights[i];
+        if (r <= 0) { type = types[i]; break; }
+      }
+
+      const color = type === 'shield' ? GREEN : type === 'slow' ? PURPLE : AMBER;
+      const symbol = type === 'shield' ? '◆' : type === 'slow' ? '◈' : '★';
+
+      pickups.push({
+        x: cx + Math.cos(angle) * ship.radius,
+        y: cy + Math.sin(angle) * ship.radius,
+        type: type,
+        color: color,
+        symbol: symbol,
+        life: 8,
+        size: 10,
+        pulse: 0
+      });
+    }
+
+    function addScorePopup(x, y, text, color) {
+      scorePopups.push({ x, y, text, color, life: 1.0 });
+    }
+
+    // Update
+    function update(dt) {
+      if (gameOver) {
+        updateParticles(dt);
+        return;
+      }
+
+      const speedMul = slowTime > 0 ? 0.5 : 1;
+
+      // Move ship
+      ship.angle += ship.dir * ship.speed * dt;
+      if (ship.angle > Math.PI * 2) ship.angle -= Math.PI * 2;
+      if (ship.angle < 0) ship.angle += Math.PI * 2;
+
+      const sx = cx + Math.cos(ship.angle) * ship.radius;
+      const sy = cy + Math.sin(ship.angle) * ship.radius;
+
+      // Trail
+      ship.trail.push({ x: sx, y: sy, life: 0.6 });
+      if (ship.trail.length > 40) ship.trail.shift();
+
+      // Score timer - points for surviving
+      scoreTimer += dt;
+      if (scoreTimer >= 0.5) {
+        scoreTimer -= 0.5;
+        score += waveNum;
+        updateHUD();
+      }
+
+      // Wave timer
+      waveTimer += dt;
+      if (waveTimer >= 15) {
+        waveTimer = 0;
+        waveNum++;
+        ship.speed = 1.8 + waveNum * 0.15;
+        updateHUD();
+        // Wave announcement particles
+        for (let i = 0; i < 20; i++) {
+          const a = Math.random() * Math.PI * 2;
+          particles.push({
+            x: cx, y: cy,
+            vx: Math.cos(a) * (80 + Math.random() * 60),
+            vy: Math.sin(a) * (80 + Math.random() * 60),
+            life: 0.8,
+            maxLife: 0.8,
+            color: PURPLE,
+            size: 2
+          });
+        }
+        addScorePopup(cx, cy - 30, 'WAVE ' + waveNum, PURPLE);
+      }
+
+      // Spawn asteroids
+      const spawnRate = Math.max(0.2, 1.5 - waveNum * 0.12);
+      spawnTimer -= dt;
+      if (spawnTimer <= 0) {
+        spawnTimer = spawnRate + Math.random() * spawnRate * 0.5;
+        const count = 1 + Math.floor(waveNum / 4);
+        for (let i = 0; i < count; i++) spawnAsteroid();
+      }
+
+      // Spawn pickups
+      pickupTimer -= dt;
+      if (pickupTimer <= 0) {
+        pickupTimer = 6 + Math.random() * 4;
+        spawnPickup();
+      }
+
+      // Shield / slow timers
+      if (shieldTime > 0) shieldTime -= dt;
+      if (slowTime > 0) slowTime -= dt;
+      const shieldInd = document.getElementById('shield-ind');
+      shieldInd.classList.toggle('visible', shieldTime > 0);
+
+      // Update asteroids
+      for (let i = asteroids.length - 1; i >= 0; i--) {
+        const a = asteroids[i];
+        a.x += a.vx * dt * speedMul;
+        a.y += a.vy * dt * speedMul;
+        a.rot += a.rotSpeed * dt * speedMul;
+
+        // Remove if off-screen
+        const margin = 60;
+        if (a.x < -margin || a.x > W + margin || a.y < -margin || a.y > H + margin) {
+          asteroids.splice(i, 1);
+          continue;
+        }
+
+        // Collision with ship
+        const dx = a.x - sx;
+        const dy = a.y - sy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < a.size + ship.size) {
+          if (shieldTime > 0) {
+            // Destroy asteroid, gain points
+            for (let j = 0; j < 8; j++) {
+              const pa = Math.random() * Math.PI * 2;
+              particles.push({
+                x: a.x, y: a.y,
+                vx: Math.cos(pa) * (40 + Math.random() * 60),
+                vy: Math.sin(pa) * (40 + Math.random() * 60),
+                life: 0.5,
+                maxLife: 0.5,
+                color: GREEN,
+                size: 2
+              });
+            }
+            score += 10;
+            addScorePopup(a.x, a.y, '+10', GREEN);
+            updateHUD();
+            asteroids.splice(i, 1);
+          } else {
+            endGame();
+            return;
+          }
+        }
+      }
+
+      // Update pickups
+      for (let i = pickups.length - 1; i >= 0; i--) {
+        const p = pickups[i];
+        p.life -= dt;
+        p.pulse += dt * 4;
+        if (p.life <= 0) {
+          pickups.splice(i, 1);
+          continue;
+        }
+
+        // Collision with ship
+        const dx = p.x - sx;
+        const dy = p.y - sy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < p.size + ship.size) {
+          if (p.type === 'shield') {
+            shieldTime = 5;
+            addScorePopup(p.x, p.y, 'SHIELD', GREEN);
+          } else if (p.type === 'points') {
+            score += 25 * waveNum;
+            addScorePopup(p.x, p.y, '+' + (25 * waveNum), AMBER);
+          } else if (p.type === 'slow') {
+            slowTime = 4;
+            addScorePopup(p.x, p.y, 'SLOW', PURPLE);
+          }
+          // Pickup particles
+          for (let j = 0; j < 10; j++) {
+            const pa = Math.random() * Math.PI * 2;
+            particles.push({
+              x: p.x, y: p.y,
+              vx: Math.cos(pa) * (30 + Math.random() * 50),
+              vy: Math.sin(pa) * (30 + Math.random() * 50),
+              life: 0.5,
+              maxLife: 0.5,
+              color: p.color,
+              size: 2
+            });
+          }
+          updateHUD();
+          pickups.splice(i, 1);
+        }
+      }
+
+      // Update trail
+      for (let i = ship.trail.length - 1; i >= 0; i--) {
+        ship.trail[i].life -= dt;
+        if (ship.trail[i].life <= 0) ship.trail.splice(i, 1);
+      }
+
+      updateParticles(dt);
+
+      // Update score popups
+      for (let i = scorePopups.length - 1; i >= 0; i--) {
+        scorePopups[i].life -= dt;
+        scorePopups[i].y -= 30 * dt;
+        if (scorePopups[i].life <= 0) scorePopups.splice(i, 1);
+      }
+    }
+
+    function updateParticles(dt) {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vx *= 0.97;
+        p.vy *= 0.97;
+        p.life -= dt;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    // Draw
+    function draw() {
+      ctx.fillStyle = VOID;
+      ctx.fillRect(0, 0, W, H);
+
+      // Draw starfield (static background dots)
+      drawStars();
+
+      // Draw orbit ring
+      ctx.beginPath();
+      ctx.arc(cx, cy, ship.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(122, 122, 144, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Draw central sun
+      drawSun();
+
+      // Draw trail
+      for (let i = 0; i < ship.trail.length; i++) {
+        const t = ship.trail[i];
+        const alpha = t.life / 0.6;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, 2 * alpha, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(0, 240, 255, ${alpha * 0.6})`;
+        ctx.fill();
+      }
+
+      // Draw asteroids
+      for (const a of asteroids) {
+        ctx.save();
+        ctx.translate(a.x, a.y);
+        ctx.rotate(a.rot);
+        ctx.beginPath();
+        const v = a.vertices;
+        ctx.moveTo(v[0].x, v[0].y);
+        for (let i = 1; i < v.length; i++) ctx.lineTo(v[i].x, v[i].y);
+        ctx.closePath();
+        ctx.strokeStyle = a.color;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = a.color;
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+
+      // Draw pickups
+      for (const p of pickups) {
+        const pulseScale = 1 + Math.sin(p.pulse) * 0.15;
+        const alpha = p.life < 2 ? p.life / 2 : 1;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.scale(pulseScale, pulseScale);
+        ctx.font = '14px "JetBrains Mono"';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = alpha;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 12;
+        ctx.fillText(p.symbol, 0, 0);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // Draw ship
+      if (!gameOver) {
+        const sx = cx + Math.cos(ship.angle) * ship.radius;
+        const sy = cy + Math.sin(ship.angle) * ship.radius;
+        const pointAngle = ship.angle + (ship.dir > 0 ? Math.PI / 2 : -Math.PI / 2);
+
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(pointAngle);
+
+        // Ship triangle
+        ctx.beginPath();
+        ctx.moveTo(ship.size, 0);
+        ctx.lineTo(-ship.size * 0.7, -ship.size * 0.6);
+        ctx.lineTo(-ship.size * 0.3, 0);
+        ctx.lineTo(-ship.size * 0.7, ship.size * 0.6);
+        ctx.closePath();
+
+        if (shieldTime > 0) {
+          ctx.fillStyle = GREEN;
+          ctx.shadowColor = GREEN;
+        } else {
+          ctx.fillStyle = CYAN;
+          ctx.shadowColor = CYAN;
+        }
+        ctx.shadowBlur = 15;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Shield ring
+        if (shieldTime > 0) {
+          const shieldAlpha = shieldTime < 1.5 ? (0.3 + 0.4 * Math.sin(shieldTime * 10)) : 0.6;
+          ctx.beginPath();
+          ctx.arc(0, 0, ship.size + 6, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(57, 255, 20, ${shieldAlpha})`;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+
+      // Draw particles
+      for (const p of particles) {
+        const alpha = Math.max(0, p.life / p.maxLife);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = alpha;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      // Draw score popups
+      for (const sp of scorePopups) {
+        const alpha = Math.max(0, sp.life);
+        ctx.font = '700 12px "JetBrains Mono"';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = sp.color;
+        ctx.globalAlpha = alpha;
+        ctx.shadowColor = sp.color;
+        ctx.shadowBlur = 8;
+        ctx.fillText(sp.text, sp.x, sp.y);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // Static stars (regenerated on resize)
+    let stars = [];
+    function generateStars() {
+      stars = [];
+      for (let i = 0; i < 80; i++) {
+        stars.push({
+          x: Math.random() * W,
+          y: Math.random() * H,
+          size: Math.random() * 1.5,
+          brightness: 0.2 + Math.random() * 0.4
+        });
+      }
+    }
+    generateStars();
+    window.addEventListener('resize', generateStars);
+
+    function drawStars() {
+      for (const s of stars) {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(224, 224, 232, ${s.brightness})`;
+        ctx.fill();
+      }
+    }
+
+    function drawSun() {
+      // Glow layers
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 40);
+      gradient.addColorStop(0, 'rgba(255, 45, 123, 0.4)');
+      gradient.addColorStop(0.4, 'rgba(255, 45, 123, 0.15)');
+      gradient.addColorStop(1, 'rgba(255, 45, 123, 0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(cx - 40, cy - 40, 80, 80);
+
+      // Core
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+      ctx.fillStyle = MAGENTA;
+      ctx.shadowColor = MAGENTA;
+      ctx.shadowBlur = 20;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // Game loop
+    function loop(time) {
+      const dt = Math.min((time - lastTime) / 1000, 0.05);
+      lastTime = time;
+
+      if (playing && !gameOver) {
+        update(dt);
+      } else {
+        updateParticles(dt);
+      }
+
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

@@ -13,6 +13,11 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    *, *::before, *::after {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
     main {
       max-width: 640px;
       margin: 0 auto;
@@ -58,7 +63,7 @@
     }
 
     .energy-amount {
-      font-size: 2rem;
+      font-size: clamp(1.5rem, 6vw, 2rem);
       font-weight: 800;
       color: var(--accent-cyan);
       text-shadow: 0 0 20px var(--glow-cyan);
@@ -83,13 +88,13 @@
     .core-wrap {
       position: relative;
       margin: 0 auto 2rem;
-      width: 180px;
-      height: 180px;
+      width: min(180px, 45vw);
+      height: min(180px, 45vw);
     }
 
     .core-btn {
-      width: 180px;
-      height: 180px;
+      width: 100%;
+      height: 100%;
       border: 2px solid var(--accent-magenta);
       background: transparent;
       cursor: pointer;
@@ -111,8 +116,8 @@
     }
 
     .core-inner {
-      width: 80px;
-      height: 80px;
+      width: min(80px, 20vw);
+      height: min(80px, 20vw);
       border: 1px solid var(--accent-magenta);
       transform: rotate(45deg);
       display: flex;
@@ -166,7 +171,8 @@
     .stats-row {
       display: flex;
       justify-content: center;
-      gap: 2rem;
+      flex-wrap: wrap;
+      gap: 0.5rem 1.5rem;
       margin-bottom: 2rem;
       font-size: 0.7rem;
     }
@@ -195,11 +201,12 @@
       display: flex;
       align-items: center;
       border: 1px solid var(--border);
-      padding: 0.8rem 1rem;
+      padding: 0.9rem 1rem;
       margin-bottom: 0.5rem;
       cursor: pointer;
       transition: border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
       text-align: left;
+      min-height: 48px;
     }
 
     .upgrade:hover:not(.locked) {
@@ -286,7 +293,8 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.75rem;
       font-weight: 700;
-      padding: 0.5rem 1.5rem;
+      padding: 0.6rem 2rem;
+      min-height: 44px;
       cursor: pointer;
       letter-spacing: 0.08em;
       transition: all 0.2s;
@@ -369,11 +377,7 @@
       <div class="prestige-info">Current prestige: <span id="prestige-level">0</span> &middot; Multiplier: <span id="prestige-mult">1.0x</span></div>
     </div>
 
-    <div class="controls">
-      <kbd>CLICK</kbd> or <kbd>SPACE</kbd> &mdash; tap the core &middot;
-      <kbd>1-5</kbd> &mdash; buy generator &middot;
-      <kbd>P</kbd> &mdash; prestige
-    </div>
+    <div class="controls" id="controls"></div>
   </main>
 
   <script>
@@ -458,8 +462,10 @@
       let p = document.createElement('div');
       p.className = 'particle';
       p.textContent = '+' + fmt(amount);
-      let x = 40 + Math.random() * 100;
-      let y = 30 + Math.random() * 60;
+      let w = wrap.offsetWidth;
+      let h = wrap.offsetHeight;
+      let x = w * 0.2 + Math.random() * w * 0.6;
+      let y = h * 0.15 + Math.random() * h * 0.35;
       p.style.left = x + 'px';
       p.style.top = y + 'px';
       wrap.appendChild(p);
@@ -653,6 +659,17 @@
         }
       } catch(e) {}
     }
+
+    // --- Controls hint ---
+    (function() {
+      var isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      var el = document.getElementById('controls');
+      if (isMobile) {
+        el.innerHTML = '<kbd>TAP</kbd> the core to harvest &middot; tap generators and upgrades to buy';
+      } else {
+        el.innerHTML = '<kbd>CLICK</kbd> or <kbd>SPACE</kbd> &mdash; tap the core &middot; <kbd>1-5</kbd> &mdash; buy generator &middot; <kbd>P</kbd> &mdash; prestige';
+      }
+    })();
 
     // --- Init ---
     loadGame();

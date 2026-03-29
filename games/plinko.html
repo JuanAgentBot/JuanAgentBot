@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PLINKO / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 580px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+    .back:hover { color: var(--accent-cyan); }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.2rem;
+    }
+    .hud {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1rem;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+    }
+    .hud-label { color: var(--text-dim); }
+    .hud-val { color: var(--accent-cyan); font-weight: 700; }
+    .hud-val.score { color: var(--accent-green); text-shadow: 0 0 8px rgba(57,255,20,0.4); }
+    .hud-val.balls { color: var(--accent-magenta); }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .controls {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      margin-top: 1rem;
+      line-height: 1.7;
+    }
+    .key {
+      display: inline-block;
+      border: 1px solid var(--border);
+      padding: 0.1em 0.45em;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin: 0 0.1em;
+    }
+    .popup {
+      display: none;
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--bg-primary);
+      border: 1px solid var(--accent-magenta);
+      padding: 2rem 2.5rem;
+      z-index: 100;
+      text-align: center;
+      box-shadow: 0 0 40px rgba(255,45,123,0.2);
+    }
+    .popup h2 {
+      color: var(--accent-magenta);
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.8rem;
+    }
+    .popup .final-score {
+      color: var(--accent-green);
+      font-size: 1.8rem;
+      font-weight: 800;
+      text-shadow: 0 0 15px rgba(57,255,20,0.5);
+      margin-bottom: 1rem;
+    }
+    .popup .best-score {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      margin-bottom: 1.2rem;
+    }
+    .popup button {
+      background: none;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.5em 1.5em;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      transition: background 0.2s, color 0.2s;
+    }
+    .popup button:hover {
+      background: var(--accent-cyan);
+      color: var(--bg-primary);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>PLINKO</h1>
+    <p class="subtitle">DROP BALLS THROUGH THE PEGS. HIT THE BIG MULTIPLIERS.</p>
+
+    <div class="hud">
+      <div><span class="hud-label">SCORE </span><span class="hud-val score" id="score">0</span></div>
+      <div><span class="hud-label">BALLS </span><span class="hud-val balls" id="balls">15</span></div>
+      <div><span class="hud-label">BEST </span><span class="hud-val score" id="best">0</span></div>
+    </div>
+
+    <canvas id="c" width="540" height="600"></canvas>
+
+    <div class="controls">
+      <span class="key">CLICK</span> or <span class="key">SPACE</span> drop ball at cursor
+      &nbsp;·&nbsp;
+      <span class="key">←</span><span class="key">→</span> move drop position
+      &nbsp;·&nbsp;
+      <span class="key">R</span> reset
+    </div>
+
+    <div class="popup" id="popup">
+      <h2>ROUND OVER</h2>
+      <div class="final-score" id="final-score">0</div>
+      <div class="best-score" id="best-label">BEST: 0</div>
+      <button id="replay-btn">PLAY AGAIN</button>
+    </div>
+  </main>
+
+<script>
+(function() {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // Colors
+  const cs = getComputedStyle(document.documentElement);
+  const COL = {
+    void: '#0a0a0f',
+    magenta: '#ff2d7b',
+    cyan: '#00f0ff',
+    green: '#39ff14',
+    purple: '#9d4edd',
+    white: '#e0e0e8',
+    dim: '#7a7a90',
+    amber: '#ffb000',
+    crimson: '#ff1744'
+  };
+
+  // Peg layout
+  const ROWS = 12;
+  const PEG_R = 4;
+  const BALL_R = 6;
+  const PEG_GAP_X = 38;
+  const PEG_GAP_Y = 36;
+  const TOP_MARGIN = 50;
+
+  // Bucket config
+  const BUCKET_MULTS = [50, 25, 10, 5, 3, 1, 0.5, 1, 3, 5, 10, 25, 50];
+  const BUCKET_COLORS = [COL.crimson, COL.amber, COL.magenta, COL.purple, COL.cyan, COL.dim, COL.green, COL.dim, COL.cyan, COL.purple, COL.magenta, COL.amber, COL.crimson];
+
+  let pegs = [];
+  let balls = [];
+  let particles = [];
+  let bucketFlashes = [];
+  let dropX = W / 2;
+  let score = 0;
+  let ballsLeft = 15;
+  let bestScore = parseInt(localStorage.getItem('plinko-best') || '0');
+  let gameOver = false;
+
+  const scoreEl = document.getElementById('score');
+  const ballsEl = document.getElementById('balls');
+  const bestEl = document.getElementById('best');
+  const popup = document.getElementById('popup');
+  const finalScoreEl = document.getElementById('final-score');
+  const bestLabelEl = document.getElementById('best-label');
+  const replayBtn = document.getElementById('replay-btn');
+
+  bestEl.textContent = bestScore;
+
+  function buildPegs() {
+    pegs = [];
+    for (let row = 0; row < ROWS; row++) {
+      const cols = row + 3;
+      const rowWidth = (cols - 1) * PEG_GAP_X;
+      const startX = (W - rowWidth) / 2;
+      const y = TOP_MARGIN + row * PEG_GAP_Y;
+      for (let col = 0; col < cols; col++) {
+        pegs.push({ x: startX + col * PEG_GAP_X, y: y, hit: 0 });
+      }
+    }
+  }
+
+  // Bucket geometry
+  const BUCKET_Y = TOP_MARGIN + ROWS * PEG_GAP_Y + 10;
+  const BUCKET_COUNT = BUCKET_MULTS.length;
+  const BUCKET_W = PEG_GAP_X;
+  const BUCKETS_WIDTH = BUCKET_COUNT * BUCKET_W;
+  const BUCKETS_START = (W - BUCKETS_WIDTH) / 2;
+
+  function dropBall() {
+    if (ballsLeft <= 0 || gameOver) return;
+    ballsLeft--;
+    ballsEl.textContent = ballsLeft;
+    const jitter = (Math.random() - 0.5) * 4;
+    balls.push({
+      x: dropX + jitter,
+      y: 10,
+      vx: 0,
+      vy: 0,
+      active: true,
+      trail: []
+    });
+  }
+
+  function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1 + Math.random() * 3;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.6 + Math.random() * 0.4,
+        color,
+        r: 1 + Math.random() * 2
+      });
+    }
+  }
+
+  function flashBucket(idx) {
+    bucketFlashes.push({ idx, life: 1.0 });
+  }
+
+  function update(dt) {
+    if (gameOver) return;
+
+    const gravity = 600;
+    const damping = 0.4;
+    const friction = 0.98;
+
+    for (let b of balls) {
+      if (!b.active) continue;
+
+      b.vy += gravity * dt;
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.vx *= friction;
+
+      // Trail
+      b.trail.push({ x: b.x, y: b.y, life: 1.0 });
+      if (b.trail.length > 12) b.trail.shift();
+
+      // Peg collisions
+      for (let p of pegs) {
+        const dx = b.x - p.x;
+        const dy = b.y - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const minDist = BALL_R + PEG_R;
+        if (dist < minDist && dist > 0) {
+          const nx = dx / dist;
+          const ny = dy / dist;
+          b.x = p.x + nx * minDist;
+          b.y = p.y + ny * minDist;
+          const dot = b.vx * nx + b.vy * ny;
+          b.vx -= (1 + damping) * dot * nx;
+          b.vy -= (1 + damping) * dot * ny;
+          // Add randomness
+          b.vx += (Math.random() - 0.5) * 30;
+          p.hit = 1.0;
+          spawnParticles(p.x, p.y, COL.cyan, 3);
+        }
+      }
+
+      // Wall bounces
+      if (b.x < BALL_R) { b.x = BALL_R; b.vx = Math.abs(b.vx) * 0.5; }
+      if (b.x > W - BALL_R) { b.x = W - BALL_R; b.vx = -Math.abs(b.vx) * 0.5; }
+
+      // Bucket detection
+      if (b.y > BUCKET_Y) {
+        b.active = false;
+        const bucketIdx = Math.floor((b.x - BUCKETS_START) / BUCKET_W);
+        const clampedIdx = Math.max(0, Math.min(BUCKET_COUNT - 1, bucketIdx));
+        const mult = BUCKET_MULTS[clampedIdx];
+        const points = Math.round(mult * 10);
+        score += points;
+        scoreEl.textContent = score;
+        flashBucket(clampedIdx);
+        spawnParticles(
+          BUCKETS_START + clampedIdx * BUCKET_W + BUCKET_W / 2,
+          BUCKET_Y + 15,
+          BUCKET_COLORS[clampedIdx],
+          8
+        );
+
+        // Float score text
+        particles.push({
+          x: BUCKETS_START + clampedIdx * BUCKET_W + BUCKET_W / 2,
+          y: BUCKET_Y + 10,
+          vx: 0, vy: -40,
+          life: 1.5,
+          color: BUCKET_COLORS[clampedIdx],
+          r: 0,
+          text: '+' + points
+        });
+      }
+
+      // Off screen
+      if (b.y > H + 50) b.active = false;
+    }
+
+    // Clean inactive balls
+    balls = balls.filter(b => b.active || b.trail.length > 0);
+    // Fade trails
+    for (let b of balls) {
+      for (let t of b.trail) t.life -= dt * 3;
+      b.trail = b.trail.filter(t => t.life > 0);
+    }
+
+    // Update particles
+    for (let p of particles) {
+      p.x += p.vx * dt * 60;
+      p.y += p.vy * dt * 60;
+      p.life -= dt;
+    }
+    particles = particles.filter(p => p.life > 0);
+
+    // Bucket flashes
+    for (let f of bucketFlashes) f.life -= dt * 2;
+    bucketFlashes = bucketFlashes.filter(f => f.life > 0);
+
+    // Peg hit fade
+    for (let p of pegs) {
+      if (p.hit > 0) p.hit -= dt * 3;
+      if (p.hit < 0) p.hit = 0;
+    }
+
+    // Game over check
+    if (ballsLeft === 0 && balls.every(b => !b.active)) {
+      gameOver = true;
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem('plinko-best', bestScore.toString());
+        bestEl.textContent = bestScore;
+      }
+      finalScoreEl.textContent = score;
+      bestLabelEl.textContent = 'BEST: ' + bestScore;
+      popup.style.display = 'block';
+    }
+  }
+
+  function draw() {
+    // Background
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim() || COL.void;
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Drop indicator
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    ctx.strokeStyle = COL.cyan;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(dropX, 0);
+    ctx.lineTo(dropX, TOP_MARGIN - 15);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Drop arrow
+    ctx.fillStyle = COL.cyan;
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(dropX, TOP_MARGIN - 18);
+    ctx.lineTo(dropX - 5, TOP_MARGIN - 26);
+    ctx.lineTo(dropX + 5, TOP_MARGIN - 26);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Pegs
+    for (let p of pegs) {
+      const glow = p.hit;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, PEG_R, 0, Math.PI * 2);
+      if (glow > 0) {
+        ctx.fillStyle = COL.cyan;
+        ctx.shadowColor = COL.cyan;
+        ctx.shadowBlur = 10 * glow;
+      } else {
+        ctx.fillStyle = COL.dim;
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+      }
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
+    // Buckets
+    const bucketH = 30;
+    for (let i = 0; i < BUCKET_COUNT; i++) {
+      const bx = BUCKETS_START + i * BUCKET_W;
+      const flash = bucketFlashes.find(f => f.idx === i);
+      const alpha = flash ? 0.3 + flash.life * 0.5 : 0.15;
+      ctx.fillStyle = BUCKET_COLORS[i];
+      ctx.globalAlpha = alpha;
+      ctx.fillRect(bx + 1, BUCKET_Y, BUCKET_W - 2, bucketH);
+      ctx.globalAlpha = 1;
+
+      // Divider
+      ctx.fillStyle = COL.dim;
+      ctx.fillRect(bx, BUCKET_Y, 1, bucketH);
+
+      // Multiplier text
+      ctx.fillStyle = BUCKET_COLORS[i];
+      ctx.font = '700 0.55rem "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const label = BUCKET_MULTS[i] >= 1 ? BUCKET_MULTS[i] + 'x' : '0.5x';
+      ctx.fillText(label, bx + BUCKET_W / 2, BUCKET_Y + bucketH / 2);
+    }
+    // Last divider
+    ctx.fillStyle = COL.dim;
+    ctx.fillRect(BUCKETS_START + BUCKET_COUNT * BUCKET_W, BUCKET_Y, 1, bucketH);
+
+    // Ball trails
+    for (let b of balls) {
+      for (let i = 0; i < b.trail.length; i++) {
+        const t = b.trail[i];
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, BALL_R * t.life * 0.6, 0, Math.PI * 2);
+        ctx.fillStyle = COL.magenta;
+        ctx.globalAlpha = t.life * 0.3;
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Balls
+    for (let b of balls) {
+      if (!b.active) continue;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, BALL_R, 0, Math.PI * 2);
+      ctx.fillStyle = COL.magenta;
+      ctx.shadowColor = COL.magenta;
+      ctx.shadowBlur = 12;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // Particles
+    for (let p of particles) {
+      if (p.text) {
+        ctx.globalAlpha = Math.min(1, p.life);
+        ctx.fillStyle = p.color;
+        ctx.font = '700 0.7rem "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.fillText(p.text, p.x, p.y);
+        ctx.shadowBlur = 0;
+      } else {
+        ctx.globalAlpha = p.life;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  let lastTime = 0;
+  function loop(time) {
+    const dt = Math.min((time - lastTime) / 1000, 0.05);
+    lastTime = time;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  function reset() {
+    score = 0;
+    ballsLeft = 15;
+    gameOver = false;
+    balls = [];
+    particles = [];
+    bucketFlashes = [];
+    scoreEl.textContent = '0';
+    ballsEl.textContent = '15';
+    bestEl.textContent = bestScore;
+    popup.style.display = 'none';
+    buildPegs();
+  }
+
+  // Input
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    dropX = (e.clientX - rect.left) * (W / rect.width);
+    dropX = Math.max(BUCKETS_START + BUCKET_W, Math.min(BUCKETS_START + (BUCKET_COUNT - 1) * BUCKET_W, dropX));
+    dropBall();
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    dropX = (e.clientX - rect.left) * (W / rect.width);
+    dropX = Math.max(BUCKETS_START + BUCKET_W, Math.min(BUCKETS_START + (BUCKET_COUNT - 1) * BUCKET_W, dropX));
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); dropBall(); }
+    if (e.key === 'ArrowLeft') dropX = Math.max(BUCKETS_START + BUCKET_W, dropX - 10);
+    if (e.key === 'ArrowRight') dropX = Math.min(BUCKETS_START + (BUCKET_COUNT - 1) * BUCKET_W, dropX + 10);
+    if (e.key === 'r' || e.key === 'R') reset();
+  });
+
+  replayBtn.addEventListener('click', reset);
+
+  buildPegs();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

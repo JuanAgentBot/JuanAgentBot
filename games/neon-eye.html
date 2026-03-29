@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON EYE / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 0.6rem 1rem;
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    .hud-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.2rem;
+    }
+
+    .hud-label {
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+    }
+
+    .hud-val {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .hud-val.score { color: var(--accent-magenta); text-shadow: 0 0 8px var(--glow-magenta); }
+    .hud-val.level { color: var(--accent-cyan); text-shadow: 0 0 8px var(--glow-cyan); }
+    .hud-val.timer { color: var(--accent-green); text-shadow: 0 0 8px var(--glow-green); }
+    .hud-val.timer.low { color: #ff1744; text-shadow: 0 0 8px rgba(255,23,68,0.5); }
+    .hud-val.best { color: var(--accent-purple); text-shadow: 0 0 8px var(--glow-purple); }
+
+    #grid-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0 auto 1.2rem;
+      min-height: 360px;
+    }
+
+    #grid {
+      display: grid;
+      gap: 4px;
+      user-select: none;
+    }
+
+    .tile {
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.1s;
+      border: none;
+      outline: none;
+      padding: 0;
+    }
+
+    .tile:hover {
+      transform: scale(1.05);
+    }
+
+    .tile:active {
+      transform: scale(0.95);
+    }
+
+    .tile.correct {
+      animation: correctPulse 0.4s ease-out;
+    }
+
+    .tile.wrong {
+      animation: wrongShake 0.35s ease-out;
+    }
+
+    @keyframes correctPulse {
+      0% { transform: scale(1); box-shadow: none; }
+      50% { transform: scale(1.15); box-shadow: 0 0 20px var(--accent-green); }
+      100% { transform: scale(1); box-shadow: none; }
+    }
+
+    @keyframes wrongShake {
+      0% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+      100% { transform: translateX(0); }
+    }
+
+    #start-screen, #game-over-screen {
+      padding: 2rem 0;
+    }
+
+    .screen-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: 1rem;
+    }
+
+    .screen-text {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.7;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 0.7rem 2rem;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-shadow: 0 0 8px var(--glow-cyan);
+    }
+
+    .btn:hover {
+      background: var(--accent-cyan);
+      color: var(--bg-primary);
+      box-shadow: 0 0 20px var(--glow-cyan);
+      text-shadow: none;
+    }
+
+    .final-score {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      text-shadow: 0 0 20px var(--glow-magenta);
+      margin: 0.5rem 0;
+    }
+
+    .final-level {
+      font-size: 0.85rem;
+      color: var(--accent-cyan);
+      margin-bottom: 0.3rem;
+    }
+
+    .new-best {
+      color: var(--accent-green);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 10px var(--glow-green);
+      margin-bottom: 1rem;
+      animation: bestPulse 1s ease-in-out infinite;
+    }
+
+    @keyframes bestPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .controls {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      margin-top: 1rem;
+      line-height: 1.6;
+    }
+
+    .level-flash {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--accent-cyan);
+      text-shadow: 0 0 30px var(--glow-cyan);
+      pointer-events: none;
+      opacity: 0;
+      animation: levelUp 0.8s ease-out forwards;
+      z-index: 100;
+      letter-spacing: 0.15em;
+    }
+
+    @keyframes levelUp {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+      30% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5) translateY(-30px); }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>NEON EYE</h1>
+    <p class="subtitle">FIND THE DIFFERENT TILE</p>
+
+    <div class="hud" id="hud" style="display:none;">
+      <div class="hud-item">
+        <span class="hud-label">SCORE</span>
+        <span class="hud-val score" id="score">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">LEVEL</span>
+        <span class="hud-val level" id="level">1</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">TIME</span>
+        <span class="hud-val timer" id="timer">15.0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">BEST</span>
+        <span class="hud-val best" id="best">0</span>
+      </div>
+    </div>
+
+    <div id="grid-container">
+      <div id="grid"></div>
+    </div>
+
+    <div id="start-screen">
+      <div class="screen-title">SPOT THE ODD ONE OUT</div>
+      <div class="screen-text">
+        A grid of colored tiles. One is slightly different.<br>
+        Click it before time runs out.<br>
+        Each round, the grid grows and the difference shrinks.<br>
+        How sharp is your eye?
+      </div>
+      <button class="btn" id="start-btn">START</button>
+    </div>
+
+    <div id="game-over-screen" style="display:none;">
+      <div class="screen-title">GAME OVER</div>
+      <div class="final-level" id="final-level">LEVEL 1</div>
+      <div class="final-score" id="final-score">0</div>
+      <div class="new-best" id="new-best" style="display:none;">&#9733; NEW BEST &#9733;</div>
+      <button class="btn" id="retry-btn">RETRY</button>
+    </div>
+
+    <div class="controls">CLICK or TAP the tile that looks different</div>
+  </main>
+
+  <script>
+    (function() {
+      const STORAGE_KEY = 'zero-neon-eye-best';
+      const INITIAL_TIME = 15;
+      const TIME_BONUS = 2.5;
+      const TIME_PENALTY = 3;
+      const MIN_TIME = 1;
+
+      let score = 0;
+      let level = 1;
+      let timeLeft = INITIAL_TIME;
+      let timerInterval = null;
+      let bestScore = parseInt(localStorage.getItem(STORAGE_KEY)) || 0;
+      let oddIndex = -1;
+      let playing = false;
+      let transitioning = false;
+
+      const $hud = document.getElementById('hud');
+      const $score = document.getElementById('score');
+      const $level = document.getElementById('level');
+      const $timer = document.getElementById('timer');
+      const $best = document.getElementById('best');
+      const $grid = document.getElementById('grid');
+      const $gridContainer = document.getElementById('grid-container');
+      const $startScreen = document.getElementById('start-screen');
+      const $gameOverScreen = document.getElementById('game-over-screen');
+      const $finalScore = document.getElementById('final-score');
+      const $finalLevel = document.getElementById('final-level');
+      const $newBest = document.getElementById('new-best');
+
+      $best.textContent = bestScore;
+
+      document.getElementById('start-btn').addEventListener('click', startGame);
+      document.getElementById('retry-btn').addEventListener('click', startGame);
+
+      function startGame() {
+        score = 0;
+        level = 1;
+        timeLeft = INITIAL_TIME;
+        playing = true;
+        transitioning = false;
+
+        $startScreen.style.display = 'none';
+        $gameOverScreen.style.display = 'none';
+        $hud.style.display = 'flex';
+
+        updateHUD();
+        buildRound();
+        startTimer();
+      }
+
+      function startTimer() {
+        clearInterval(timerInterval);
+        timerInterval = setInterval(function() {
+          timeLeft -= 0.1;
+          if (timeLeft <= 0) {
+            timeLeft = 0;
+            updateTimerDisplay();
+            endGame();
+            return;
+          }
+          updateTimerDisplay();
+        }, 100);
+      }
+
+      function updateTimerDisplay() {
+        $timer.textContent = Math.max(0, timeLeft).toFixed(1);
+        if (timeLeft <= 5) {
+          $timer.classList.add('low');
+        } else {
+          $timer.classList.remove('low');
+        }
+      }
+
+      function updateHUD() {
+        $score.textContent = score;
+        $level.textContent = level;
+        $best.textContent = bestScore;
+        updateTimerDisplay();
+      }
+
+      function getGridSize() {
+        if (level <= 2) return 2;
+        if (level <= 5) return 3;
+        if (level <= 9) return 4;
+        if (level <= 14) return 5;
+        if (level <= 20) return 6;
+        if (level <= 28) return 7;
+        return 8;
+      }
+
+      function getColorDiff() {
+        // Starts easy (big difference), gets harder
+        // Level 1: 60, Level 5: 40, Level 10: 25, Level 20: 12, Level 30+: 6
+        var diff = Math.max(5, 70 - level * 3);
+        return diff;
+      }
+
+      function randomHue() {
+        return Math.floor(Math.random() * 360);
+      }
+
+      function hslToString(h, s, l) {
+        return 'hsl(' + h + ',' + s + '%,' + l + '%)';
+      }
+
+      function buildRound() {
+        var size = getGridSize();
+        var total = size * size;
+        var diff = getColorDiff();
+
+        var hue = randomHue();
+        var sat = 60 + Math.floor(Math.random() * 25);
+        var lit = 35 + Math.floor(Math.random() * 20);
+
+        // Randomly shift the odd tile's hue or lightness
+        var oddHue = hue;
+        var oddSat = sat;
+        var oddLit = lit;
+
+        var shiftType = Math.random();
+        if (shiftType < 0.4) {
+          // Hue shift
+          oddHue = (hue + diff + 360) % 360;
+        } else if (shiftType < 0.7) {
+          // Lightness shift
+          oddLit = lit + (Math.random() < 0.5 ? diff * 0.5 : -diff * 0.5);
+          oddLit = Math.max(15, Math.min(70, oddLit));
+        } else {
+          // Both
+          oddHue = (hue + diff * 0.6 + 360) % 360;
+          oddLit = lit + (Math.random() < 0.5 ? diff * 0.3 : -diff * 0.3);
+          oddLit = Math.max(15, Math.min(70, oddLit));
+        }
+
+        var baseColor = hslToString(hue, sat, lit);
+        var oddColor = hslToString(oddHue, oddSat, oddLit);
+
+        oddIndex = Math.floor(Math.random() * total);
+
+        // Calculate tile size to fit in container
+        var containerSize = Math.min(360, window.innerWidth - 60);
+        var gap = 4;
+        var tileSize = Math.floor((containerSize - gap * (size - 1)) / size);
+        var gridPx = tileSize * size + gap * (size - 1);
+
+        $grid.style.gridTemplateColumns = 'repeat(' + size + ', ' + tileSize + 'px)';
+        $grid.style.gridTemplateRows = 'repeat(' + size + ', ' + tileSize + 'px)';
+        $grid.style.gap = gap + 'px';
+        $grid.innerHTML = '';
+
+        for (var i = 0; i < total; i++) {
+          var tile = document.createElement('div');
+          tile.className = 'tile';
+          tile.style.width = tileSize + 'px';
+          tile.style.height = tileSize + 'px';
+          tile.style.backgroundColor = (i === oddIndex) ? oddColor : baseColor;
+          tile.dataset.index = i;
+          tile.addEventListener('click', onTileClick);
+          $grid.appendChild(tile);
+        }
+      }
+
+      function onTileClick(e) {
+        if (!playing || transitioning) return;
+
+        var idx = parseInt(e.target.dataset.index);
+
+        if (idx === oddIndex) {
+          // Correct!
+          transitioning = true;
+          e.target.classList.add('correct');
+
+          var points = getGridSize() * getGridSize();
+          if (timeLeft > 10) points = Math.floor(points * 1.5);
+          score += points;
+          timeLeft = Math.min(timeLeft + TIME_BONUS, 30);
+          level++;
+
+          updateHUD();
+          showLevelFlash();
+
+          setTimeout(function() {
+            transitioning = false;
+            buildRound();
+          }, 400);
+        } else {
+          // Wrong!
+          e.target.classList.add('wrong');
+          timeLeft = Math.max(MIN_TIME, timeLeft - TIME_PENALTY);
+          updateTimerDisplay();
+
+          // Briefly highlight the correct tile
+          var tiles = $grid.querySelectorAll('.tile');
+          tiles[oddIndex].style.boxShadow = '0 0 12px var(--accent-green), inset 0 0 8px var(--accent-green)';
+          setTimeout(function() {
+            tiles[oddIndex].style.boxShadow = '';
+            e.target.classList.remove('wrong');
+          }, 300);
+        }
+      }
+
+      function showLevelFlash() {
+        var flash = document.createElement('div');
+        flash.className = 'level-flash';
+        flash.textContent = 'LV ' + level;
+        document.body.appendChild(flash);
+        setTimeout(function() {
+          flash.remove();
+        }, 800);
+      }
+
+      function endGame() {
+        playing = false;
+        clearInterval(timerInterval);
+
+        var isNewBest = score > bestScore;
+        if (isNewBest) {
+          bestScore = score;
+          localStorage.setItem(STORAGE_KEY, bestScore);
+          $best.textContent = bestScore;
+        }
+
+        $grid.innerHTML = '';
+        $hud.style.display = 'none';
+
+        $finalLevel.textContent = 'LEVEL ' + level;
+        $finalScore.textContent = score;
+        $newBest.style.display = isNewBest ? 'block' : 'none';
+        $gameOverScreen.style.display = 'block';
+      }
+    })();
+  </script>
+</body>
+</html>

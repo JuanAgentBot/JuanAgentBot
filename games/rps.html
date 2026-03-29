@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROCK PAPER SCISSORS / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+      user-select: none;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 2rem;
+    }
+
+    /* Mode select */
+    .mode-bar {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+    .mode-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.4rem 0.8rem;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: all 0.2s;
+    }
+    .mode-btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+    .mode-btn.active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--glow-cyan-soft);
+    }
+
+    /* Scoreboard */
+    .scoreboard {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+    }
+    .score-you { color: var(--accent-cyan); }
+    .score-cpu { color: var(--accent-magenta); }
+    .score-draw { color: var(--text-dim); }
+    .score-val {
+      font-size: 1.8rem;
+      font-weight: 800;
+      display: block;
+      margin-top: 0.2rem;
+    }
+
+    /* Arena */
+    .arena {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+      min-height: 140px;
+    }
+    .hand-box {
+      width: 120px;
+      height: 120px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.5rem;
+      position: relative;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .hand-box.you { border-color: var(--accent-cyan); }
+    .hand-box.cpu { border-color: var(--accent-magenta); }
+    .hand-box.win-glow {
+      box-shadow: 0 0 20px var(--glow-green);
+      border-color: var(--accent-green);
+    }
+    .hand-box.lose-glow {
+      box-shadow: 0 0 20px rgba(255, 23, 68, 0.4);
+      border-color: #ff1744;
+    }
+    .hand-label {
+      position: absolute;
+      bottom: -1.4rem;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+    }
+    .vs {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+    }
+
+    /* Shaking animation */
+    @keyframes shake {
+      0%, 100% { transform: translateY(0); }
+      25% { transform: translateY(-12px); }
+      75% { transform: translateY(6px); }
+    }
+    .shaking .hand-icon {
+      animation: shake 0.4s ease-in-out infinite;
+    }
+
+    /* Result */
+    .result {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      min-height: 1.6rem;
+      margin-bottom: 1.2rem;
+      transition: color 0.3s;
+    }
+    .result.win { color: var(--accent-green); text-shadow: 0 0 10px var(--glow-green); }
+    .result.lose { color: #ff1744; text-shadow: 0 0 10px rgba(255, 23, 68, 0.5); }
+    .result.draw { color: var(--accent-purple); text-shadow: 0 0 10px var(--glow-purple); }
+
+    /* Choices */
+    .choices {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+    .choice-btn {
+      width: 90px;
+      height: 90px;
+      background: transparent;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      transition: all 0.2s;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .choice-btn:hover {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 12px var(--glow-cyan-soft);
+    }
+    .choice-btn:active {
+      transform: scale(0.95);
+    }
+    .choice-btn.disabled {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    .choice-emoji { font-size: 2rem; }
+    .choice-label {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+    }
+
+    /* Match result */
+    .match-result {
+      min-height: 3rem;
+      margin-bottom: 1rem;
+    }
+    .match-msg {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+    }
+    .match-msg.you-win { color: var(--accent-green); text-shadow: 0 0 15px var(--glow-green); }
+    .match-msg.cpu-win { color: #ff1744; text-shadow: 0 0 15px rgba(255, 23, 68, 0.5); }
+    .new-match-btn {
+      background: transparent;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.5rem 1.2rem;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      transition: all 0.2s;
+      margin-top: 0.5rem;
+    }
+    .new-match-btn:hover {
+      box-shadow: 0 0 12px var(--glow-cyan-soft);
+      background: rgba(0, 240, 255, 0.05);
+    }
+
+    /* Stats */
+    .stats {
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+      margin-top: 1rem;
+    }
+    .stats-title {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.6rem;
+    }
+    .stats-row {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      font-size: 0.7rem;
+      margin-bottom: 0.3rem;
+    }
+    .stat-item { color: var(--text-muted); }
+    .stat-val { font-weight: 700; }
+    .stat-val.cyan { color: var(--accent-cyan); }
+    .stat-val.magenta { color: var(--accent-magenta); }
+    .stat-val.green { color: var(--accent-green); }
+    .stat-val.purple { color: var(--accent-purple); }
+
+    /* History */
+    .history {
+      margin-top: 1rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+    .history-title {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+    .history-rounds {
+      display: flex;
+      gap: 0.3rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .history-dot {
+      width: 10px;
+      height: 10px;
+      border: 1px solid var(--border);
+    }
+    .history-dot.w { background: var(--accent-green); border-color: var(--accent-green); }
+    .history-dot.l { background: #ff1744; border-color: #ff1744; }
+    .history-dot.d { background: var(--accent-purple); border-color: var(--accent-purple); }
+
+    .controls-hint {
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      letter-spacing: 0.06em;
+      margin-top: 1.5rem;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="index.html" class="back">&lt; GAME LAB</a>
+    <h1>ROCK PAPER SCISSORS</h1>
+    <p class="subtitle">THROW YOUR HAND</p>
+
+    <div class="mode-bar">
+      <button class="mode-btn active" data-rounds="3">BEST OF 3</button>
+      <button class="mode-btn" data-rounds="5">BEST OF 5</button>
+      <button class="mode-btn" data-rounds="7">BEST OF 7</button>
+    </div>
+
+    <div class="scoreboard">
+      <div class="score-you">
+        YOU <span class="score-val" id="score-you">0</span>
+      </div>
+      <div class="score-draw">
+        DRAW <span class="score-val" id="score-draw">0</span>
+      </div>
+      <div class="score-cpu">
+        CPU <span class="score-val" id="score-cpu">0</span>
+      </div>
+    </div>
+
+    <div class="arena">
+      <div class="hand-box you" id="hand-you">
+        <span class="hand-icon">❔</span>
+        <span class="hand-label">YOU</span>
+      </div>
+      <span class="vs">VS</span>
+      <div class="hand-box cpu" id="hand-cpu">
+        <span class="hand-icon">❔</span>
+        <span class="hand-label">CPU</span>
+      </div>
+    </div>
+
+    <div class="result" id="result">&nbsp;</div>
+
+    <div class="choices" id="choices">
+      <button class="choice-btn" data-choice="rock">
+        <span class="choice-emoji">🪨</span>
+        <span class="choice-label">ROCK [1]</span>
+      </button>
+      <button class="choice-btn" data-choice="paper">
+        <span class="choice-emoji">📄</span>
+        <span class="choice-label">PAPER [2]</span>
+      </button>
+      <button class="choice-btn" data-choice="scissors">
+        <span class="choice-emoji">✂️</span>
+        <span class="choice-label">SCISSORS [3]</span>
+      </button>
+    </div>
+
+    <div class="match-result" id="match-result"></div>
+
+    <div class="stats">
+      <div class="stats-title">ALL-TIME STATS</div>
+      <div class="stats-row">
+        <span class="stat-item">MATCHES: <span class="stat-val cyan" id="stat-matches">0</span></span>
+        <span class="stat-item">WON: <span class="stat-val green" id="stat-won">0</span></span>
+        <span class="stat-item">LOST: <span class="stat-val magenta" id="stat-lost">0</span></span>
+      </div>
+      <div class="stats-row">
+        <span class="stat-item">ROUNDS: <span class="stat-val cyan" id="stat-rounds">0</span></span>
+        <span class="stat-item">WIN RATE: <span class="stat-val green" id="stat-winrate">0%</span></span>
+        <span class="stat-item">STREAK: <span class="stat-val purple" id="stat-streak">0</span></span>
+      </div>
+    </div>
+
+    <div class="history" id="history-section" style="display:none">
+      <div class="history-title">ROUND HISTORY</div>
+      <div class="history-rounds" id="history-rounds"></div>
+    </div>
+
+    <div class="controls-hint">
+      PRESS 1 / 2 / 3 &nbsp;OR&nbsp; CLICK TO THROW
+    </div>
+  </main>
+
+  <script>
+  (function() {
+    const EMOJI = { rock: '🪨', paper: '📄', scissors: '✂️' };
+    const CHOICES = ['rock', 'paper', 'scissors'];
+    const BEATS = { rock: 'scissors', paper: 'rock', scissors: 'paper' };
+
+    let bestOf = 3;
+    let winsNeeded = 2;
+    let scoreYou = 0;
+    let scoreCpu = 0;
+    let draws = 0;
+    let playing = true;
+    let animating = false;
+    let roundHistory = [];
+
+    // Pattern tracking CPU: remembers player's last moves and predicts
+    let playerHistory = [];
+
+    // All-time stats (localStorage)
+    let stats = loadStats();
+
+    const elScoreYou = document.getElementById('score-you');
+    const elScoreCpu = document.getElementById('score-cpu');
+    const elScoreDraw = document.getElementById('score-draw');
+    const elHandYou = document.getElementById('hand-you');
+    const elHandCpu = document.getElementById('hand-cpu');
+    const elResult = document.getElementById('result');
+    const elChoices = document.getElementById('choices');
+    const elMatchResult = document.getElementById('match-result');
+    const elHistorySection = document.getElementById('history-section');
+    const elHistoryRounds = document.getElementById('history-rounds');
+    const choiceBtns = elChoices.querySelectorAll('.choice-btn');
+
+    // Mode buttons
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (animating) return;
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        bestOf = parseInt(btn.dataset.rounds);
+        winsNeeded = Math.ceil(bestOf / 2);
+        resetMatch();
+      });
+    });
+
+    // Choice buttons
+    choiceBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!playing || animating) return;
+        playRound(btn.dataset.choice);
+      });
+    });
+
+    // Keyboard
+    document.addEventListener('keydown', (e) => {
+      if (!playing || animating) return;
+      if (e.key === '1') playRound('rock');
+      else if (e.key === '2') playRound('paper');
+      else if (e.key === '3') playRound('scissors');
+    });
+
+    function cpuChoose() {
+      // Pattern tracker: look at player's recent choices and counter the most frequent
+      if (playerHistory.length < 3) {
+        return CHOICES[Math.floor(Math.random() * 3)];
+      }
+
+      // Look at last 10 moves, predict player will repeat their most common choice
+      const recent = playerHistory.slice(-10);
+      const counts = { rock: 0, paper: 0, scissors: 0 };
+      recent.forEach(c => counts[c]++);
+
+      // Also check last 2-3 move patterns
+      if (playerHistory.length >= 3) {
+        const last2 = playerHistory.slice(-2).join(',');
+        // Check if this 2-gram pattern has occurred before and what followed
+        let patternNext = { rock: 0, paper: 0, scissors: 0 };
+        let patternFound = false;
+        for (let i = 0; i < playerHistory.length - 2; i++) {
+          const gram = playerHistory[i] + ',' + playerHistory[i + 1];
+          if (gram === last2) {
+            patternNext[playerHistory[i + 2]]++;
+            patternFound = true;
+          }
+        }
+        if (patternFound) {
+          // Use pattern prediction with 60% weight
+          let predicted = CHOICES[0];
+          let maxP = 0;
+          for (const c of CHOICES) {
+            if (patternNext[c] > maxP) { maxP = patternNext[c]; predicted = c; }
+          }
+          // 60% chance to use pattern prediction, 40% frequency
+          if (Math.random() < 0.6) {
+            return BEATS[predicted]; // Counter the predicted move
+          }
+        }
+      }
+
+      // Frequency-based: counter most common
+      let predicted = CHOICES[0];
+      let maxC = 0;
+      for (const c of CHOICES) {
+        if (counts[c] > maxC) { maxC = counts[c]; predicted = c; }
+      }
+
+      // Add some randomness (30% random, 70% counter)
+      if (Math.random() < 0.3) {
+        return CHOICES[Math.floor(Math.random() * 3)];
+      }
+      return BEATS[predicted];
+    }
+
+    function playRound(playerChoice) {
+      animating = true;
+      const cpuChoice = cpuChoose();
+      playerHistory.push(playerChoice);
+
+      // Disable buttons
+      choiceBtns.forEach(b => b.classList.add('disabled'));
+
+      // Clear previous glow
+      elHandYou.classList.remove('win-glow', 'lose-glow');
+      elHandCpu.classList.remove('win-glow', 'lose-glow');
+
+      // Shake animation
+      elHandYou.querySelector('.hand-icon').textContent = '✊';
+      elHandCpu.querySelector('.hand-icon').textContent = '✊';
+      elHandYou.classList.add('shaking');
+      elHandCpu.classList.add('shaking');
+      elResult.innerHTML = '&nbsp;';
+
+      setTimeout(() => {
+        elHandYou.classList.remove('shaking');
+        elHandCpu.classList.remove('shaking');
+
+        // Reveal
+        elHandYou.querySelector('.hand-icon').textContent = EMOJI[playerChoice];
+        elHandCpu.querySelector('.hand-icon').textContent = EMOJI[cpuChoice];
+
+        // Determine winner
+        let outcome;
+        if (playerChoice === cpuChoice) {
+          outcome = 'draw';
+          draws++;
+          elResult.textContent = 'DRAW';
+          elResult.className = 'result draw';
+          roundHistory.push('d');
+        } else if (BEATS[playerChoice] === cpuChoice) {
+          outcome = 'win';
+          scoreYou++;
+          elResult.textContent = winMessage(playerChoice, cpuChoice);
+          elResult.className = 'result win';
+          elHandYou.classList.add('win-glow');
+          elHandCpu.classList.add('lose-glow');
+          roundHistory.push('w');
+        } else {
+          outcome = 'lose';
+          scoreCpu++;
+          elResult.textContent = winMessage(cpuChoice, playerChoice);
+          elResult.className = 'result lose';
+          elHandCpu.classList.add('win-glow');
+          elHandYou.classList.add('lose-glow');
+          roundHistory.push('l');
+        }
+
+        updateScore();
+        updateHistory();
+        updateAllTimeStats(outcome);
+
+        // Check match end
+        if (scoreYou >= winsNeeded || scoreCpu >= winsNeeded) {
+          playing = false;
+          const youWon = scoreYou >= winsNeeded;
+          stats.matches++;
+          if (youWon) {
+            stats.matchWins++;
+            stats.streak = Math.max(0, stats.streak) + 1;
+          } else {
+            stats.matchLosses++;
+            stats.streak = Math.min(0, stats.streak) - 1;
+          }
+          saveStats();
+          renderStats();
+
+          setTimeout(() => {
+            showMatchResult(youWon);
+            animating = false;
+          }, 600);
+          return;
+        }
+
+        setTimeout(() => {
+          choiceBtns.forEach(b => b.classList.remove('disabled'));
+          animating = false;
+        }, 400);
+      }, 800);
+    }
+
+    function winMessage(winner, loser) {
+      const msgs = {
+        'rock,scissors': 'ROCK CRUSHES SCISSORS',
+        'paper,rock': 'PAPER COVERS ROCK',
+        'scissors,paper': 'SCISSORS CUT PAPER'
+      };
+      return msgs[winner + ',' + loser] || '';
+    }
+
+    function updateScore() {
+      elScoreYou.textContent = scoreYou;
+      elScoreCpu.textContent = scoreCpu;
+      elScoreDraw.textContent = draws;
+    }
+
+    function updateHistory() {
+      elHistorySection.style.display = 'block';
+      elHistoryRounds.innerHTML = '';
+      roundHistory.forEach(r => {
+        const dot = document.createElement('div');
+        dot.className = 'history-dot ' + r;
+        elHistoryRounds.appendChild(dot);
+      });
+    }
+
+    function showMatchResult(youWon) {
+      elMatchResult.innerHTML = '';
+      const msg = document.createElement('div');
+      msg.className = 'match-msg ' + (youWon ? 'you-win' : 'cpu-win');
+      msg.textContent = youWon ? 'YOU WIN THE MATCH!' : 'CPU WINS THE MATCH';
+      elMatchResult.appendChild(msg);
+
+      const btn = document.createElement('button');
+      btn.className = 'new-match-btn';
+      btn.textContent = 'NEW MATCH';
+      btn.addEventListener('click', () => {
+        resetMatch();
+      });
+      elMatchResult.appendChild(btn);
+
+      // Also allow pressing Enter or Space
+      const handler = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          document.removeEventListener('keydown', handler);
+          resetMatch();
+        }
+      };
+      document.addEventListener('keydown', handler);
+    }
+
+    function resetMatch() {
+      scoreYou = 0;
+      scoreCpu = 0;
+      draws = 0;
+      playing = true;
+      animating = false;
+      roundHistory = [];
+      elHandYou.querySelector('.hand-icon').textContent = '❔';
+      elHandCpu.querySelector('.hand-icon').textContent = '❔';
+      elHandYou.classList.remove('win-glow', 'lose-glow');
+      elHandCpu.classList.remove('win-glow', 'lose-glow');
+      elResult.innerHTML = '&nbsp;';
+      elMatchResult.innerHTML = '';
+      elHistorySection.style.display = 'none';
+      elHistoryRounds.innerHTML = '';
+      updateScore();
+      choiceBtns.forEach(b => b.classList.remove('disabled'));
+      renderStats();
+    }
+
+    function updateAllTimeStats(outcome) {
+      stats.totalRounds++;
+      if (outcome === 'win') stats.roundWins++;
+      else if (outcome === 'lose') stats.roundLosses++;
+      saveStats();
+      renderStats();
+    }
+
+    function renderStats() {
+      document.getElementById('stat-matches').textContent = stats.matches;
+      document.getElementById('stat-won').textContent = stats.matchWins;
+      document.getElementById('stat-lost').textContent = stats.matchLosses;
+      document.getElementById('stat-rounds').textContent = stats.totalRounds;
+      const wr = stats.totalRounds > 0 ? Math.round(stats.roundWins / stats.totalRounds * 100) : 0;
+      document.getElementById('stat-winrate').textContent = wr + '%';
+      const s = stats.streak;
+      document.getElementById('stat-streak').textContent = s > 0 ? '+' + s : s < 0 ? '' + s : '0';
+    }
+
+    function loadStats() {
+      try {
+        const raw = localStorage.getItem('zero-rps-stats');
+        if (raw) return JSON.parse(raw);
+      } catch(e) {}
+      return { matches: 0, matchWins: 0, matchLosses: 0, totalRounds: 0, roundWins: 0, roundLosses: 0, streak: 0 };
+    }
+
+    function saveStats() {
+      try { localStorage.setItem('zero-rps-stats', JSON.stringify(stats)); } catch(e) {}
+    }
+
+    renderStats();
+  })();
+  </script>
+</body>
+</html>

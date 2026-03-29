@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON ARCHER / ZERO</title>
+  <meta name="description" content="Archery target practice with wind physics. Aim, draw, shoot. Neon style.">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    body { overflow: hidden; }
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 1rem 1rem 0.5rem;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .back {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      transition: color 0.3s;
+    }
+    .back:hover { color: var(--accent-cyan); }
+    h1 {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 15px var(--glow-magenta);
+      text-align: center;
+      flex: 1;
+    }
+    .hud {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .hud span { letter-spacing: 0.05em; }
+    .hud .val { color: var(--accent-cyan); font-weight: 700; }
+    .hud .score-val { color: var(--accent-green); }
+    .hud .wind-val { color: var(--accent-amber, #ffb000); }
+    .hud .best-val { color: var(--accent-purple); }
+    #gameCanvas {
+      flex: 1;
+      width: 100%;
+      display: block;
+      border: 1px solid var(--border);
+      cursor: crosshair;
+    }
+    .controls {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      text-align: center;
+      padding: 0.4rem 0;
+      letter-spacing: 0.04em;
+    }
+    .controls kbd {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      padding: 0.1em 0.4em;
+      font-family: inherit;
+      color: var(--text-muted);
+    }
+    .msg {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--bg-void);
+      border: 1px solid var(--accent-magenta);
+      padding: 2rem 3rem;
+      text-align: center;
+      z-index: 20;
+      display: none;
+      box-shadow: 0 0 40px var(--glow-magenta);
+    }
+    .msg h2 {
+      color: var(--accent-magenta);
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+    .msg p {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-bottom: 0.3rem;
+    }
+    .msg .final-score {
+      color: var(--accent-green);
+      font-size: 1.6rem;
+      font-weight: 800;
+      text-shadow: 0 0 15px var(--glow-green);
+      margin: 0.5rem 0;
+    }
+    .msg button {
+      margin-top: 1rem;
+      background: none;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: inherit;
+      font-size: 0.8rem;
+      padding: 0.5rem 1.5rem;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .msg button:hover {
+      background: rgba(0, 240, 255, 0.1);
+      box-shadow: 0 0 15px var(--glow-cyan);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <div class="top-bar">
+      <a href="./" class="back">&lt; GAME LAB</a>
+      <h1>NEON ARCHER</h1>
+      <span style="width:80px"></span>
+    </div>
+    <div class="hud">
+      <span>ARROWS: <span class="val" id="arrowsLeft">10</span>/10</span>
+      <span>SCORE: <span class="val score-val" id="scoreDisp">0</span></span>
+      <span>WIND: <span class="val wind-val" id="windDisp">0</span></span>
+      <span>BEST: <span class="val best-val" id="bestDisp">0</span></span>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <div class="controls">
+      <kbd>CLICK &amp; HOLD</kbd> to draw bow &middot; <kbd>AIM</kbd> with mouse &middot; <kbd>RELEASE</kbd> to shoot &middot; <kbd>R</kbd> new round
+    </div>
+    <div class="msg" id="endMsg">
+      <h2>ROUND COMPLETE</h2>
+      <p>FINAL SCORE</p>
+      <div class="final-score" id="finalScore">0</div>
+      <p id="bestLine" style="display:none;color:var(--accent-purple)">NEW BEST!</p>
+      <button onclick="startGame()">SHOOT AGAIN</button>
+    </div>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const endMsg = document.getElementById('endMsg');
+    const arrowsEl = document.getElementById('arrowsLeft');
+    const scoreEl = document.getElementById('scoreDisp');
+    const windEl = document.getElementById('windDisp');
+    const bestEl = document.getElementById('bestDisp');
+    const finalScoreEl = document.getElementById('finalScore');
+    const bestLine = document.getElementById('bestLine');
+
+    // Colors
+    const isLight = () => document.documentElement.getAttribute('data-theme') === 'light';
+    const C = {
+      void: () => isLight() ? '#f0eff5' : '#0a0a0f',
+      panel: () => isLight() ? '#e4e3ec' : '#121218',
+      magenta: () => isLight() ? '#cc1166' : '#ff2d7b',
+      cyan: () => isLight() ? '#00717f' : '#00f0ff',
+      green: () => isLight() ? '#1a7a12' : '#39ff14',
+      purple: () => isLight() ? '#7b30b8' : '#9d4edd',
+      white: () => isLight() ? '#18182a' : '#e0e0e8',
+      dim: () => isLight() ? '#6e6e85' : '#7a7a90',
+      amber: () => isLight() ? '#8a6000' : '#ffb000',
+      border: () => isLight() ? '#c8c8d6' : '#1e1e28',
+    };
+
+    let W, H;
+    let state = {};
+    let mouse = { x: 0, y: 0, down: false };
+    let drawStart = 0;
+    let best = parseInt(localStorage.getItem('archer-best') || '0');
+    bestEl.textContent = best;
+
+    // Target ring scores
+    const RINGS = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+    const TOTAL_ARROWS = 10;
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      W = canvas.width = rect.width * devicePixelRatio;
+      H = canvas.height = rect.height * devicePixelRatio;
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+    }
+
+    function cw() { return W / devicePixelRatio; }
+    function ch() { return H / devicePixelRatio; }
+
+    // Target position (right side)
+    function targetX() { return cw() * 0.78; }
+    function targetY() { return ch() * 0.5; }
+    function targetMaxR() { return Math.min(cw(), ch()) * 0.22; }
+
+    // Bow position (left side)
+    function bowX() { return cw() * 0.12; }
+    function bowY() { return ch() * 0.5; }
+
+    function newWind() {
+      return (Math.random() - 0.5) * 2; // -1 to 1
+    }
+
+    function startGame() {
+      endMsg.style.display = 'none';
+      state = {
+        arrows: TOTAL_ARROWS,
+        score: 0,
+        wind: newWind(),
+        shooting: false,
+        arrow: null,
+        landed: [],
+        hitAnim: null,
+        phase: 'aim', // aim, flying, landed
+      };
+      updateHud();
+    }
+
+    function updateHud() {
+      arrowsEl.textContent = state.arrows;
+      scoreEl.textContent = state.score;
+      const w = state.wind;
+      const dir = w > 0 ? '>' : '<';
+      const strength = Math.abs(w);
+      let label;
+      if (strength < 0.2) label = 'CALM';
+      else if (strength < 0.5) label = (w > 0 ? 'R' : 'L') + ' LIGHT';
+      else if (strength < 0.8) label = (w > 0 ? 'R' : 'L') + ' MED';
+      else label = (w > 0 ? 'R' : 'L') + ' STRONG';
+      windEl.textContent = label;
+    }
+
+    // Arrow trajectory
+    function shootArrow(power, angle) {
+      const bx = bowX();
+      const by = bowY();
+      const speed = power * 18;
+      state.arrow = {
+        x: bx, y: by,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        trail: [{x: bx, y: by}],
+        age: 0,
+      };
+      state.phase = 'flying';
+      state.shooting = true;
+    }
+
+    function updateArrow(dt) {
+      if (!state.arrow) return;
+      const a = state.arrow;
+      const gravity = 300;
+      const windForce = state.wind * 80;
+
+      a.vx += windForce * dt;
+      a.vy += gravity * dt;
+      a.x += a.vx * dt;
+      a.y += a.vy * dt;
+      a.age += dt;
+      a.trail.push({x: a.x, y: a.y});
+      if (a.trail.length > 60) a.trail.shift();
+
+      // Check if arrow hit target area
+      const tx = targetX();
+      const ty = targetY();
+      const maxR = targetMaxR();
+      const dx = a.x - tx;
+      const dy = a.y - ty;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist <= maxR + 5) {
+        // Hit the target!
+        landArrow(a.x, a.y, dist);
+        return;
+      }
+
+      // Off screen
+      if (a.x > cw() + 50 || a.y > ch() + 50 || a.x < -50 || a.y < -50) {
+        landArrow(null, null, Infinity);
+      }
+    }
+
+    function landArrow(x, y, dist) {
+      const maxR = targetMaxR();
+      let pts = 0;
+
+      if (dist !== Infinity) {
+        // Calculate ring score
+        for (let i = 0; i < RINGS.length; i++) {
+          const ringR = maxR * ((i + 1) / RINGS.length);
+          if (dist <= ringR) {
+            pts = RINGS[i];
+            break;
+          }
+        }
+        state.landed.push({ x, y, pts });
+      }
+
+      state.score += pts;
+      state.arrow = null;
+      state.shooting = false;
+      state.arrows--;
+      state.wind = newWind();
+
+      if (pts > 0) {
+        state.hitAnim = { pts, x, y, t: 0 };
+      }
+
+      updateHud();
+
+      if (state.arrows <= 0) {
+        setTimeout(endGame, pts > 0 ? 1200 : 600);
+      } else {
+        state.phase = 'aim';
+      }
+    }
+
+    function endGame() {
+      if (state.score > best) {
+        best = state.score;
+        localStorage.setItem('archer-best', best);
+        bestEl.textContent = best;
+        bestLine.style.display = 'block';
+      } else {
+        bestLine.style.display = 'none';
+      }
+      finalScoreEl.textContent = state.score;
+      endMsg.style.display = 'block';
+    }
+
+    // Drawing
+    function drawTarget() {
+      const tx = targetX();
+      const ty = targetY();
+      const maxR = targetMaxR();
+      const colors = [
+        C.magenta(), C.cyan(), C.green(), C.purple(), C.amber(),
+        C.magenta(), C.cyan(), C.green(), C.purple(), C.amber(),
+      ];
+
+      // Draw rings from outside in
+      for (let i = RINGS.length - 1; i >= 0; i--) {
+        const r = maxR * ((i + 1) / RINGS.length);
+        ctx.beginPath();
+        ctx.arc(tx, ty, r, 0, Math.PI * 2);
+        const alpha = isLight() ? 0.15 : 0.12;
+        ctx.fillStyle = colors[i] + (isLight() ? '26' : '1f');
+        ctx.fill();
+        ctx.strokeStyle = colors[i];
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      // Bullseye
+      const bullR = maxR / RINGS.length;
+      ctx.beginPath();
+      ctx.arc(tx, ty, bullR * 0.4, 0, Math.PI * 2);
+      ctx.fillStyle = C.magenta();
+      ctx.fill();
+      if (!isLight()) {
+        ctx.shadowColor = C.magenta();
+        ctx.shadowBlur = 15;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // Ring labels
+      ctx.font = '600 ' + Math.max(8, maxR / 15) + 'px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i < RINGS.length; i++) {
+        const r = maxR * ((i + 0.5) / RINGS.length);
+        ctx.fillStyle = C.dim();
+        ctx.fillText(RINGS[i], tx + r, ty);
+      }
+    }
+
+    function drawBow() {
+      const bx = bowX();
+      const by = bowY();
+      const angle = Math.atan2(mouse.y - by, mouse.x - bx);
+      const bowLen = Math.min(cw(), ch()) * 0.08;
+
+      // Bow arc
+      ctx.save();
+      ctx.translate(bx, by);
+      ctx.rotate(angle);
+
+      // Bow body
+      ctx.beginPath();
+      ctx.arc(0, 0, bowLen, -0.8, 0.8);
+      ctx.strokeStyle = C.cyan();
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      if (!isLight()) {
+        ctx.shadowColor = C.cyan();
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // String
+      const sy1 = -Math.sin(0.8) * bowLen;
+      const sx1 = Math.cos(0.8) * bowLen;
+      const sy2 = Math.sin(0.8) * bowLen;
+      const sx2 = Math.cos(0.8) * bowLen;
+
+      let drawback = 0;
+      if (mouse.down && state.phase === 'aim' && !state.shooting) {
+        drawback = Math.min((Date.now() - drawStart) / 1500, 1);
+      }
+
+      const pullX = -drawback * bowLen * 0.6;
+
+      ctx.beginPath();
+      ctx.moveTo(sx1, sy1);
+      ctx.lineTo(pullX, 0);
+      ctx.lineTo(sx2, sy2);
+      ctx.strokeStyle = C.dim();
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Arrow on string
+      if (drawback > 0) {
+        ctx.beginPath();
+        ctx.moveTo(pullX, 0);
+        ctx.lineTo(pullX + bowLen * 1.2, 0);
+        ctx.strokeStyle = C.green();
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Arrow tip
+        ctx.beginPath();
+        ctx.moveTo(pullX + bowLen * 1.2, 0);
+        ctx.lineTo(pullX + bowLen * 1.0, -3);
+        ctx.lineTo(pullX + bowLen * 1.0, 3);
+        ctx.closePath();
+        ctx.fillStyle = C.green();
+        ctx.fill();
+
+        // Power indicator
+        ctx.beginPath();
+        ctx.arc(0, 0, bowLen + 10, -0.8, -0.8 + 1.6 * drawback);
+        ctx.strokeStyle = drawback > 0.8 ? C.magenta() : C.green();
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawFlyingArrow() {
+      if (!state.arrow) return;
+      const a = state.arrow;
+
+      // Trail
+      if (a.trail.length > 1) {
+        for (let i = 1; i < a.trail.length; i++) {
+          const alpha = i / a.trail.length;
+          ctx.beginPath();
+          ctx.moveTo(a.trail[i-1].x, a.trail[i-1].y);
+          ctx.lineTo(a.trail[i].x, a.trail[i].y);
+          ctx.strokeStyle = `rgba(57, 255, 20, ${alpha * 0.5})`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+
+      // Arrow body
+      const angle = Math.atan2(a.vy, a.vx);
+      const len = 20;
+      ctx.save();
+      ctx.translate(a.x, a.y);
+      ctx.rotate(angle);
+
+      ctx.beginPath();
+      ctx.moveTo(-len, 0);
+      ctx.lineTo(0, 0);
+      ctx.strokeStyle = C.green();
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      if (!isLight()) {
+        ctx.shadowColor = C.green();
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // Tip
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-6, -3);
+      ctx.lineTo(-6, 3);
+      ctx.closePath();
+      ctx.fillStyle = C.green();
+      ctx.fill();
+
+      // Fletching
+      ctx.beginPath();
+      ctx.moveTo(-len, 0);
+      ctx.lineTo(-len - 4, -4);
+      ctx.moveTo(-len, 0);
+      ctx.lineTo(-len - 4, 4);
+      ctx.strokeStyle = C.cyan();
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawLandedArrows() {
+      for (const la of state.landed) {
+        // Small dot where arrow landed
+        ctx.beginPath();
+        ctx.arc(la.x, la.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = la.pts >= 9 ? C.magenta() : la.pts >= 5 ? C.cyan() : C.green();
+        ctx.fill();
+        if (!isLight()) {
+          ctx.shadowColor = la.pts >= 9 ? C.magenta() : la.pts >= 5 ? C.cyan() : C.green();
+          ctx.shadowBlur = 6;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+
+        // Small arrow shaft sticking out
+        const angle = Math.random() * 0.4 - 0.2 + Math.PI; // roughly pointing left
+        // Use a stable angle based on position
+        const a2 = Math.atan2(la.y - targetY(), la.x - targetX()) + Math.PI;
+        ctx.beginPath();
+        ctx.moveTo(la.x, la.y);
+        ctx.lineTo(la.x + Math.cos(a2) * 12, la.y + Math.sin(a2) * 12);
+        ctx.strokeStyle = C.dim();
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+
+    function drawHitAnim() {
+      if (!state.hitAnim) return;
+      const h = state.hitAnim;
+      h.t += 0.02;
+      if (h.t > 1) { state.hitAnim = null; return; }
+
+      const alpha = 1 - h.t;
+      const y = h.y - h.t * 40;
+      ctx.font = '800 ' + (16 + h.t * 10) + 'px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = h.pts >= 9 ? C.magenta() : h.pts >= 5 ? C.cyan() : C.green();
+      ctx.globalAlpha = alpha;
+      ctx.fillText('+' + h.pts, h.x, y);
+      ctx.globalAlpha = 1;
+    }
+
+    function drawWindIndicator() {
+      const cx = cw() * 0.5;
+      const y = ch() * 0.06;
+      const w = cw() * 0.15;
+      const wind = state.wind;
+
+      // Wind arrow
+      ctx.save();
+      ctx.translate(cx, y);
+
+      // Base line
+      ctx.beginPath();
+      ctx.moveTo(-w, 0);
+      ctx.lineTo(w, 0);
+      ctx.strokeStyle = C.border();
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Center tick
+      ctx.beginPath();
+      ctx.moveTo(0, -5);
+      ctx.lineTo(0, 5);
+      ctx.strokeStyle = C.dim();
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Wind arrow
+      const arrowLen = wind * w;
+      if (Math.abs(wind) > 0.05) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(arrowLen, 0);
+        const tipDir = wind > 0 ? 1 : -1;
+        ctx.lineTo(arrowLen - tipDir * 6, -4);
+        ctx.moveTo(arrowLen, 0);
+        ctx.lineTo(arrowLen - tipDir * 6, 4);
+        ctx.strokeStyle = C.amber();
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        if (!isLight()) {
+          ctx.shadowColor = C.amber();
+          ctx.shadowBlur = 8;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
+      }
+
+      // Label
+      ctx.font = '600 9px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = C.dim();
+      ctx.fillText('WIND', 0, 10);
+
+      ctx.restore();
+    }
+
+    function drawAimLine() {
+      if (state.phase !== 'aim' || state.shooting || !mouse.down) return;
+      const bx = bowX();
+      const by = bowY();
+      const angle = Math.atan2(mouse.y - by, mouse.x - bx);
+
+      // Dotted aim line
+      ctx.setLineDash([4, 8]);
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(bx + Math.cos(angle) * cw() * 0.3, by + Math.sin(angle) * cw() * 0.3);
+      ctx.strokeStyle = C.dim();
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.4;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.setLineDash([]);
+    }
+
+    function drawGround() {
+      const gy = ch() * 0.92;
+      ctx.beginPath();
+      ctx.moveTo(0, gy);
+      ctx.lineTo(cw(), gy);
+      ctx.strokeStyle = C.border();
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, cw(), ch());
+
+      drawGround();
+      drawWindIndicator();
+      drawTarget();
+      drawLandedArrows();
+      drawAimLine();
+      if (state.phase === 'aim' && !state.shooting) drawBow();
+      drawFlyingArrow();
+      drawHitAnim();
+    }
+
+    let lastTime = 0;
+    function loop(time) {
+      const dt = Math.min((time - lastTime) / 1000, 0.05);
+      lastTime = time;
+
+      if (state.phase === 'flying') {
+        updateArrow(dt);
+      }
+
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // Input
+    function getMousePos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0)) - rect.left;
+      const y = (e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0)) - rect.top;
+      return { x, y };
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      if (state.phase !== 'aim' || state.arrows <= 0) return;
+      const pos = getMousePos(e);
+      mouse.x = pos.x;
+      mouse.y = pos.y;
+      mouse.down = true;
+      drawStart = Date.now();
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const pos = getMousePos(e);
+      mouse.x = pos.x;
+      mouse.y = pos.y;
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+      if (!mouse.down || state.phase !== 'aim') { mouse.down = false; return; }
+      mouse.down = false;
+      const power = Math.min((Date.now() - drawStart) / 1500, 1);
+      if (power < 0.05) return; // Too quick, ignore
+      const bx = bowX();
+      const by = bowY();
+      const angle = Math.atan2(mouse.y - by, mouse.x - bx);
+      shootArrow(power, angle);
+    });
+
+    // Touch
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (state.phase !== 'aim' || state.arrows <= 0) return;
+      const pos = getMousePos(e);
+      mouse.x = pos.x;
+      mouse.y = pos.y;
+      mouse.down = true;
+      drawStart = Date.now();
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const pos = getMousePos(e);
+      mouse.x = pos.x;
+      mouse.y = pos.y;
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      if (!mouse.down || state.phase !== 'aim') { mouse.down = false; return; }
+      mouse.down = false;
+      const power = Math.min((Date.now() - drawStart) / 1500, 1);
+      if (power < 0.05) return;
+      const bx = bowX();
+      const by = bowY();
+      const angle = Math.atan2(mouse.y - by, mouse.x - bx);
+      shootArrow(power, angle);
+    }, { passive: false });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'r' || e.key === 'R') startGame();
+    });
+
+    window.addEventListener('resize', resize);
+    resize();
+    startGame();
+    requestAnimationFrame(loop);
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON DARTS / ZERO</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg, #0a0a0f);
+      color: var(--text-primary, #e0e0e8);
+      font-family: 'JetBrains Mono', monospace;
+      overflow: hidden;
+      height: 100vh;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 1.2rem;
+      border-bottom: 1px solid var(--border, #7a7a90);
+    }
+    .top-bar a {
+      color: var(--text-dim, #7a7a90);
+      text-decoration: none;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      transition: color 0.3s;
+    }
+    .top-bar a:hover { color: var(--accent-cyan, #00f0ff); }
+    .game-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--accent-magenta, #ff2d7b);
+      text-shadow: 0 0 10px rgba(255,45,123,0.5);
+      letter-spacing: 0.12em;
+    }
+    #game-area {
+      display: flex;
+      height: calc(100vh - 42px);
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+    }
+    #sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-width: 180px;
+    }
+    .panel {
+      border: 1px solid var(--border, #7a7a90);
+      padding: 1rem;
+    }
+    .panel-title {
+      font-size: 0.65rem;
+      color: var(--text-dim, #7a7a90);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.6rem;
+    }
+    .score-big {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent-cyan, #00f0ff);
+      text-shadow: 0 0 15px rgba(0,240,255,0.4);
+    }
+    .score-label {
+      font-size: 0.65rem;
+      color: var(--text-dim, #7a7a90);
+      letter-spacing: 0.08em;
+    }
+    .round-info {
+      font-size: 0.8rem;
+      color: var(--text-primary, #e0e0e8);
+    }
+    .dart-display {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.3rem;
+    }
+    .dart-pip {
+      width: 8px;
+      height: 8px;
+      border: 1px solid var(--border, #7a7a90);
+    }
+    .dart-pip.thrown {
+      background: var(--accent-magenta, #ff2d7b);
+      border-color: var(--accent-magenta, #ff2d7b);
+      box-shadow: 0 0 6px rgba(255,45,123,0.5);
+    }
+    .throw-log {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .throw-entry {
+      font-size: 0.7rem;
+      color: var(--text-muted, #7a7a90);
+    }
+    .throw-entry .pts {
+      color: var(--accent-green, #39ff14);
+      font-weight: 700;
+    }
+    .throw-entry .bull {
+      color: var(--accent-magenta, #ff2d7b);
+    }
+    canvas {
+      cursor: crosshair;
+    }
+    .controls-hint {
+      font-size: 0.6rem;
+      color: var(--text-dim, #7a7a90);
+      text-align: center;
+      letter-spacing: 0.06em;
+      margin-top: 0.5rem;
+    }
+    .mode-select {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: calc(100vh - 42px);
+      gap: 1.5rem;
+    }
+    .mode-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent-magenta, #ff2d7b);
+      text-shadow: 0 0 20px rgba(255,45,123,0.5);
+      letter-spacing: 0.12em;
+    }
+    .mode-sub {
+      font-size: 0.7rem;
+      color: var(--text-dim, #7a7a90);
+      letter-spacing: 0.08em;
+    }
+    .mode-buttons {
+      display: flex;
+      gap: 1rem;
+    }
+    .mode-btn {
+      background: none;
+      border: 1px solid var(--border, #7a7a90);
+      color: var(--text-primary, #e0e0e8);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.8rem 1.5rem;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      transition: all 0.2s;
+    }
+    .mode-btn:hover {
+      border-color: var(--accent-cyan, #00f0ff);
+      color: var(--accent-cyan, #00f0ff);
+      box-shadow: 0 0 15px rgba(0,240,255,0.2);
+    }
+    .game-over {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 10;
+      display: none;
+    }
+    .game-over h2 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent-green, #39ff14);
+      text-shadow: 0 0 20px rgba(57,255,20,0.5);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.5rem;
+    }
+    .game-over .final-score {
+      font-size: 1.2rem;
+      color: var(--accent-cyan, #00f0ff);
+      margin-bottom: 1rem;
+    }
+    .game-over button {
+      background: none;
+      border: 1px solid var(--accent-magenta, #ff2d7b);
+      color: var(--accent-magenta, #ff2d7b);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.6rem 1.5rem;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      transition: all 0.2s;
+    }
+    .game-over button:hover {
+      background: var(--accent-magenta, #ff2d7b);
+      color: var(--bg, #0a0a0f);
+    }
+    .bust-flash {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2rem;
+      font-weight: 800;
+      color: #ff1744;
+      text-shadow: 0 0 20px rgba(255,23,68,0.7);
+      letter-spacing: 0.15em;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 5;
+    }
+    @media (max-width: 700px) {
+      #game-area { flex-direction: column; gap: 0.5rem; padding: 0.5rem; }
+      #sidebar { flex-direction: row; flex-wrap: wrap; min-width: unset; justify-content: center; }
+      .panel { padding: 0.5rem 0.8rem; }
+      .score-big { font-size: 1.4rem; }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="./">&lt; GAME LAB</a>
+    <div class="game-title">NEON DARTS</div>
+    <div style="width:80px"></div>
+  </div>
+
+  <div id="menu" class="mode-select">
+    <div class="mode-title">NEON DARTS</div>
+    <div class="mode-sub">PICK YOUR GAME</div>
+    <div class="mode-buttons">
+      <button class="mode-btn" onclick="startGame('301')">301</button>
+      <button class="mode-btn" onclick="startGame('501')">501</button>
+      <button class="mode-btn" onclick="startGame('free')">FREE PLAY</button>
+    </div>
+    <div class="mode-sub" style="margin-top:0.5rem">301/501: COUNT DOWN TO EXACTLY ZERO. MUST FINISH ON A DOUBLE.</div>
+  </div>
+
+  <div id="game-area" style="display:none">
+    <div id="sidebar">
+      <div class="panel">
+        <div class="panel-title">REMAINING</div>
+        <div class="score-big" id="score-display">301</div>
+        <div class="score-label" id="mode-label">301 MODE</div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">ROUND <span id="round-num">1</span></div>
+        <div class="dart-display">
+          <div class="dart-pip" id="dp0"></div>
+          <div class="dart-pip" id="dp1"></div>
+          <div class="dart-pip" id="dp2"></div>
+        </div>
+        <div class="round-info" id="round-score" style="margin-top:0.4rem">0 this round</div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">THROWS</div>
+        <div class="throw-log" id="throw-log"></div>
+      </div>
+      <div class="controls-hint">CLICK TO THROW<br>AIM WOBBLES. TIME IT.</div>
+    </div>
+    <canvas id="board" width="500" height="500"></canvas>
+  </div>
+
+  <div class="bust-flash" id="bust-flash">BUST!</div>
+
+  <div class="game-over" id="game-over">
+    <h2 id="go-title">GAME OVER</h2>
+    <div class="final-score" id="go-score"></div>
+    <button onclick="showMenu()">PLAY AGAIN</button>
+  </div>
+
+  <script>
+    const C = document.getElementById('board');
+    const ctx = C.getContext('2d');
+    const MAGENTA = '#ff2d7b';
+    const CYAN = '#00f0ff';
+    const GREEN = '#39ff14';
+    const PURPLE = '#9d4edd';
+    const WHITE = '#e0e0e8';
+    const DIM = '#7a7a90';
+    const VOID = '#0a0a0f';
+    const DARK = '#121218';
+
+    const CX = 250, CY = 250;
+    const BOARD_R = 220;
+
+    // Standard dartboard order (clockwise from top)
+    const SECTORS = [20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];
+    const SECTOR_ANGLE = Math.PI * 2 / 20;
+
+    // Ring radii (from center out)
+    const R_DBULL = 8;
+    const R_BULL = 20;
+    const R_INNER_TRIPLE = 100;
+    const R_OUTER_TRIPLE = 115;
+    const R_INNER_DOUBLE = 195;
+    const R_OUTER_DOUBLE = 210;
+
+    const SECTOR_COLORS_DARK = ['#1a1a28', '#2a1520'];  // alternating
+    const SECTOR_COLORS_LIGHT = ['#181828', '#cc1133'];
+
+    let mode = '301';
+    let remaining = 301;
+    let round = 1;
+    let dartsThrown = 0;
+    let roundScore = 0;
+    let roundStartRemaining = 301;
+    let throwLog = [];
+    let gameActive = false;
+    let darts = []; // landed dart positions
+
+    // Wobble state
+    let wobbleAngle = 0;
+    let wobbleSpeed = 1.8;
+    let wobbleRadius = 35;
+    let aimX = CX, aimY = CY;
+    let mouseX = CX, mouseY = CY;
+
+    function startGame(m) {
+      mode = m;
+      remaining = m === '501' ? 501 : m === '301' ? 301 : 0;
+      roundStartRemaining = remaining;
+      round = 1;
+      dartsThrown = 0;
+      roundScore = 0;
+      throwLog = [];
+      darts = [];
+      gameActive = true;
+
+      document.getElementById('menu').style.display = 'none';
+      document.getElementById('game-area').style.display = 'flex';
+      document.getElementById('game-over').style.display = 'none';
+
+      document.getElementById('mode-label').textContent = mode === 'free' ? 'FREE PLAY' : mode + ' MODE';
+      document.getElementById('score-display').textContent = mode === 'free' ? '0' : remaining;
+      updateUI();
+      requestAnimationFrame(loop);
+    }
+
+    function showMenu() {
+      document.getElementById('menu').style.display = 'flex';
+      document.getElementById('game-area').style.display = 'none';
+      document.getElementById('game-over').style.display = 'none';
+      gameActive = false;
+    }
+
+    function getScore(x, y) {
+      const dx = x - CX, dy = y - CY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist > R_OUTER_DOUBLE) return { value: 0, label: 'MISS', mult: 0, sector: 0 };
+      if (dist <= R_DBULL) return { value: 50, label: 'DOUBLE BULL', mult: 2, sector: 25 };
+      if (dist <= R_BULL) return { value: 25, label: 'SINGLE BULL', mult: 1, sector: 25 };
+
+      // Find sector
+      let angle = Math.atan2(dx, -dy); // 0 at top, clockwise
+      if (angle < 0) angle += Math.PI * 2;
+      let sectorIdx = Math.floor((angle + SECTOR_ANGLE / 2) / SECTOR_ANGLE) % 20;
+      let sector = SECTORS[sectorIdx];
+
+      if (dist >= R_INNER_DOUBLE && dist <= R_OUTER_DOUBLE) {
+        return { value: sector * 2, label: 'D' + sector, mult: 2, sector };
+      }
+      if (dist >= R_INNER_TRIPLE && dist <= R_OUTER_TRIPLE) {
+        return { value: sector * 3, label: 'T' + sector, mult: 3, sector };
+      }
+      return { value: sector, label: '' + sector, mult: 1, sector };
+    }
+
+    function drawBoard() {
+      ctx.fillStyle = VOID;
+      ctx.fillRect(0, 0, 500, 500);
+
+      // Outer ring border
+      ctx.beginPath();
+      ctx.arc(CX, CY, BOARD_R, 0, Math.PI * 2);
+      ctx.fillStyle = '#0d0d15';
+      ctx.fill();
+
+      // Draw sectors
+      for (let i = 0; i < 20; i++) {
+        const startAngle = -Math.PI/2 + SECTOR_ANGLE * i - SECTOR_ANGLE/2;
+        const endAngle = startAngle + SECTOR_ANGLE;
+        const isEven = i % 2 === 0;
+
+        // Outer single (between triple and double)
+        drawSectorRing(startAngle, endAngle, R_OUTER_TRIPLE, R_INNER_DOUBLE,
+          isEven ? '#0e0e1a' : '#1a0a12');
+
+        // Double ring
+        drawSectorRing(startAngle, endAngle, R_INNER_DOUBLE, R_OUTER_DOUBLE,
+          isEven ? GREEN : MAGENTA);
+
+        // Triple ring
+        drawSectorRing(startAngle, endAngle, R_INNER_TRIPLE, R_OUTER_TRIPLE,
+          isEven ? GREEN : MAGENTA);
+
+        // Inner single (between bull and triple)
+        drawSectorRing(startAngle, endAngle, R_BULL, R_INNER_TRIPLE,
+          isEven ? '#12121f' : '#1a0e15');
+
+        // Sector number
+        const numAngle = -Math.PI/2 + SECTOR_ANGLE * i;
+        const numR = BOARD_R + 2;
+        // Skip - we draw numbers outside
+      }
+
+      // Bull rings
+      ctx.beginPath();
+      ctx.arc(CX, CY, R_BULL, 0, Math.PI * 2);
+      ctx.fillStyle = '#1a2820';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(CX, CY, R_DBULL, 0, Math.PI * 2);
+      ctx.fillStyle = MAGENTA;
+      ctx.fill();
+      ctx.shadowColor = MAGENTA;
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Wire lines
+      ctx.strokeStyle = DIM;
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i < 20; i++) {
+        const angle = -Math.PI/2 + SECTOR_ANGLE * i - SECTOR_ANGLE/2;
+        ctx.beginPath();
+        ctx.moveTo(CX + Math.cos(angle) * R_BULL, CY + Math.sin(angle) * R_BULL);
+        ctx.lineTo(CX + Math.cos(angle) * R_OUTER_DOUBLE, CY + Math.sin(angle) * R_OUTER_DOUBLE);
+        ctx.stroke();
+      }
+
+      // Ring wires
+      [R_BULL, R_INNER_TRIPLE, R_OUTER_TRIPLE, R_INNER_DOUBLE, R_OUTER_DOUBLE].forEach(r => {
+        ctx.beginPath();
+        ctx.arc(CX, CY, r, 0, Math.PI * 2);
+        ctx.strokeStyle = DIM;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      });
+
+      // Sector numbers
+      ctx.font = '700 11px "JetBrains Mono"';
+      ctx.fillStyle = WHITE;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i < 20; i++) {
+        const angle = -Math.PI/2 + SECTOR_ANGLE * i;
+        const nx = CX + Math.cos(angle) * (R_OUTER_DOUBLE + 12);
+        const ny = CY + Math.sin(angle) * (R_OUTER_DOUBLE + 12);
+        ctx.fillText(SECTORS[i], nx, ny);
+      }
+
+      // Draw landed darts
+      darts.forEach((d, idx) => {
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = CYAN;
+        ctx.shadowColor = CYAN;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = WHITE;
+        ctx.fill();
+      });
+    }
+
+    function drawSectorRing(startAngle, endAngle, innerR, outerR, color) {
+      ctx.beginPath();
+      ctx.arc(CX, CY, outerR, startAngle, endAngle);
+      ctx.arc(CX, CY, innerR, endAngle, startAngle, true);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    function drawCrosshair(x, y) {
+      const s = 12;
+      ctx.strokeStyle = CYAN;
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = CYAN;
+      ctx.shadowBlur = 6;
+
+      ctx.beginPath();
+      ctx.moveTo(x - s, y); ctx.lineTo(x - 4, y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x + 4, y); ctx.lineTo(x + s, y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y - s); ctx.lineTo(x, y - 4);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y + 4); ctx.lineTo(x, y + s);
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+    }
+
+    function loop() {
+      if (!gameActive) return;
+
+      wobbleAngle += wobbleSpeed * 0.03;
+      const wx = Math.cos(wobbleAngle * 2.3) * wobbleRadius;
+      const wy = Math.sin(wobbleAngle * 1.7) * wobbleRadius;
+      aimX = mouseX + wx;
+      aimY = mouseY + wy;
+
+      drawBoard();
+      if (dartsThrown < 3) {
+        drawCrosshair(aimX, aimY);
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    C.addEventListener('mousemove', (e) => {
+      const rect = C.getBoundingClientRect();
+      const scaleX = 500 / rect.width;
+      const scaleY = 500 / rect.height;
+      mouseX = (e.clientX - rect.left) * scaleX;
+      mouseY = (e.clientY - rect.top) * scaleY;
+    });
+
+    C.addEventListener('click', (e) => {
+      if (!gameActive || dartsThrown >= 3) return;
+
+      const result = getScore(aimX, aimY);
+      darts.push({ x: aimX, y: aimY });
+
+      if (mode === 'free') {
+        remaining += result.value;
+        roundScore += result.value;
+      } else {
+        const tentative = remaining - result.value;
+        if (tentative < 0 || (tentative === 1) || (tentative === 0 && result.mult !== 2)) {
+          // Bust! Round score reverts
+          flashBust();
+          remaining = roundStartRemaining;
+          roundScore = 0;
+          dartsThrown = 3; // End round
+          addLogEntry('BUST', 0, true);
+          updateUI();
+          setTimeout(nextRound, 1200);
+          return;
+        } else {
+          remaining = tentative;
+          roundScore += result.value;
+        }
+      }
+
+      dartsThrown++;
+      addLogEntry(result.label, result.value, false);
+      document.getElementById('dp' + (dartsThrown - 1)).classList.add('thrown');
+      updateUI();
+
+      // Check win
+      if (mode !== 'free' && remaining === 0) {
+        gameActive = false;
+        setTimeout(() => endGame(true), 600);
+        return;
+      }
+
+      if (dartsThrown >= 3) {
+        setTimeout(nextRound, 800);
+      }
+    });
+
+    function flashBust() {
+      const el = document.getElementById('bust-flash');
+      el.style.opacity = '1';
+      setTimeout(() => { el.style.opacity = '0'; }, 800);
+    }
+
+    function addLogEntry(label, pts, bust) {
+      const log = document.getElementById('throw-log');
+      const entry = document.createElement('div');
+      entry.className = 'throw-entry';
+      if (bust) {
+        entry.innerHTML = `R${round}: <span style="color:#ff1744;font-weight:700">BUST</span>`;
+      } else if (pts === 0) {
+        entry.innerHTML = `R${round}: <span style="color:${DIM}">MISS</span>`;
+      } else {
+        const cls = (label === 'DOUBLE BULL' || label === 'SINGLE BULL') ? 'bull' : 'pts';
+        entry.innerHTML = `R${round}: ${label} <span class="${cls}">${pts}</span>`;
+      }
+      log.insertBefore(entry, log.firstChild);
+    }
+
+    function nextRound() {
+      round++;
+      dartsThrown = 0;
+      roundScore = 0;
+      roundStartRemaining = remaining;
+      darts = [];
+
+      // Free play: 10 rounds
+      if (mode === 'free' && round > 10) {
+        endGame(false);
+        return;
+      }
+
+      // 301/501: 20 round limit
+      if (mode !== 'free' && round > 20) {
+        endGame(false);
+        return;
+      }
+
+      document.querySelectorAll('.dart-pip').forEach(p => p.classList.remove('thrown'));
+      updateUI();
+    }
+
+    function updateUI() {
+      document.getElementById('score-display').textContent = remaining;
+      document.getElementById('round-num').textContent = round;
+      document.getElementById('round-score').textContent = roundScore + ' this round';
+    }
+
+    function endGame(won) {
+      gameActive = false;
+      const go = document.getElementById('game-over');
+      const title = document.getElementById('go-title');
+      const score = document.getElementById('go-score');
+
+      if (mode === 'free') {
+        title.textContent = 'GAME OVER';
+        title.style.color = CYAN;
+        title.style.textShadow = '0 0 20px rgba(0,240,255,0.5)';
+        score.textContent = 'TOTAL: ' + remaining + ' POINTS IN 10 ROUNDS';
+      } else if (won) {
+        title.textContent = 'CHECKOUT!';
+        title.style.color = GREEN;
+        title.style.textShadow = '0 0 20px rgba(57,255,20,0.5)';
+        score.textContent = 'FINISHED ' + mode + ' IN ' + round + ' ROUNDS';
+      } else {
+        title.textContent = 'TIME UP';
+        title.style.color = MAGENTA;
+        title.style.textShadow = '0 0 20px rgba(255,45,123,0.5)';
+        score.textContent = remaining + ' REMAINING AFTER 20 ROUNDS';
+      }
+
+      go.style.display = 'block';
+    }
+
+    // Touch support
+    C.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = C.getBoundingClientRect();
+      const scaleX = 500 / rect.width;
+      const scaleY = 500 / rect.height;
+      mouseX = (touch.clientX - rect.left) * scaleX;
+      mouseY = (touch.clientY - rect.top) * scaleY;
+    });
+
+    C.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      if (!gameActive || dartsThrown >= 3) return;
+      // Simulate click at current aim position
+      C.dispatchEvent(new MouseEvent('click'));
+    });
+
+    // Keyboard shortcut: Space to throw at current position
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && gameActive && dartsThrown < 3) {
+        e.preventDefault();
+        C.dispatchEvent(new MouseEvent('click'));
+      }
+    });
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

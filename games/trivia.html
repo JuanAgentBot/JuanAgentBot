@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON TRIVIA / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+    }
+
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+      text-align: center;
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    /* Menu screen */
+    #menu { text-align: center; }
+
+    .cat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .cat-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.8rem 0.5rem;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: border-color 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+
+    .cat-btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 12px var(--glow-cyan-soft);
+    }
+
+    .cat-btn.selected {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+      box-shadow: 0 0 12px var(--glow-magenta);
+    }
+
+    .cat-icon {
+      font-size: 1.4rem;
+      display: block;
+      margin-bottom: 0.3rem;
+    }
+
+    .start-btn {
+      background: none;
+      border: 1px solid var(--accent-green);
+      color: var(--accent-green);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      padding: 0.8rem 2rem;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+
+    .start-btn:hover {
+      background: rgba(57, 255, 20, 0.1);
+      box-shadow: 0 0 20px rgba(57, 255, 20, 0.3);
+    }
+
+    .menu-label {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.6rem;
+    }
+
+    .high-score {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      margin-top: 1.2rem;
+      letter-spacing: 0.04em;
+    }
+
+    .high-score span {
+      color: var(--accent-green);
+      text-shadow: 0 0 8px rgba(57, 255, 20, 0.5);
+    }
+
+    /* Game screen */
+    #game { display: none; }
+
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.2rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hud-item {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+    }
+
+    .hud-item span {
+      color: var(--text-bright);
+    }
+
+    .hud-score span {
+      color: var(--accent-green);
+      text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+    }
+
+    .timer-bar-wrap {
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      margin-bottom: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .timer-bar {
+      height: 100%;
+      width: 100%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--glow-cyan-soft);
+      transition: width 0.1s linear;
+    }
+
+    .timer-bar.warning {
+      background: #ffb000;
+      box-shadow: 0 0 8px rgba(255, 176, 0, 0.4);
+    }
+
+    .timer-bar.danger {
+      background: #ff1744;
+      box-shadow: 0 0 8px rgba(255, 23, 68, 0.4);
+    }
+
+    .category-tag {
+      display: inline-block;
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      color: var(--accent-purple);
+      border: 1px solid var(--accent-purple);
+      padding: 0.15rem 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .question-text {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+      min-height: 3rem;
+    }
+
+    .answers {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .answer-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      padding: 0.9rem 1rem;
+      cursor: pointer;
+      text-align: left;
+      line-height: 1.4;
+      transition: border-color 0.15s, background 0.15s;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.8rem;
+    }
+
+    .answer-btn:hover:not(.locked) {
+      border-color: var(--accent-cyan);
+      background: rgba(0, 240, 255, 0.04);
+    }
+
+    .answer-btn .key {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      min-width: 1rem;
+      padding-top: 0.1rem;
+    }
+
+    .answer-btn.correct {
+      border-color: var(--accent-green);
+      background: rgba(57, 255, 20, 0.08);
+      color: var(--accent-green);
+    }
+
+    .answer-btn.correct .key { color: var(--accent-green); }
+
+    .answer-btn.wrong {
+      border-color: #ff1744;
+      background: rgba(255, 23, 68, 0.08);
+      color: #ff1744;
+    }
+
+    .answer-btn.wrong .key { color: #ff1744; }
+
+    .answer-btn.locked {
+      cursor: default;
+      opacity: 0.5;
+    }
+
+    .answer-btn.locked.correct,
+    .answer-btn.locked.wrong {
+      opacity: 1;
+    }
+
+    .feedback {
+      text-align: center;
+      margin-top: 1.2rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      min-height: 1.5rem;
+    }
+
+    .feedback.right { color: var(--accent-green); text-shadow: 0 0 8px rgba(57, 255, 20, 0.4); }
+    .feedback.wrong { color: #ff1744; }
+    .feedback.timeout { color: #ffb000; }
+
+    /* Results screen */
+    #results { display: none; text-align: center; }
+
+    .final-score {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--accent-green);
+      text-shadow: 0 0 30px rgba(57, 255, 20, 0.5);
+      margin-bottom: 0.3rem;
+    }
+
+    .final-label {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+    }
+
+    .final-detail {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .final-detail span { color: var(--text-bright); }
+
+    .new-record {
+      color: var(--accent-magenta);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      margin: 1rem 0;
+      text-shadow: 0 0 12px var(--glow-magenta);
+    }
+
+    .result-breakdown {
+      margin: 1.5rem 0;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+
+    .result-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      padding: 0.4rem 0;
+      font-size: 0.7rem;
+      text-align: left;
+    }
+
+    .result-icon { min-width: 1.2rem; text-align: center; }
+    .result-icon.right { color: var(--accent-green); }
+    .result-icon.wrong { color: #ff1744; }
+    .result-icon.timeout { color: #ffb000; }
+
+    .result-q { color: var(--text-dim); flex: 1; line-height: 1.3; }
+    .result-pts { color: var(--text-bright); min-width: 3rem; text-align: right; }
+
+    .btn-row {
+      display: flex;
+      gap: 0.8rem;
+      justify-content: center;
+      margin-top: 1.5rem;
+    }
+
+    .btn-row button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.6rem 1.2rem;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-row button:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .controls-hint {
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      letter-spacing: 0.06em;
+      margin-top: 1rem;
+      text-align: center;
+    }
+
+    .controls-hint kbd {
+      display: inline-block;
+      border: 1px solid var(--border);
+      padding: 0.1rem 0.35rem;
+      font-size: 0.6rem;
+      color: var(--text-bright);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>NEON TRIVIA</h1>
+    <p class="subtitle">10 QUESTIONS &middot; 15 SECONDS EACH &middot; SPEED SCORES</p>
+
+    <!-- MENU -->
+    <div id="menu">
+      <p class="menu-label">PICK A CATEGORY</p>
+      <div class="cat-grid">
+        <button class="cat-btn selected" data-cat="all"><span class="cat-icon">&#9733;</span>ALL</button>
+        <button class="cat-btn" data-cat="science"><span class="cat-icon">&#9883;</span>SCIENCE</button>
+        <button class="cat-btn" data-cat="tech"><span class="cat-icon">&#9000;</span>TECH</button>
+        <button class="cat-btn" data-cat="history"><span class="cat-icon">&#9876;</span>HISTORY</button>
+        <button class="cat-btn" data-cat="geo"><span class="cat-icon">&#9652;</span>GEOGRAPHY</button>
+        <button class="cat-btn" data-cat="space"><span class="cat-icon">&#10038;</span>SPACE</button>
+      </div>
+      <button class="start-btn" id="start-btn">&#9654; START</button>
+      <div class="high-score" id="high-score"></div>
+      <div class="controls-hint">
+        <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> to answer &middot; <kbd>Enter</kbd> to start
+      </div>
+    </div>
+
+    <!-- GAME -->
+    <div id="game">
+      <div class="hud">
+        <div class="hud-item">Q <span id="q-num">1</span>/10</div>
+        <div class="hud-item hud-score">SCORE <span id="hud-score">0</span></div>
+        <div class="hud-item">TIME <span id="hud-time">15</span></div>
+      </div>
+      <div class="timer-bar-wrap"><div class="timer-bar" id="timer-bar"></div></div>
+      <div class="category-tag" id="q-cat"></div>
+      <div class="question-text" id="q-text"></div>
+      <div class="answers" id="answers"></div>
+      <div class="feedback" id="feedback"></div>
+      <div class="controls-hint">
+        <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> to answer
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="results">
+      <div class="final-label">FINAL SCORE</div>
+      <div class="final-score" id="final-score">0</div>
+      <div class="final-detail"><span id="r-correct">0</span> / 10 correct</div>
+      <div class="final-detail">Average time: <span id="r-avg">0.0</span>s</div>
+      <div class="new-record" id="new-record" style="display:none">&#9733; NEW HIGH SCORE &#9733;</div>
+      <div class="result-breakdown" id="breakdown"></div>
+      <div class="btn-row">
+        <button id="btn-again">PLAY AGAIN</button>
+        <button id="btn-menu">MENU</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // --- QUESTION DATABASE ---
+    var Q = [
+      // SCIENCE
+      {cat:"science",q:"What is the chemical symbol for gold?",a:["Au","Ag","Fe","Gd"],c:0},
+      {cat:"science",q:"How many bones are in the adult human body?",a:["206","196","216","186"],c:0},
+      {cat:"science",q:"What gas do plants absorb from the atmosphere?",a:["Carbon dioxide","Nitrogen","Oxygen","Hydrogen"],c:0},
+      {cat:"science",q:"What is the hardest natural substance on Earth?",a:["Diamond","Tungsten","Titanium","Quartz"],c:0},
+      {cat:"science",q:"What planet is known as the Red Planet?",a:["Mars","Venus","Jupiter","Mercury"],c:0},
+      {cat:"science",q:"What is the powerhouse of the cell?",a:["Mitochondria","Nucleus","Ribosome","Golgi apparatus"],c:0},
+      {cat:"science",q:"What element has the atomic number 1?",a:["Hydrogen","Helium","Lithium","Carbon"],c:0},
+      {cat:"science",q:"What type of animal is a dolphin?",a:["Mammal","Fish","Reptile","Amphibian"],c:0},
+      {cat:"science",q:"What force keeps us on the ground?",a:["Gravity","Magnetism","Friction","Inertia"],c:0},
+      {cat:"science",q:"What is the speed of light approximately?",a:["300,000 km/s","150,000 km/s","500,000 km/s","1,000,000 km/s"],c:0},
+      {cat:"science",q:"How many chambers does the human heart have?",a:["4","2","3","6"],c:0},
+      {cat:"science",q:"What is the most abundant gas in Earth's atmosphere?",a:["Nitrogen","Oxygen","Carbon dioxide","Argon"],c:0},
+      {cat:"science",q:"What part of the atom has a positive charge?",a:["Proton","Electron","Neutron","Photon"],c:0},
+      {cat:"science",q:"What is the boiling point of water in Celsius?",a:["100","90","110","212"],c:0},
+      {cat:"science",q:"Which organ filters blood in the human body?",a:["Kidney","Liver","Spleen","Lung"],c:0},
+
+      // TECH
+      {cat:"tech",q:"What does CPU stand for?",a:["Central Processing Unit","Central Power Unit","Computer Processing Unit","Core Processing Unit"],c:0},
+      {cat:"tech",q:"Who co-founded Apple with Steve Jobs?",a:["Steve Wozniak","Bill Gates","Larry Page","Tim Cook"],c:0},
+      {cat:"tech",q:"What year was the first iPhone released?",a:["2007","2005","2008","2006"],c:0},
+      {cat:"tech",q:"What does HTML stand for?",a:["HyperText Markup Language","High Text Machine Language","HyperTool Markup Language","Home Text Markup Language"],c:0},
+      {cat:"tech",q:"What programming language is known for its snake logo?",a:["Python","Cobra","Mamba","Viper"],c:0},
+      {cat:"tech",q:"What company created the Android operating system?",a:["Google","Apple","Microsoft","Samsung"],c:0},
+      {cat:"tech",q:"What does RAM stand for?",a:["Random Access Memory","Read Access Memory","Rapid Access Module","Random Array Memory"],c:0},
+      {cat:"tech",q:"Who is considered the father of computer science?",a:["Alan Turing","Charles Babbage","John von Neumann","Ada Lovelace"],c:0},
+      {cat:"tech",q:"What does the acronym SQL stand for?",a:["Structured Query Language","Standard Query Language","Simple Query Language","System Query Language"],c:0},
+      {cat:"tech",q:"What company developed the Linux kernel?",a:["None (Linus Torvalds)","IBM","Microsoft","Sun Microsystems"],c:0},
+      {cat:"tech",q:"What year was Wikipedia launched?",a:["2001","1999","2003","1998"],c:0},
+      {cat:"tech",q:"What does HTTP stand for?",a:["HyperText Transfer Protocol","High Text Transfer Protocol","Hyper Transfer Text Protocol","HyperText Transit Protocol"],c:0},
+      {cat:"tech",q:"What is the name of Google's web browser?",a:["Chrome","Firefox","Safari","Edge"],c:0},
+      {cat:"tech",q:"What does GPU stand for?",a:["Graphics Processing Unit","General Processing Unit","Graphics Power Unit","Global Processing Unit"],c:0},
+      {cat:"tech",q:"What company created the first commercially successful mouse?",a:["Apple","Microsoft","IBM","Xerox"],c:0},
+
+      // HISTORY
+      {cat:"history",q:"In what year did World War II end?",a:["1945","1943","1944","1946"],c:0},
+      {cat:"history",q:"Who was the first person to walk on the Moon?",a:["Neil Armstrong","Buzz Aldrin","Yuri Gagarin","John Glenn"],c:0},
+      {cat:"history",q:"What ancient wonder was located in Alexandria, Egypt?",a:["Lighthouse","Library","Pyramid","Colossus"],c:0},
+      {cat:"history",q:"What year did the Berlin Wall fall?",a:["1989","1991","1987","1990"],c:0},
+      {cat:"history",q:"Who wrote the Declaration of Independence?",a:["Thomas Jefferson","George Washington","Benjamin Franklin","John Adams"],c:0},
+      {cat:"history",q:"What empire was ruled by Genghis Khan?",a:["Mongol Empire","Ottoman Empire","Roman Empire","Persian Empire"],c:0},
+      {cat:"history",q:"In what year did the Titanic sink?",a:["1912","1905","1915","1920"],c:0},
+      {cat:"history",q:"What civilization built Machu Picchu?",a:["Inca","Maya","Aztec","Olmec"],c:0},
+      {cat:"history",q:"Who was the first Emperor of Rome?",a:["Augustus","Julius Caesar","Nero","Caligula"],c:0},
+      {cat:"history",q:"What year was the Magna Carta signed?",a:["1215","1066","1315","1415"],c:0},
+      {cat:"history",q:"What ancient civilization invented paper?",a:["Chinese","Egyptian","Greek","Roman"],c:0},
+      {cat:"history",q:"Who painted the ceiling of the Sistine Chapel?",a:["Michelangelo","Leonardo da Vinci","Raphael","Botticelli"],c:0},
+      {cat:"history",q:"What war was fought between the North and South in the US?",a:["Civil War","Revolutionary War","War of 1812","Mexican-American War"],c:0},
+      {cat:"history",q:"What country was formerly known as Persia?",a:["Iran","Iraq","Turkey","Afghanistan"],c:0},
+      {cat:"history",q:"Who discovered penicillin?",a:["Alexander Fleming","Louis Pasteur","Joseph Lister","Robert Koch"],c:0},
+
+      // GEOGRAPHY
+      {cat:"geo",q:"What is the largest ocean on Earth?",a:["Pacific","Atlantic","Indian","Arctic"],c:0},
+      {cat:"geo",q:"What is the smallest country in the world?",a:["Vatican City","Monaco","San Marino","Liechtenstein"],c:0},
+      {cat:"geo",q:"What is the longest river in the world?",a:["Nile","Amazon","Yangtze","Mississippi"],c:0},
+      {cat:"geo",q:"What country has the most people?",a:["India","China","United States","Indonesia"],c:0},
+      {cat:"geo",q:"What is the capital of Australia?",a:["Canberra","Sydney","Melbourne","Brisbane"],c:0},
+      {cat:"geo",q:"What desert is the largest in the world?",a:["Sahara","Arabian","Gobi","Kalahari"],c:0},
+      {cat:"geo",q:"How many continents are there?",a:["7","6","5","8"],c:0},
+      {cat:"geo",q:"What is the tallest mountain in the world?",a:["Mount Everest","K2","Kangchenjunga","Lhotse"],c:0},
+      {cat:"geo",q:"What country is shaped like a boot?",a:["Italy","Chile","Japan","Norway"],c:0},
+      {cat:"geo",q:"What is the capital of Japan?",a:["Tokyo","Osaka","Kyoto","Hiroshima"],c:0},
+      {cat:"geo",q:"What river flows through Paris?",a:["Seine","Thames","Danube","Rhine"],c:0},
+      {cat:"geo",q:"What country has the most islands?",a:["Sweden","Indonesia","Philippines","Japan"],c:0},
+      {cat:"geo",q:"What is the driest continent?",a:["Antarctica","Africa","Australia","Asia"],c:0},
+      {cat:"geo",q:"What strait separates Europe from Africa?",a:["Strait of Gibraltar","Strait of Hormuz","Bering Strait","Strait of Malacca"],c:0},
+      {cat:"geo",q:"What is the capital of Brazil?",a:["Brasilia","Rio de Janeiro","Sao Paulo","Salvador"],c:0},
+
+      // SPACE
+      {cat:"space",q:"What planet has the most moons?",a:["Saturn","Jupiter","Uranus","Neptune"],c:0},
+      {cat:"space",q:"What is the closest star to Earth?",a:["The Sun","Proxima Centauri","Alpha Centauri A","Barnard's Star"],c:0},
+      {cat:"space",q:"How long does light from the Sun take to reach Earth?",a:["About 8 minutes","About 1 minute","About 30 minutes","About 1 second"],c:0},
+      {cat:"space",q:"What planet is famous for its rings?",a:["Saturn","Jupiter","Uranus","Neptune"],c:0},
+      {cat:"space",q:"What is the largest planet in our solar system?",a:["Jupiter","Saturn","Neptune","Uranus"],c:0},
+      {cat:"space",q:"What galaxy do we live in?",a:["Milky Way","Andromeda","Triangulum","Whirlpool"],c:0},
+      {cat:"space",q:"What is a light-year a measure of?",a:["Distance","Time","Speed","Brightness"],c:0},
+      {cat:"space",q:"What planet rotates on its side?",a:["Uranus","Neptune","Venus","Pluto"],c:0},
+      {cat:"space",q:"What is the hottest planet in our solar system?",a:["Venus","Mercury","Mars","Jupiter"],c:0},
+      {cat:"space",q:"Who was the first human in space?",a:["Yuri Gagarin","Alan Shepard","John Glenn","Neil Armstrong"],c:0},
+      {cat:"space",q:"What is the name of the Mars rover that landed in 2021?",a:["Perseverance","Curiosity","Opportunity","Spirit"],c:0},
+      {cat:"space",q:"What space telescope was launched in 1990?",a:["Hubble","James Webb","Spitzer","Chandra"],c:0},
+      {cat:"space",q:"How many planets are in our solar system?",a:["8","9","7","10"],c:0},
+      {cat:"space",q:"What causes a solar eclipse?",a:["Moon blocks the Sun","Earth blocks the Sun","Venus blocks the Sun","Clouds block the Sun"],c:0},
+      {cat:"space",q:"What is the name of Saturn's largest moon?",a:["Titan","Europa","Ganymede","Callisto"],c:0}
+    ];
+
+    var CAT_NAMES = {
+      all: "ALL CATEGORIES",
+      science: "SCIENCE",
+      tech: "TECHNOLOGY",
+      history: "HISTORY",
+      geo: "GEOGRAPHY",
+      space: "SPACE"
+    };
+
+    // --- STATE ---
+    var selectedCat = "all";
+    var questions = [];
+    var currentQ = 0;
+    var score = 0;
+    var results = [];
+    var timerInterval = null;
+    var timeLeft = 0;
+    var answered = false;
+    var QUESTION_TIME = 15;
+    var QUESTIONS_PER_GAME = 10;
+
+    // --- DOM ---
+    var menuEl = document.getElementById("menu");
+    var gameEl = document.getElementById("game");
+    var resultsEl = document.getElementById("results");
+    var startBtn = document.getElementById("start-btn");
+    var qNumEl = document.getElementById("q-num");
+    var hudScoreEl = document.getElementById("hud-score");
+    var hudTimeEl = document.getElementById("hud-time");
+    var timerBarEl = document.getElementById("timer-bar");
+    var qCatEl = document.getElementById("q-cat");
+    var qTextEl = document.getElementById("q-text");
+    var answersEl = document.getElementById("answers");
+    var feedbackEl = document.getElementById("feedback");
+    var highScoreEl = document.getElementById("high-score");
+
+    // --- HELPERS ---
+    function shuffle(arr) {
+      for (var i = arr.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+      }
+      return arr;
+    }
+
+    function getHighScore(cat) {
+      try { return parseInt(localStorage.getItem("trivia-hs-" + cat)) || 0; } catch(e) { return 0; }
+    }
+
+    function setHighScore(cat, val) {
+      try { localStorage.setItem("trivia-hs-" + cat, val); } catch(e) {}
+    }
+
+    function showHighScore() {
+      var hs = getHighScore(selectedCat);
+      highScoreEl.textContent = hs > 0 ? "HIGH SCORE: " : "";
+      if (hs > 0) {
+        highScoreEl.innerHTML = 'HIGH SCORE: <span>' + hs + '</span>';
+      }
+    }
+
+    // --- CATEGORY SELECTION ---
+    var catBtns = document.querySelectorAll(".cat-btn");
+    for (var i = 0; i < catBtns.length; i++) {
+      catBtns[i].addEventListener("click", function() {
+        for (var j = 0; j < catBtns.length; j++) catBtns[j].classList.remove("selected");
+        this.classList.add("selected");
+        selectedCat = this.getAttribute("data-cat");
+        showHighScore();
+      });
+    }
+
+    // --- START GAME ---
+    function startGame() {
+      var pool = selectedCat === "all" ? Q.slice() : Q.filter(function(q) { return q.cat === selectedCat; });
+
+      // Shuffle answers for each question (create copies)
+      pool = pool.map(function(q) {
+        var correctAnswer = q.a[q.c];
+        var shuffled = shuffle(q.a.slice());
+        var newC = shuffled.indexOf(correctAnswer);
+        return { cat: q.cat, q: q.q, a: shuffled, c: newC };
+      });
+
+      shuffle(pool);
+      questions = pool.slice(0, QUESTIONS_PER_GAME);
+      currentQ = 0;
+      score = 0;
+      results = [];
+      answered = false;
+
+      menuEl.style.display = "none";
+      resultsEl.style.display = "none";
+      gameEl.style.display = "block";
+      hudScoreEl.textContent = "0";
+      showQuestion();
+    }
+
+    startBtn.addEventListener("click", startGame);
+
+    // --- SHOW QUESTION ---
+    function showQuestion() {
+      if (currentQ >= questions.length) {
+        showResults();
+        return;
+      }
+
+      var q = questions[currentQ];
+      answered = false;
+      qNumEl.textContent = currentQ + 1;
+      qCatEl.textContent = CAT_NAMES[q.cat] || q.cat.toUpperCase();
+      qTextEl.textContent = q.q;
+      feedbackEl.textContent = "";
+      feedbackEl.className = "feedback";
+
+      answersEl.innerHTML = "";
+      for (var i = 0; i < q.a.length; i++) {
+        var btn = document.createElement("button");
+        btn.className = "answer-btn";
+        btn.innerHTML = '<span class="key">' + (i + 1) + '</span><span>' + escHtml(q.a[i]) + '</span>';
+        btn.setAttribute("data-idx", i);
+        btn.addEventListener("click", function() { answerQuestion(parseInt(this.getAttribute("data-idx"))); });
+        answersEl.appendChild(btn);
+      }
+
+      startTimer();
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    // --- TIMER ---
+    function startTimer() {
+      timeLeft = QUESTION_TIME * 10; // tenths of seconds
+      if (timerInterval) clearInterval(timerInterval);
+      updateTimerDisplay();
+      timerInterval = setInterval(function() {
+        if (answered) return;
+        timeLeft--;
+        updateTimerDisplay();
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          timeOut();
+        }
+      }, 100);
+    }
+
+    function updateTimerDisplay() {
+      var secs = Math.ceil(timeLeft / 10);
+      hudTimeEl.textContent = secs;
+      var pct = (timeLeft / (QUESTION_TIME * 10)) * 100;
+      timerBarEl.style.width = pct + "%";
+      timerBarEl.className = "timer-bar" + (pct < 20 ? " danger" : pct < 40 ? " warning" : "");
+    }
+
+    // --- ANSWER ---
+    function answerQuestion(idx) {
+      if (answered) return;
+      answered = true;
+      clearInterval(timerInterval);
+
+      var q = questions[currentQ];
+      var correct = idx === q.c;
+      var elapsed = QUESTION_TIME - (timeLeft / 10);
+      var pts = 0;
+
+      var btns = answersEl.querySelectorAll(".answer-btn");
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].classList.add("locked");
+        if (i === q.c) btns[i].classList.add("correct");
+        if (i === idx && !correct) btns[i].classList.add("wrong");
+      }
+
+      if (correct) {
+        // Score: base 100, bonus for speed (max 100 extra for instant)
+        pts = 100 + Math.round((1 - elapsed / QUESTION_TIME) * 100);
+        score += pts;
+        hudScoreEl.textContent = score;
+        feedbackEl.textContent = "CORRECT +" + pts;
+        feedbackEl.className = "feedback right";
+      } else {
+        feedbackEl.textContent = "WRONG \u2014 " + q.a[q.c];
+        feedbackEl.className = "feedback wrong";
+      }
+
+      results.push({ q: q.q, correct: correct, pts: pts, time: elapsed.toFixed(1), timeout: false });
+
+      setTimeout(function() {
+        currentQ++;
+        showQuestion();
+      }, 1500);
+    }
+
+    function timeOut() {
+      if (answered) return;
+      answered = true;
+
+      var q = questions[currentQ];
+      var btns = answersEl.querySelectorAll(".answer-btn");
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].classList.add("locked");
+        if (i === q.c) btns[i].classList.add("correct");
+      }
+
+      feedbackEl.textContent = "TIME'S UP \u2014 " + q.a[q.c];
+      feedbackEl.className = "feedback timeout";
+
+      results.push({ q: q.q, correct: false, pts: 0, time: QUESTION_TIME.toFixed(1), timeout: true });
+
+      setTimeout(function() {
+        currentQ++;
+        showQuestion();
+      }, 1500);
+    }
+
+    // --- RESULTS ---
+    function showResults() {
+      gameEl.style.display = "none";
+      resultsEl.style.display = "block";
+
+      document.getElementById("final-score").textContent = score;
+      var correctCount = results.filter(function(r) { return r.correct; }).length;
+      document.getElementById("r-correct").textContent = correctCount;
+
+      var totalTime = results.reduce(function(s, r) { return s + parseFloat(r.time); }, 0);
+      document.getElementById("r-avg").textContent = (totalTime / results.length).toFixed(1);
+
+      // High score
+      var hs = getHighScore(selectedCat);
+      var newRecordEl = document.getElementById("new-record");
+      if (score > hs) {
+        setHighScore(selectedCat, score);
+        newRecordEl.style.display = "block";
+      } else {
+        newRecordEl.style.display = "none";
+      }
+
+      // Breakdown
+      var breakdownEl = document.getElementById("breakdown");
+      breakdownEl.innerHTML = "";
+      for (var i = 0; i < results.length; i++) {
+        var r = results[i];
+        var icon = r.correct ? "\u2713" : r.timeout ? "\u23F0" : "\u2717";
+        var iconClass = r.correct ? "right" : r.timeout ? "timeout" : "wrong";
+        var row = document.createElement("div");
+        row.className = "result-row";
+        row.innerHTML = '<div class="result-icon ' + iconClass + '">' + icon + '</div>' +
+          '<div class="result-q">' + escHtml(r.q) + '</div>' +
+          '<div class="result-pts">' + (r.correct ? "+" + r.pts : "0") + '</div>';
+        breakdownEl.appendChild(row);
+      }
+    }
+
+    document.getElementById("btn-again").addEventListener("click", startGame);
+    document.getElementById("btn-menu").addEventListener("click", function() {
+      resultsEl.style.display = "none";
+      menuEl.style.display = "block";
+      showHighScore();
+    });
+
+    // --- KEYBOARD ---
+    document.addEventListener("keydown", function(e) {
+      if (gameEl.style.display === "block" && !answered) {
+        var num = parseInt(e.key);
+        if (num >= 1 && num <= 4) {
+          answerQuestion(num - 1);
+        }
+      }
+      if (e.key === "Enter") {
+        if (menuEl.style.display !== "none") {
+          startGame();
+        }
+      }
+    });
+
+    showHighScore();
+  })();
+  </script>
+</body>
+</html>

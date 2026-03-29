@@ -100,6 +100,7 @@
       width: 100%;
       height: auto;
       cursor: crosshair;
+      touch-action: none;
     }
 
     .prize-table {
@@ -152,11 +153,14 @@
       color: var(--accent-cyan);
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.8rem;
-      padding: 0.6rem 1.8rem;
+      padding: 0.75rem 1.8rem;
+      min-height: 44px;
+      min-width: 44px;
       letter-spacing: 0.08em;
       cursor: pointer;
       transition: all 0.2s;
       margin: 0.3rem;
+      touch-action: manipulation;
     }
 
     .btn:hover {
@@ -223,6 +227,51 @@
       transition: width 0.15s;
       box-shadow: 0 0 6px var(--glow-cyan);
     }
+
+    @media (max-width: 480px) {
+      main {
+        padding: 1rem 0.75rem 3rem;
+      }
+
+      h1 {
+        font-size: 1.3rem;
+      }
+
+      .stats-bar {
+        margin-bottom: 0.8rem;
+        padding: 0.5rem 0;
+      }
+
+      .stat-value {
+        font-size: 0.95rem;
+      }
+
+      .controls {
+        display: flex;
+        gap: 0.4rem;
+        justify-content: center;
+      }
+
+      .btn {
+        flex: 1;
+        max-width: 48%;
+        padding: 0.75rem 0.5rem;
+        font-size: 0.7rem;
+      }
+
+      .prize-table .sym {
+        flex: 0 0 2rem;
+        font-size: 1rem;
+      }
+
+      .prize-table .row {
+        padding: 0.35rem 0.5rem;
+      }
+
+      .hint {
+        font-size: 0.55rem;
+      }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -264,7 +313,7 @@
 
     <div class="prize-table" id="prize-table"></div>
 
-    <p class="hint">DRAG TO SCRATCH &middot; MATCH 3 SYMBOLS IN THE GRID TO WIN</p>
+    <p class="hint">SWIPE OR DRAG TO SCRATCH &middot; MATCH 3 SYMBOLS TO WIN</p>
   </main>
 
   <script>

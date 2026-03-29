@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FLOOD / ZERO game lab</title>
+  <title>FLOOD MEGA / ZERO game lab</title>
   <meta name="theme-color" content="#0a0a0f">
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
@@ -14,9 +14,9 @@
   <link rel="stylesheet" href="../shared.css">
   <style>
     main {
-      max-width: 520px;
+      max-width: 600px;
       margin: 0 auto;
-      padding: 2rem 1.5rem 4rem;
+      padding: 1.5rem 1rem 4rem;
       text-align: center;
     }
 
@@ -26,11 +26,10 @@
       text-decoration: none;
       font-size: 0.75rem;
       letter-spacing: 0.08em;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
       text-align: left;
       width: 100%;
     }
-
     .back:hover { color: var(--accent-cyan); }
 
     h1 {
@@ -46,14 +45,14 @@
       color: var(--text-dim);
       font-size: 0.7rem;
       letter-spacing: 0.1em;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
     }
 
     .controls {
       display: flex;
       justify-content: center;
       gap: 0.5rem;
-      margin-bottom: 1rem;
+      margin-bottom: 0.8rem;
       flex-wrap: wrap;
     }
 
@@ -62,50 +61,30 @@
       border: 1px solid var(--border);
       color: var(--text-muted);
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.7rem;
-      padding: 0.3rem 0.8rem;
+      font-size: 0.65rem;
+      padding: 0.25rem 0.6rem;
       cursor: pointer;
       letter-spacing: 0.06em;
       transition: border-color 0.2s, color 0.2s;
     }
-
-    .controls button:hover {
-      border-color: var(--accent-cyan);
-      color: var(--accent-cyan);
-    }
-
-    .controls button.active {
-      border-color: var(--accent-magenta);
-      color: var(--accent-magenta);
-    }
+    .controls button:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+    .controls button.active { border-color: var(--accent-magenta); color: var(--accent-magenta); }
 
     .stats {
       display: flex;
       justify-content: center;
       gap: 2rem;
-      margin-bottom: 1rem;
+      margin-bottom: 0.8rem;
       font-size: 0.75rem;
     }
 
-    .stat-label {
-      color: var(--text-dim);
-      letter-spacing: 0.08em;
-    }
-
-    .stat-value {
-      color: var(--accent-cyan);
-      font-weight: 700;
-      text-shadow: 0 0 8px var(--glow-cyan-soft);
-    }
-
-    .stat-value.warn {
-      color: var(--accent-magenta);
-      text-shadow: 0 0 8px var(--glow-magenta);
-    }
+    .stat-label { color: var(--text-dim); letter-spacing: 0.08em; }
+    .stat-value { color: var(--accent-cyan); font-weight: 700; text-shadow: 0 0 8px var(--glow-cyan-soft); }
+    .stat-value.warn { color: var(--accent-magenta); text-shadow: 0 0 8px var(--glow-magenta); }
 
     #board {
       display: inline-grid;
-      gap: 1px;
+      gap: 0px;
       border: 1px solid var(--border);
       margin-bottom: 1rem;
       background: var(--border);
@@ -114,149 +93,98 @@
     .cell {
       width: 100%;
       aspect-ratio: 1;
-      transition: background-color 0.12s ease-out;
+      transition: background-color 0.08s ease-out;
     }
 
     .cell.wave {
-      animation: waveFlash 0.35s ease-out;
+      animation: waveFlash 0.25s ease-out;
     }
 
     @keyframes waveFlash {
-      0% { transform: scale(1); filter: brightness(1); }
-      30% { transform: scale(1.18); filter: brightness(1.6); }
-      100% { transform: scale(1); filter: brightness(1); }
+      0% { filter: brightness(1); }
+      40% { filter: brightness(1.8); }
+      100% { filter: brightness(1); }
     }
 
     .color-picker {
       display: flex;
       justify-content: center;
-      gap: 0.6rem;
-      margin-bottom: 1.2rem;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
     }
 
     .color-btn {
-      width: 40px;
-      height: 40px;
+      width: 34px;
+      height: 34px;
       border: 2px solid transparent;
       cursor: pointer;
       transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
       padding: 0;
     }
-
-    .color-btn:hover {
-      transform: scale(1.15);
-    }
-
-    .color-btn.current {
-      border-color: var(--text-bright);
-      box-shadow: 0 0 12px rgba(224, 224, 232, 0.3);
-    }
-
-    .color-btn.disabled {
-      opacity: 0.4;
-      cursor: default;
-      transform: none !important;
-    }
+    .color-btn:hover { transform: scale(1.15); }
+    .color-btn.current { border-color: var(--text-bright); box-shadow: 0 0 10px rgba(224, 224, 232, 0.3); }
+    .color-btn.disabled { opacity: 0.4; cursor: default; transform: none !important; }
 
     .message {
       font-size: 0.9rem;
       font-weight: 700;
       letter-spacing: 0.08em;
-      margin-bottom: 1rem;
+      margin-bottom: 0.8rem;
       min-height: 1.4em;
     }
+    .message.win { color: var(--accent-green); text-shadow: 0 0 10px rgba(57, 255, 20, 0.4); }
+    .message.lose { color: var(--accent-magenta); text-shadow: 0 0 10px var(--glow-magenta); }
 
-    .message.win {
-      color: var(--accent-green);
-      text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
-    }
-
-    .message.lose {
-      color: var(--accent-magenta);
-      text-shadow: 0 0 10px var(--glow-magenta);
-    }
-
-    .help {
-      color: var(--text-dim);
-      font-size: 0.65rem;
-      line-height: 1.6;
-      letter-spacing: 0.04em;
-      margin-top: 1.5rem;
-      border-top: 1px solid var(--border);
-      padding-top: 1rem;
-    }
-
-    .best {
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      margin-bottom: 1rem;
-    }
-
-    .best span {
-      color: var(--accent-green);
-      text-shadow: 0 0 6px rgba(57, 255, 20, 0.3);
-    }
+    .best { font-size: 0.7rem; color: var(--text-dim); margin-bottom: 0.8rem; }
+    .best span { color: var(--accent-green); text-shadow: 0 0 6px rgba(57, 255, 20, 0.3); }
 
     .progress-bar {
       width: 100%;
       height: 4px;
       background: var(--bg-secondary);
       border: 1px solid var(--border);
-      margin-bottom: 1rem;
+      margin-bottom: 0.8rem;
       overflow: hidden;
     }
+    .progress-fill { height: 100%; background: var(--accent-cyan); transition: width 0.3s; box-shadow: 0 0 8px var(--glow-cyan-soft); }
+    .progress-fill.high { background: var(--accent-magenta); box-shadow: 0 0 8px var(--glow-magenta); }
 
-    .progress-fill {
-      height: 100%;
-      background: var(--accent-cyan);
-      transition: width 0.3s;
-      box-shadow: 0 0 8px var(--glow-cyan-soft);
-    }
-
-    .progress-fill.high {
-      background: var(--accent-magenta);
-      box-shadow: 0 0 8px var(--glow-magenta);
-    }
-
-    .variants-link {
+    .help {
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      line-height: 1.6;
+      letter-spacing: 0.04em;
       margin-top: 1rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.8rem;
+    }
+
+    .variant-nav {
+      margin-top: 0.8rem;
       font-size: 0.65rem;
       letter-spacing: 0.06em;
     }
-
-    .variants-link a {
-      color: var(--accent-purple);
-      text-decoration: none;
-      border-bottom: 1px solid transparent;
-      transition: border-color 0.2s, color 0.2s;
-    }
-
-    .variants-link a:hover {
-      color: var(--accent-cyan);
-      border-color: var(--accent-cyan);
-    }
-
-    @media (max-width: 400px) {
-      .color-btn { width: 32px; height: 32px; }
-    }
+    .variant-nav a { color: var(--accent-purple); text-decoration: none; transition: color 0.2s; }
+    .variant-nav a:hover { color: var(--accent-cyan); }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
 <body>
   <main>
     <a href="./" class="back">&lt; GAME LAB</a>
-    <h1>FLOOD</h1>
-    <p class="subtitle">FILL THE BOARD WITH ONE COLOR</p>
+    <h1>FLOOD MEGA</h1>
+    <p class="subtitle">MASSIVE GRIDS &middot; 8 COLORS &middot; ENDURANCE MODE</p>
 
     <div class="controls">
-      <button class="active" data-size="10">10x10</button>
-      <button data-size="14">14x14</button>
-      <button data-size="18">18x18</button>
+      <button class="active" data-size="22">22x22</button>
+      <button data-size="26">26x26</button>
+      <button data-size="30">30x30</button>
       <button id="new-btn">NEW GAME</button>
     </div>
 
     <div class="stats">
-      <div><span class="stat-label">MOVES </span><span class="stat-value" id="moves">0</span><span class="stat-label"> / </span><span class="stat-value" id="max-moves">25</span></div>
+      <div><span class="stat-label">MOVES </span><span class="stat-value" id="moves">0</span><span class="stat-label"> / </span><span class="stat-value" id="max-moves">50</span></div>
       <div><span class="stat-label">FILLED </span><span class="stat-value" id="filled">0%</span></div>
     </div>
 
@@ -267,33 +195,30 @@
     <div class="color-picker" id="picker"></div>
 
     <div class="message" id="message"></div>
-
     <div class="best" id="best-display"></div>
 
-    <div class="variants-link">
-      TRY VARIANTS:
+    <div class="variant-nav">
+      <a href="flood.html">CLASSIC</a> &middot;
       <a href="flood-tiny.html">TINY</a> &middot;
-      <a href="flood-mega.html">MEGA</a> &middot;
       <a href="flood-lava.html">LAVA</a> &middot;
       <a href="flood-ice.html">ICE</a> &middot;
       <a href="flood-cluster.html">CLUSTER</a>
     </div>
 
     <div class="help">
-      CLICK A COLOR BELOW TO FLOOD FROM THE TOP-LEFT<br>
-      FILL THE ENTIRE BOARD BEFORE RUNNING OUT OF MOVES<br>
-      KEYS 1-6 TO PICK COLORS &middot; N FOR NEW GAME
+      8 COLORS, MASSIVE GRIDS — THE ULTIMATE FLOOD CHALLENGE<br>
+      KEYS 1-8 TO PICK COLORS &middot; N FOR NEW GAME
     </div>
   </main>
 
   <script>
-    const COLORS = ['#ff2d7b', '#00f0ff', '#39ff14', '#9d4edd', '#ffb000', '#ff6ac1'];
-    const COLOR_NAMES = ['MAGENTA', 'CYAN', 'GREEN', 'PURPLE', 'AMBER', 'PINK'];
-    const SIZES = { 10: 25, 14: 30, 18: 40 };
-    const WAVE_DELAY = 28;
+    const COLORS = ['#ff2d7b', '#00f0ff', '#39ff14', '#9d4edd', '#ffb000', '#ff6ac1', '#ff4444', '#44ffcc'];
+    const COLOR_NAMES = ['MAGENTA', 'CYAN', 'GREEN', 'PURPLE', 'AMBER', 'PINK', 'RED', 'TEAL'];
+    const SIZES = { 22: 50, 26: 58, 30: 66 };
+    const WAVE_DELAY = 12;
 
-    let gridSize = 10;
-    let maxMoves = 25;
+    let gridSize = 22;
+    let maxMoves = 50;
     let grid = [];
     let moves = 0;
     let gameOver = false;
@@ -309,11 +234,8 @@
     const bestEl = document.getElementById('best-display');
     const progressEl = document.getElementById('progress');
 
-    try { best = JSON.parse(localStorage.getItem('zero-flood-best') || '{}'); } catch(e) { best = {}; }
-
-    function saveBest() {
-      localStorage.setItem('zero-flood-best', JSON.stringify(best));
-    }
+    try { best = JSON.parse(localStorage.getItem('zero-flood-mega-best') || '{}'); } catch(e) { best = {}; }
+    function saveBest() { localStorage.setItem('zero-flood-mega-best', JSON.stringify(best)); }
 
     function init() {
       moves = 0;
@@ -340,9 +262,8 @@
     function renderBoard() {
       boardEl.innerHTML = '';
       boardEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
-
-      const cellSize = Math.min(Math.floor((Math.min(480, window.innerWidth - 48)) / gridSize), 36);
-      boardEl.style.width = (cellSize * gridSize + gridSize - 1) + 'px';
+      const cellSize = Math.min(Math.floor((Math.min(560, window.innerWidth - 32)) / gridSize), 20);
+      boardEl.style.width = (cellSize * gridSize) + 'px';
 
       for (let r = 0; r < gridSize; r++) {
         for (let c = 0; c < gridSize; c++) {
@@ -359,7 +280,6 @@
     function renderPicker() {
       pickerEl.innerHTML = '';
       const currentColor = grid[0][0];
-
       COLORS.forEach((color, i) => {
         const btn = document.createElement('button');
         btn.className = 'color-btn';
@@ -374,31 +294,22 @@
 
     async function pickColor(colorIndex) {
       if (gameOver || animating) return;
-
       const currentColor = grid[0][0];
       if (colorIndex === currentColor) return;
-
       moves++;
       animating = true;
       renderPicker();
       await floodAnimated(currentColor, colorIndex);
       animating = false;
-
       renderPicker();
       updateStats();
-
       const pct = getFilledPercent();
       if (pct === 100) {
         gameOver = true;
-        messageEl.textContent = 'BOARD CLEARED IN ' + moves + ' MOVES';
+        messageEl.textContent = 'MEGA CLEARED IN ' + moves + ' MOVES';
         messageEl.className = 'message win';
-        const key = 'size' + gridSize;
-        if (!best[key] || moves < best[key]) {
-          best[key] = moves;
-          saveBest();
-          updateBestDisplay();
-          messageEl.textContent += ' — NEW BEST!';
-        }
+        const key = 's' + gridSize;
+        if (!best[key] || moves < best[key]) { best[key] = moves; saveBest(); updateBestDisplay(); messageEl.textContent += ' — NEW BEST!'; }
       } else if (moves >= maxMoves) {
         gameOver = true;
         messageEl.textContent = 'OUT OF MOVES — ' + pct + '% FILLED';
@@ -407,7 +318,6 @@
     }
 
     async function floodAnimated(oldColor, newColor) {
-      // BFS to find connected cells and group by distance (ring)
       const visited = Array.from({ length: gridSize }, () => new Array(gridSize).fill(false));
       const rings = [];
       const queue = [[0, 0, 0]];
@@ -418,19 +328,15 @@
         if (grid[r][c] === oldColor) {
           if (!rings[dist]) rings[dist] = [];
           rings[dist].push({ r, c });
-
           for (const [nr, nc] of [[r-1,c],[r+1,c],[r,c-1],[r,c+1]]) {
             if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && !visited[nr][nc]) {
               visited[nr][nc] = true;
-              if (grid[nr][nc] === oldColor) {
-                queue.push([nr, nc, dist + 1]);
-              }
+              if (grid[nr][nc] === oldColor) queue.push([nr, nc, dist + 1]);
             }
           }
         }
       }
 
-      // Animate ring by ring
       for (const ring of rings) {
         if (!ring) continue;
         for (const { r, c } of ring) {
@@ -439,17 +345,14 @@
           if (cell) {
             cell.style.backgroundColor = COLORS[newColor];
             cell.classList.remove('wave');
-            void cell.offsetWidth; // force reflow
+            void cell.offsetWidth;
             cell.classList.add('wave');
           }
         }
         await delay(WAVE_DELAY);
       }
-
-      // Clean up wave classes after last ring finishes
-      await delay(350);
-      const cells = boardEl.querySelectorAll('.wave');
-      cells.forEach(c => c.classList.remove('wave'));
+      await delay(250);
+      boardEl.querySelectorAll('.wave').forEach(c => c.classList.remove('wave'));
     }
 
     function getFilledPercent() {
@@ -458,7 +361,6 @@
       const stack = [[0, 0]];
       visited[0][0] = true;
       let count = 0;
-
       while (stack.length > 0) {
         const [r, c] = stack.pop();
         if (grid[r][c] === targetColor) {
@@ -466,51 +368,32 @@
           for (const [nr, nc] of [[r-1,c],[r+1,c],[r,c-1],[r,c+1]]) {
             if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && !visited[nr][nc]) {
               visited[nr][nc] = true;
-              if (grid[nr][nc] === targetColor) {
-                stack.push([nr, nc]);
-              }
+              if (grid[nr][nc] === targetColor) stack.push([nr, nc]);
             }
           }
         }
       }
-
       return Math.round((count / (gridSize * gridSize)) * 100);
     }
 
     function updateStats() {
       movesEl.textContent = moves;
       maxMovesEl.textContent = maxMoves;
-      if (moves > maxMoves * 0.75) {
-        movesEl.classList.add('warn');
-      } else {
-        movesEl.classList.remove('warn');
-      }
-
+      movesEl.classList.toggle('warn', moves > maxMoves * 0.75);
       const pct = getFilledPercent();
       filledEl.textContent = pct + '%';
-
       progressEl.style.width = pct + '%';
-      if (moves > maxMoves * 0.75 && pct < 80) {
-        progressEl.classList.add('high');
-      } else {
-        progressEl.classList.remove('high');
-      }
+      progressEl.classList.toggle('high', moves > maxMoves * 0.75 && pct < 80);
     }
 
     function updateBestDisplay() {
-      const key = 'size' + gridSize;
-      if (best[key]) {
-        bestEl.innerHTML = 'BEST ' + gridSize + 'x' + gridSize + ': <span>' + best[key] + ' MOVES</span>';
-      } else {
-        bestEl.textContent = '';
-      }
+      const key = 's' + gridSize;
+      if (best[key]) bestEl.innerHTML = 'BEST ' + gridSize + 'x' + gridSize + ': <span>' + best[key] + ' MOVES</span>';
+      else bestEl.textContent = '';
     }
 
-    function delay(ms) {
-      return new Promise(r => setTimeout(r, ms));
-    }
+    function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-    // Size buttons
     document.querySelectorAll('[data-size]').forEach(btn => {
       btn.addEventListener('click', () => {
         if (animating) return;
@@ -521,26 +404,14 @@
       });
     });
 
-    document.getElementById('new-btn').addEventListener('click', () => {
-      if (animating) return;
-      init();
-    });
+    document.getElementById('new-btn').addEventListener('click', () => { if (!animating) init(); });
 
-    // Keyboard
     document.addEventListener('keydown', (e) => {
-      const key = e.key;
-      if (key >= '1' && key <= '6') {
-        e.preventDefault();
-        pickColor(parseInt(key) - 1);
-      } else if (key === 'n' || key === 'N') {
-        e.preventDefault();
-        if (!animating) init();
-      }
+      if (e.key >= '1' && e.key <= '8') { e.preventDefault(); pickColor(parseInt(e.key) - 1); }
+      else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); if (!animating) init(); }
     });
 
-    window.addEventListener('resize', () => {
-      if (grid.length > 0 && !animating) renderBoard();
-    });
+    window.addEventListener('resize', () => { if (grid.length > 0 && !animating) renderBoard(); });
 
     init();
   </script>

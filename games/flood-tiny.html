@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FLOOD / ZERO game lab</title>
+  <title>FLOOD TINY / ZERO game lab</title>
   <meta name="theme-color" content="#0a0a0f">
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="../shared.css">
   <style>
     main {
-      max-width: 520px;
+      max-width: 420px;
       margin: 0 auto;
       padding: 2rem 1.5rem 4rem;
       text-align: center;
@@ -36,10 +36,10 @@
     h1 {
       font-size: 1.6rem;
       font-weight: 800;
-      color: var(--accent-magenta);
+      color: var(--accent-cyan);
       letter-spacing: 0.12em;
       margin-bottom: 0.3rem;
-      text-shadow: 0 0 20px var(--glow-magenta);
+      text-shadow: 0 0 20px var(--glow-cyan);
     }
 
     .subtitle {
@@ -49,42 +49,12 @@
       margin-bottom: 1.5rem;
     }
 
-    .controls {
-      display: flex;
-      justify-content: center;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
-    }
-
-    .controls button {
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.7rem;
-      padding: 0.3rem 0.8rem;
-      cursor: pointer;
-      letter-spacing: 0.06em;
-      transition: border-color 0.2s, color 0.2s;
-    }
-
-    .controls button:hover {
-      border-color: var(--accent-cyan);
-      color: var(--accent-cyan);
-    }
-
-    .controls button.active {
-      border-color: var(--accent-magenta);
-      color: var(--accent-magenta);
-    }
-
     .stats {
       display: flex;
       justify-content: center;
       gap: 2rem;
       margin-bottom: 1rem;
-      font-size: 0.75rem;
+      font-size: 0.8rem;
     }
 
     .stat-label {
@@ -105,53 +75,51 @@
 
     #board {
       display: inline-grid;
-      gap: 1px;
-      border: 1px solid var(--border);
-      margin-bottom: 1rem;
+      gap: 2px;
+      border: 2px solid var(--border);
+      margin-bottom: 1.2rem;
       background: var(--border);
     }
 
     .cell {
       width: 100%;
       aspect-ratio: 1;
+      border-radius: 4px;
       transition: background-color 0.12s ease-out;
     }
 
     .cell.wave {
-      animation: waveFlash 0.35s ease-out;
+      animation: waveFlash 0.4s ease-out;
     }
 
     @keyframes waveFlash {
-      0% { transform: scale(1); filter: brightness(1); }
-      30% { transform: scale(1.18); filter: brightness(1.6); }
-      100% { transform: scale(1); filter: brightness(1); }
+      0% { transform: scale(1); filter: brightness(1); border-radius: 4px; }
+      30% { transform: scale(1.2); filter: brightness(1.7); border-radius: 8px; }
+      100% { transform: scale(1); filter: brightness(1); border-radius: 4px; }
     }
 
     .color-picker {
       display: flex;
       justify-content: center;
-      gap: 0.6rem;
+      gap: 0.8rem;
       margin-bottom: 1.2rem;
     }
 
     .color-btn {
-      width: 40px;
-      height: 40px;
+      width: 52px;
+      height: 52px;
       border: 2px solid transparent;
+      border-radius: 6px;
       cursor: pointer;
       transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
       padding: 0;
     }
 
-    .color-btn:hover {
-      transform: scale(1.15);
-    }
-
+    .color-btn:hover { transform: scale(1.15); }
     .color-btn.current {
       border-color: var(--text-bright);
-      box-shadow: 0 0 12px rgba(224, 224, 232, 0.3);
+      box-shadow: 0 0 14px rgba(224, 224, 232, 0.3);
     }
-
     .color-btn.disabled {
       opacity: 0.4;
       cursor: default;
@@ -159,7 +127,7 @@
     }
 
     .message {
-      font-size: 0.9rem;
+      font-size: 1rem;
       font-weight: 700;
       letter-spacing: 0.08em;
       margin-bottom: 1rem;
@@ -176,16 +144,6 @@
       text-shadow: 0 0 10px var(--glow-magenta);
     }
 
-    .help {
-      color: var(--text-dim);
-      font-size: 0.65rem;
-      line-height: 1.6;
-      letter-spacing: 0.04em;
-      margin-top: 1.5rem;
-      border-top: 1px solid var(--border);
-      padding-top: 1rem;
-    }
-
     .best {
       font-size: 0.7rem;
       color: var(--text-dim);
@@ -199,11 +157,12 @@
 
     .progress-bar {
       width: 100%;
-      height: 4px;
+      height: 6px;
       background: var(--bg-secondary);
       border: 1px solid var(--border);
       margin-bottom: 1rem;
       overflow: hidden;
+      border-radius: 3px;
     }
 
     .progress-fill {
@@ -211,6 +170,7 @@
       background: var(--accent-cyan);
       transition: width 0.3s;
       box-shadow: 0 0 8px var(--glow-cyan-soft);
+      border-radius: 3px;
     }
 
     .progress-fill.high {
@@ -218,45 +178,66 @@
       box-shadow: 0 0 8px var(--glow-magenta);
     }
 
-    .variants-link {
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.3rem 0.8rem;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .help {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      line-height: 1.6;
+      letter-spacing: 0.04em;
+      margin-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+
+    .variant-nav {
       margin-top: 1rem;
       font-size: 0.65rem;
       letter-spacing: 0.06em;
     }
 
-    .variants-link a {
+    .variant-nav a {
       color: var(--accent-purple);
       text-decoration: none;
-      border-bottom: 1px solid transparent;
-      transition: border-color 0.2s, color 0.2s;
+      transition: color 0.2s;
     }
-
-    .variants-link a:hover {
-      color: var(--accent-cyan);
-      border-color: var(--accent-cyan);
-    }
-
-    @media (max-width: 400px) {
-      .color-btn { width: 32px; height: 32px; }
-    }
+    .variant-nav a:hover { color: var(--accent-cyan); }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
 <body>
   <main>
     <a href="./" class="back">&lt; GAME LAB</a>
-    <h1>FLOOD</h1>
-    <p class="subtitle">FILL THE BOARD WITH ONE COLOR</p>
+    <h1>FLOOD TINY</h1>
+    <p class="subtitle">6&times;6 GRID &middot; 4 COLORS &middot; BIG CHUNKY CELLS</p>
 
     <div class="controls">
-      <button class="active" data-size="10">10x10</button>
-      <button data-size="14">14x14</button>
-      <button data-size="18">18x18</button>
-      <button id="new-btn">NEW GAME</button>
+      <button class="btn" id="new-btn">NEW GAME</button>
     </div>
 
     <div class="stats">
-      <div><span class="stat-label">MOVES </span><span class="stat-value" id="moves">0</span><span class="stat-label"> / </span><span class="stat-value" id="max-moves">25</span></div>
+      <div><span class="stat-label">MOVES </span><span class="stat-value" id="moves">0</span><span class="stat-label"> / </span><span class="stat-value" id="max-moves">12</span></div>
       <div><span class="stat-label">FILLED </span><span class="stat-value" id="filled">0%</span></div>
     </div>
 
@@ -270,9 +251,8 @@
 
     <div class="best" id="best-display"></div>
 
-    <div class="variants-link">
-      TRY VARIANTS:
-      <a href="flood-tiny.html">TINY</a> &middot;
+    <div class="variant-nav">
+      <a href="flood.html">CLASSIC</a> &middot;
       <a href="flood-mega.html">MEGA</a> &middot;
       <a href="flood-lava.html">LAVA</a> &middot;
       <a href="flood-ice.html">ICE</a> &middot;
@@ -280,25 +260,24 @@
     </div>
 
     <div class="help">
-      CLICK A COLOR BELOW TO FLOOD FROM THE TOP-LEFT<br>
-      FILL THE ENTIRE BOARD BEFORE RUNNING OUT OF MOVES<br>
-      KEYS 1-6 TO PICK COLORS &middot; N FOR NEW GAME
+      CLICK A COLOR TO FLOOD FROM THE TOP-LEFT<br>
+      4 COLORS, 12 MOVES — QUICK AND PUNCHY<br>
+      KEYS 1-4 TO PICK COLORS &middot; N FOR NEW GAME
     </div>
   </main>
 
   <script>
-    const COLORS = ['#ff2d7b', '#00f0ff', '#39ff14', '#9d4edd', '#ffb000', '#ff6ac1'];
-    const COLOR_NAMES = ['MAGENTA', 'CYAN', 'GREEN', 'PURPLE', 'AMBER', 'PINK'];
-    const SIZES = { 10: 25, 14: 30, 18: 40 };
-    const WAVE_DELAY = 28;
+    const COLORS = ['#ff2d7b', '#00f0ff', '#39ff14', '#9d4edd'];
+    const COLOR_NAMES = ['MAGENTA', 'CYAN', 'GREEN', 'PURPLE'];
+    const GRID_SIZE = 6;
+    const MAX_MOVES = 12;
+    const WAVE_DELAY = 55;
 
-    let gridSize = 10;
-    let maxMoves = 25;
     let grid = [];
     let moves = 0;
     let gameOver = false;
     let animating = false;
-    let best = {};
+    let best = null;
 
     const boardEl = document.getElementById('board');
     const pickerEl = document.getElementById('picker');
@@ -309,10 +288,10 @@
     const bestEl = document.getElementById('best-display');
     const progressEl = document.getElementById('progress');
 
-    try { best = JSON.parse(localStorage.getItem('zero-flood-best') || '{}'); } catch(e) { best = {}; }
+    try { best = JSON.parse(localStorage.getItem('zero-flood-tiny-best')); } catch(e) {}
 
     function saveBest() {
-      localStorage.setItem('zero-flood-best', JSON.stringify(best));
+      localStorage.setItem('zero-flood-tiny-best', JSON.stringify(best));
     }
 
     function init() {
@@ -321,12 +300,11 @@
       animating = false;
       messageEl.textContent = '';
       messageEl.className = 'message';
-      maxMoves = SIZES[gridSize];
       grid = [];
 
-      for (let r = 0; r < gridSize; r++) {
+      for (let r = 0; r < GRID_SIZE; r++) {
         grid[r] = [];
-        for (let c = 0; c < gridSize; c++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
           grid[r][c] = Math.floor(Math.random() * COLORS.length);
         }
       }
@@ -339,13 +317,12 @@
 
     function renderBoard() {
       boardEl.innerHTML = '';
-      boardEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+      boardEl.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 1fr)`;
+      const cellSize = Math.min(Math.floor((Math.min(360, window.innerWidth - 60)) / GRID_SIZE), 56);
+      boardEl.style.width = (cellSize * GRID_SIZE + (GRID_SIZE - 1) * 2) + 'px';
 
-      const cellSize = Math.min(Math.floor((Math.min(480, window.innerWidth - 48)) / gridSize), 36);
-      boardEl.style.width = (cellSize * gridSize + gridSize - 1) + 'px';
-
-      for (let r = 0; r < gridSize; r++) {
-        for (let c = 0; c < gridSize; c++) {
+      for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
           const cell = document.createElement('div');
           cell.className = 'cell';
           cell.style.backgroundColor = COLORS[grid[r][c]];
@@ -359,7 +336,6 @@
     function renderPicker() {
       pickerEl.innerHTML = '';
       const currentColor = grid[0][0];
-
       COLORS.forEach((color, i) => {
         const btn = document.createElement('button');
         btn.className = 'color-btn';
@@ -374,7 +350,6 @@
 
     async function pickColor(colorIndex) {
       if (gameOver || animating) return;
-
       const currentColor = grid[0][0];
       if (colorIndex === currentColor) return;
 
@@ -383,23 +358,21 @@
       renderPicker();
       await floodAnimated(currentColor, colorIndex);
       animating = false;
-
       renderPicker();
       updateStats();
 
       const pct = getFilledPercent();
       if (pct === 100) {
         gameOver = true;
-        messageEl.textContent = 'BOARD CLEARED IN ' + moves + ' MOVES';
+        messageEl.textContent = 'CLEARED IN ' + moves + ' MOVES';
         messageEl.className = 'message win';
-        const key = 'size' + gridSize;
-        if (!best[key] || moves < best[key]) {
-          best[key] = moves;
+        if (!best || moves < best) {
+          best = moves;
           saveBest();
           updateBestDisplay();
           messageEl.textContent += ' — NEW BEST!';
         }
-      } else if (moves >= maxMoves) {
+      } else if (moves >= MAX_MOVES) {
         gameOver = true;
         messageEl.textContent = 'OUT OF MOVES — ' + pct + '% FILLED';
         messageEl.className = 'message lose';
@@ -407,8 +380,7 @@
     }
 
     async function floodAnimated(oldColor, newColor) {
-      // BFS to find connected cells and group by distance (ring)
-      const visited = Array.from({ length: gridSize }, () => new Array(gridSize).fill(false));
+      const visited = Array.from({ length: GRID_SIZE }, () => new Array(GRID_SIZE).fill(false));
       const rings = [];
       const queue = [[0, 0, 0]];
       visited[0][0] = true;
@@ -418,129 +390,82 @@
         if (grid[r][c] === oldColor) {
           if (!rings[dist]) rings[dist] = [];
           rings[dist].push({ r, c });
-
           for (const [nr, nc] of [[r-1,c],[r+1,c],[r,c-1],[r,c+1]]) {
-            if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && !visited[nr][nc]) {
+            if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && !visited[nr][nc]) {
               visited[nr][nc] = true;
-              if (grid[nr][nc] === oldColor) {
-                queue.push([nr, nc, dist + 1]);
-              }
+              if (grid[nr][nc] === oldColor) queue.push([nr, nc, dist + 1]);
             }
           }
         }
       }
 
-      // Animate ring by ring
       for (const ring of rings) {
         if (!ring) continue;
         for (const { r, c } of ring) {
           grid[r][c] = newColor;
-          const cell = boardEl.children[r * gridSize + c];
+          const cell = boardEl.children[r * GRID_SIZE + c];
           if (cell) {
             cell.style.backgroundColor = COLORS[newColor];
             cell.classList.remove('wave');
-            void cell.offsetWidth; // force reflow
+            void cell.offsetWidth;
             cell.classList.add('wave');
           }
         }
         await delay(WAVE_DELAY);
       }
-
-      // Clean up wave classes after last ring finishes
-      await delay(350);
-      const cells = boardEl.querySelectorAll('.wave');
-      cells.forEach(c => c.classList.remove('wave'));
+      await delay(400);
+      boardEl.querySelectorAll('.wave').forEach(c => c.classList.remove('wave'));
     }
 
     function getFilledPercent() {
       const targetColor = grid[0][0];
-      const visited = Array.from({ length: gridSize }, () => new Array(gridSize).fill(false));
+      const visited = Array.from({ length: GRID_SIZE }, () => new Array(GRID_SIZE).fill(false));
       const stack = [[0, 0]];
       visited[0][0] = true;
       let count = 0;
-
       while (stack.length > 0) {
         const [r, c] = stack.pop();
         if (grid[r][c] === targetColor) {
           count++;
           for (const [nr, nc] of [[r-1,c],[r+1,c],[r,c-1],[r,c+1]]) {
-            if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && !visited[nr][nc]) {
+            if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && !visited[nr][nc]) {
               visited[nr][nc] = true;
-              if (grid[nr][nc] === targetColor) {
-                stack.push([nr, nc]);
-              }
+              if (grid[nr][nc] === targetColor) stack.push([nr, nc]);
             }
           }
         }
       }
-
-      return Math.round((count / (gridSize * gridSize)) * 100);
+      return Math.round((count / (GRID_SIZE * GRID_SIZE)) * 100);
     }
 
     function updateStats() {
       movesEl.textContent = moves;
-      maxMovesEl.textContent = maxMoves;
-      if (moves > maxMoves * 0.75) {
-        movesEl.classList.add('warn');
-      } else {
-        movesEl.classList.remove('warn');
-      }
-
+      maxMovesEl.textContent = MAX_MOVES;
+      movesEl.classList.toggle('warn', moves > MAX_MOVES * 0.75);
       const pct = getFilledPercent();
       filledEl.textContent = pct + '%';
-
       progressEl.style.width = pct + '%';
-      if (moves > maxMoves * 0.75 && pct < 80) {
-        progressEl.classList.add('high');
-      } else {
-        progressEl.classList.remove('high');
-      }
+      progressEl.classList.toggle('high', moves > MAX_MOVES * 0.75 && pct < 80);
     }
 
     function updateBestDisplay() {
-      const key = 'size' + gridSize;
-      if (best[key]) {
-        bestEl.innerHTML = 'BEST ' + gridSize + 'x' + gridSize + ': <span>' + best[key] + ' MOVES</span>';
+      if (best) {
+        bestEl.innerHTML = 'BEST: <span>' + best + ' MOVES</span>';
       } else {
         bestEl.textContent = '';
       }
     }
 
-    function delay(ms) {
-      return new Promise(r => setTimeout(r, ms));
-    }
+    function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-    // Size buttons
-    document.querySelectorAll('[data-size]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (animating) return;
-        document.querySelectorAll('[data-size]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        gridSize = parseInt(btn.dataset.size);
-        init();
-      });
-    });
+    document.getElementById('new-btn').addEventListener('click', () => { if (!animating) init(); });
 
-    document.getElementById('new-btn').addEventListener('click', () => {
-      if (animating) return;
-      init();
-    });
-
-    // Keyboard
     document.addEventListener('keydown', (e) => {
-      const key = e.key;
-      if (key >= '1' && key <= '6') {
-        e.preventDefault();
-        pickColor(parseInt(key) - 1);
-      } else if (key === 'n' || key === 'N') {
-        e.preventDefault();
-        if (!animating) init();
-      }
+      if (e.key >= '1' && e.key <= '4') { e.preventDefault(); pickColor(parseInt(e.key) - 1); }
+      else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); if (!animating) init(); }
     });
 
-    window.addEventListener('resize', () => {
-      if (grid.length > 0 && !animating) renderBoard();
-    });
+    window.addEventListener('resize', () => { if (grid.length > 0 && !animating) renderBoard(); });
 
     init();
   </script>

@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON DUNGEON / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1rem 4rem;
+      text-align: center;
+    }
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+    .back:hover { color: var(--accent-cyan); }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+    .info {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 1rem;
+    }
+    #hud {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      font-size: 0.75rem;
+      margin-bottom: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .hud-item { color: var(--text-muted); }
+    .hud-val-hp { color: #39ff14; }
+    .hud-val-atk { color: #ff2d7b; }
+    .hud-val-def { color: #00f0ff; }
+    .hud-val-lvl { color: #9d4edd; }
+    .hud-val-xp { color: #ffb000; }
+    .hud-val-gold { color: #ffb000; }
+    #map-wrap {
+      display: inline-block;
+      border: 1px solid var(--border);
+      padding: 2px;
+      line-height: 0;
+      margin-bottom: 0.6rem;
+    }
+    canvas { display: block; image-rendering: pixelated; }
+    #log {
+      text-align: left;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      padding: 0.6rem 0.8rem;
+      min-height: 3rem;
+      max-height: 5rem;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+    .log-line { margin: 0; }
+    .log-combat { color: #ff2d7b; }
+    .log-pickup { color: #39ff14; }
+    .log-info { color: #00f0ff; }
+    .log-danger { color: #ff1744; }
+    #controls {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+    }
+    #overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10,10,15,0.92);
+      z-index: 10;
+      justify-content: center;
+      align-items: center;
+    }
+    #overlay.show { display: flex; }
+    .overlay-box {
+      text-align: center;
+      padding: 2rem;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      max-width: 340px;
+    }
+    .overlay-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5rem;
+    }
+    .overlay-msg {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+    .btn {
+      background: none;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.5rem 1.5rem;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn:hover {
+      background: var(--accent-cyan);
+      color: var(--bg);
+    }
+    #legend {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      margin-bottom: 0.8rem;
+      flex-wrap: wrap;
+    }
+    .leg-item { display: flex; align-items: center; gap: 0.3rem; }
+    .leg-swatch {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+    }
+    @media (max-width: 500px) {
+      canvas { max-width: 100%; height: auto; }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>NEON DUNGEON</h1>
+    <p class="info">ARROW KEYS / WASD TO MOVE &middot; BUMP ENEMIES TO ATTACK &middot; REACH THE STAIRS</p>
+    <div id="hud">
+      <span class="hud-item">HP <span class="hud-val-hp" id="hud-hp">20/20</span></span>
+      <span class="hud-item">ATK <span class="hud-val-atk" id="hud-atk">3</span></span>
+      <span class="hud-item">DEF <span class="hud-val-def" id="hud-def">0</span></span>
+      <span class="hud-item">LVL <span class="hud-val-lvl" id="hud-lvl">1</span></span>
+      <span class="hud-item">XP <span class="hud-val-xp" id="hud-xp">0/10</span></span>
+      <span class="hud-item">GOLD <span class="hud-val-gold" id="hud-gold">0</span></span>
+    </div>
+    <div id="legend">
+      <span class="leg-item"><span class="leg-swatch" style="background:#00f0ff"></span> YOU</span>
+      <span class="leg-item"><span class="leg-swatch" style="background:#39ff14"></span> POTION</span>
+      <span class="leg-item"><span class="leg-swatch" style="background:#ffb000"></span> GOLD</span>
+      <span class="leg-item"><span class="leg-swatch" style="background:#ff2d7b"></span> ENEMY</span>
+      <span class="leg-item"><span class="leg-swatch" style="background:#9d4edd"></span> STAIRS</span>
+    </div>
+    <div id="map-wrap"><canvas id="c"></canvas></div>
+    <div id="log"></div>
+    <p id="controls">ARROW KEYS / WASD &middot; . OR SPACE TO WAIT</p>
+  </main>
+  <div id="overlay">
+    <div class="overlay-box">
+      <div class="overlay-title" id="ov-title"></div>
+      <div class="overlay-msg" id="ov-msg"></div>
+      <button class="btn" id="ov-btn" onclick="startGame()">DESCEND</button>
+    </div>
+  </div>
+  <script>
+(function() {
+  "use strict";
+
+  // ── constants ──
+  const COLS = 48, ROWS = 32, TILE = 14;
+  const T_WALL = 0, T_FLOOR = 1, T_STAIR = 2;
+
+  const C_VOID   = '#0a0a0f';
+  const C_WALL   = '#1a1a28';
+  const C_FLOOR  = '#121218';
+  const C_PLAYER = '#00f0ff';
+  const C_STAIR  = '#9d4edd';
+  const C_POTION = '#39ff14';
+  const C_GOLD   = '#ffb000';
+  const C_ENEMY  = '#ff2d7b';
+  const C_GLOW_P = 'rgba(0,240,255,0.15)';
+  const C_GLOW_S = 'rgba(157,78,221,0.2)';
+  const C_FOG    = 'rgba(10,10,15,0.7)';
+
+  // ── enemy templates by floor ──
+  const ENEMIES = [
+    { name: 'Rat',       glyph: 'r', hp: 4,  atk: 1, def: 0, xp: 2,  gold: 1 },
+    { name: 'Bat',       glyph: 'b', hp: 3,  atk: 2, def: 0, xp: 2,  gold: 1 },
+    { name: 'Slime',     glyph: 's', hp: 6,  atk: 2, def: 1, xp: 3,  gold: 2 },
+    { name: 'Goblin',    glyph: 'g', hp: 8,  atk: 3, def: 1, xp: 5,  gold: 3 },
+    { name: 'Skeleton',  glyph: 'k', hp: 10, atk: 4, def: 2, xp: 6,  gold: 4 },
+    { name: 'Wraith',    glyph: 'w', hp: 12, atk: 5, def: 2, xp: 8,  gold: 5 },
+    { name: 'Orc',       glyph: 'o', hp: 15, atk: 6, def: 3, xp: 10, gold: 6 },
+    { name: 'Demon',     glyph: 'D', hp: 20, atk: 8, def: 4, xp: 15, gold: 10 },
+    { name: 'Dragon',    glyph: 'W', hp: 30, atk: 10,def: 5, xp: 25, gold: 15 },
+  ];
+
+  // ── canvas ──
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  canvas.width = COLS * TILE;
+  canvas.height = ROWS * TILE;
+
+  // ── state ──
+  let map, rooms, visible, explored, entities, items, player, floor, gameOver;
+  let logs = [];
+
+  // ── UI refs ──
+  const hudHP   = document.getElementById('hud-hp');
+  const hudATK  = document.getElementById('hud-atk');
+  const hudDEF  = document.getElementById('hud-def');
+  const hudLVL  = document.getElementById('hud-lvl');
+  const hudXP   = document.getElementById('hud-xp');
+  const hudGold = document.getElementById('hud-gold');
+  const logEl   = document.getElementById('log');
+  const overlay = document.getElementById('overlay');
+  const ovTitle = document.getElementById('ov-title');
+  const ovMsg   = document.getElementById('ov-msg');
+  const ovBtn   = document.getElementById('ov-btn');
+
+  // ── dungeon generation (BSP) ──
+  function generateDungeon() {
+    map = Array.from({ length: ROWS }, () => new Uint8Array(COLS));
+    rooms = [];
+    visible = Array.from({ length: ROWS }, () => new Uint8Array(COLS));
+    explored = Array.from({ length: ROWS }, () => new Uint8Array(COLS));
+
+    function splitBSP(x, y, w, h, depth) {
+      const minSize = 6;
+      if (depth <= 0 || w < minSize * 2 && h < minSize * 2) {
+        // carve room with padding
+        const rx = x + 1 + Math.floor(Math.random() * 2);
+        const ry = y + 1 + Math.floor(Math.random() * 2);
+        const rw = Math.max(3, w - 3 - Math.floor(Math.random() * 2));
+        const rh = Math.max(3, h - 3 - Math.floor(Math.random() * 2));
+        const room = { x: rx, y: ry, w: rw, h: rh,
+          cx: Math.floor(rx + rw / 2), cy: Math.floor(ry + rh / 2) };
+        for (let dy = 0; dy < rh; dy++)
+          for (let dx = 0; dx < rw; dx++)
+            if (ry + dy < ROWS && rx + dx < COLS) map[ry + dy][rx + dx] = T_FLOOR;
+        rooms.push(room);
+        return room;
+      }
+      let splitH = Math.random() < 0.5;
+      if (w > h * 1.3) splitH = false;
+      if (h > w * 1.3) splitH = true;
+
+      if (splitH) {
+        const split = y + minSize + Math.floor(Math.random() * (h - minSize * 2));
+        const a = splitBSP(x, y, w, split - y, depth - 1);
+        const b = splitBSP(x, split, w, y + h - split, depth - 1);
+        carveCorridor(a.cx, a.cy, b.cx, b.cy);
+        return Math.random() < 0.5 ? a : b;
+      } else {
+        const split = x + minSize + Math.floor(Math.random() * (w - minSize * 2));
+        const a = splitBSP(x, y, split - x, h, depth - 1);
+        const b = splitBSP(split, y, x + w - split, h, depth - 1);
+        carveCorridor(a.cx, a.cy, b.cx, b.cy);
+        return Math.random() < 0.5 ? a : b;
+      }
+    }
+
+    function carveCorridor(x1, y1, x2, y2) {
+      let x = x1, y = y1;
+      while (x !== x2) {
+        if (y >= 0 && y < ROWS && x >= 0 && x < COLS) map[y][x] = T_FLOOR;
+        x += x < x2 ? 1 : -1;
+      }
+      while (y !== y2) {
+        if (y >= 0 && y < ROWS && x >= 0 && x < COLS) map[y][x] = T_FLOOR;
+        y += y < y2 ? 1 : -1;
+      }
+    }
+
+    splitBSP(0, 0, COLS, ROWS, 5);
+
+    // place stairs in last room
+    const stairRoom = rooms[rooms.length - 1];
+    map[stairRoom.cy][stairRoom.cx] = T_STAIR;
+  }
+
+  // ── field of view (simple raycasting) ──
+  function computeFOV(px, py, radius) {
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++) visible[r][c] = 0;
+
+    for (let a = 0; a < 360; a += 1) {
+      const rad = a * Math.PI / 180;
+      const dx = Math.cos(rad), dy = Math.sin(rad);
+      let x = px + 0.5, y = py + 0.5;
+      for (let d = 0; d < radius; d++) {
+        const ix = Math.floor(x), iy = Math.floor(y);
+        if (ix < 0 || ix >= COLS || iy < 0 || iy >= ROWS) break;
+        visible[iy][ix] = 1;
+        explored[iy][ix] = 1;
+        if (map[iy][ix] === T_WALL) break;
+        x += dx * 0.5;
+        y += dy * 0.5;
+      }
+    }
+  }
+
+  // ── item placement ──
+  function placeItems() {
+    items = [];
+    const potionCount = 3 + Math.floor(Math.random() * 3);
+    const goldCount = 4 + Math.floor(Math.random() * 4);
+
+    for (let i = 0; i < potionCount; i++) {
+      const pos = randomFloor();
+      if (pos) items.push({ type: 'potion', x: pos.x, y: pos.y, heal: 5 + floor * 2 });
+    }
+    for (let i = 0; i < goldCount; i++) {
+      const pos = randomFloor();
+      if (pos) items.push({ type: 'gold', x: pos.x, y: pos.y, amount: 1 + Math.floor(Math.random() * (floor + 2)) });
+    }
+    // weapon/armor upgrades (rare)
+    if (Math.random() < 0.4) {
+      const pos = randomFloor();
+      if (pos) items.push({ type: 'weapon', x: pos.x, y: pos.y, bonus: 1 });
+    }
+    if (Math.random() < 0.3) {
+      const pos = randomFloor();
+      if (pos) items.push({ type: 'armor', x: pos.x, y: pos.y, bonus: 1 });
+    }
+  }
+
+  // ── enemy placement ──
+  function placeEnemies() {
+    entities = [];
+    const count = 4 + floor * 2 + Math.floor(Math.random() * 3);
+    const pool = [];
+    // enemies available based on floor
+    const maxIdx = Math.min(ENEMIES.length - 1, Math.floor(floor / 2) + 1);
+    for (let i = 0; i <= maxIdx; i++) pool.push(ENEMIES[i]);
+
+    for (let i = 0; i < count; i++) {
+      const pos = randomFloor();
+      if (!pos) continue;
+      // don't place on player or stairs
+      if (pos.x === player.x && pos.y === player.y) continue;
+      if (map[pos.y][pos.x] === T_STAIR) continue;
+      const tpl = pool[Math.floor(Math.random() * pool.length)];
+      const scale = 1 + (floor - 1) * 0.15;
+      entities.push({
+        name: tpl.name,
+        glyph: tpl.glyph,
+        x: pos.x, y: pos.y,
+        hp: Math.ceil(tpl.hp * scale),
+        maxHp: Math.ceil(tpl.hp * scale),
+        atk: Math.ceil(tpl.atk * scale),
+        def: tpl.def,
+        xp: tpl.xp,
+        gold: tpl.gold,
+      });
+    }
+  }
+
+  function randomFloor() {
+    for (let tries = 0; tries < 200; tries++) {
+      const r = rooms[Math.floor(Math.random() * rooms.length)];
+      const x = r.x + Math.floor(Math.random() * r.w);
+      const y = r.y + Math.floor(Math.random() * r.h);
+      if (x < COLS && y < ROWS && map[y][x] === T_FLOOR) return { x, y };
+    }
+    return null;
+  }
+
+  // ── player ──
+  function initPlayer() {
+    const r = rooms[0];
+    return {
+      x: r.cx, y: r.cy,
+      hp: 20, maxHp: 20,
+      atk: 3, def: 0,
+      level: 1, xp: 0, xpNext: 10,
+      gold: 0,
+    };
+  }
+
+  function levelUp() {
+    player.level++;
+    player.xp -= player.xpNext;
+    player.xpNext = Math.floor(player.xpNext * 1.6);
+    player.maxHp += 5;
+    player.hp = Math.min(player.hp + 5, player.maxHp);
+    player.atk += 1;
+    addLog('Level up! You are now level ' + player.level, 'info');
+  }
+
+  // ── combat ──
+  function attack(attacker, defender, aName, dName) {
+    const dmg = Math.max(1, attacker.atk - defender.def + Math.floor(Math.random() * 3) - 1);
+    defender.hp -= dmg;
+    addLog(aName + ' hits ' + dName + ' for ' + dmg + ' dmg', 'combat');
+    return defender.hp <= 0;
+  }
+
+  // ── enemy AI ──
+  function enemyTurns() {
+    for (const e of entities) {
+      if (e.hp <= 0) continue;
+      const dx = player.x - e.x, dy = player.y - e.y;
+      const dist = Math.abs(dx) + Math.abs(dy);
+      if (dist <= 1) {
+        // attack player
+        const dead = attack(e, player, e.name, 'you');
+        if (dead) {
+          gameOver = true;
+          showOverlay('YOU DIED', 'Reached floor ' + floor + ' &middot; Level ' + player.level + ' &middot; ' + player.gold + ' gold', 'TRY AGAIN');
+        }
+        continue;
+      }
+      if (dist > 8) continue; // out of awareness range
+      // move toward player (simple chase)
+      let mx = 0, my = 0;
+      if (Math.abs(dx) >= Math.abs(dy)) mx = dx > 0 ? 1 : -1;
+      else my = dy > 0 ? 1 : -1;
+      const nx = e.x + mx, ny = e.y + my;
+      if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && map[ny][nx] !== T_WALL) {
+        // check no entity collision
+        const blocked = entities.some(o => o !== e && o.hp > 0 && o.x === nx && o.y === ny);
+        if (!blocked && !(nx === player.x && ny === player.y)) {
+          e.x = nx;
+          e.y = ny;
+        }
+      }
+    }
+  }
+
+  // ── player move ──
+  function movePlayer(dx, dy) {
+    if (gameOver) return;
+    const nx = player.x + dx, ny = player.y + dy;
+    if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) return;
+    if (map[ny][nx] === T_WALL) return;
+
+    // check enemy
+    const enemy = entities.find(e => e.hp > 0 && e.x === nx && e.y === ny);
+    if (enemy) {
+      const killed = attack(player, enemy, 'You', enemy.name);
+      if (killed) {
+        addLog(enemy.name + ' defeated! +' + enemy.xp + ' XP, +' + enemy.gold + ' gold', 'pickup');
+        player.xp += enemy.xp;
+        player.gold += enemy.gold;
+        while (player.xp >= player.xpNext) levelUp();
+      }
+    } else {
+      player.x = nx;
+      player.y = ny;
+
+      // check stairs
+      if (map[ny][nx] === T_STAIR) {
+        floor++;
+        if (floor > 9) {
+          gameOver = true;
+          showOverlay('VICTORY', 'You escaped the dungeon!<br>Level ' + player.level + ' &middot; ' + player.gold + ' gold', 'PLAY AGAIN');
+          return;
+        }
+        addLog('Descending to floor ' + floor + '...', 'info');
+        generateFloor();
+        return;
+      }
+
+      // check items
+      const itemIdx = items.findIndex(it => it.x === nx && it.y === ny);
+      if (itemIdx !== -1) {
+        const it = items[itemIdx];
+        items.splice(itemIdx, 1);
+        if (it.type === 'potion') {
+          const healed = Math.min(it.heal, player.maxHp - player.hp);
+          player.hp += healed;
+          addLog('Picked up potion. Healed ' + healed + ' HP', 'pickup');
+        } else if (it.type === 'gold') {
+          player.gold += it.amount;
+          addLog('Found ' + it.amount + ' gold', 'pickup');
+        } else if (it.type === 'weapon') {
+          player.atk += it.bonus;
+          addLog('Found a better weapon! ATK +' + it.bonus, 'pickup');
+        } else if (it.type === 'armor') {
+          player.def += it.bonus;
+          addLog('Found better armor! DEF +' + it.bonus, 'pickup');
+        }
+      }
+    }
+
+    enemyTurns();
+    computeFOV(player.x, player.y, 7);
+    updateHUD();
+    draw();
+  }
+
+  function generateFloor() {
+    generateDungeon();
+    player.x = rooms[0].cx;
+    player.y = rooms[0].cy;
+    placeItems();
+    placeEnemies();
+    computeFOV(player.x, player.y, 7);
+    updateHUD();
+    draw();
+  }
+
+  // ── logging ──
+  function addLog(msg, cls) {
+    logs.push({ msg, cls });
+    if (logs.length > 50) logs.shift();
+    const html = logs.map(l => '<p class="log-line log-' + (l.cls || '') + '">' + l.msg + '</p>').join('');
+    logEl.innerHTML = html;
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // ── HUD ──
+  function updateHUD() {
+    hudHP.textContent = player.hp + '/' + player.maxHp;
+    hudATK.textContent = player.atk;
+    hudDEF.textContent = player.def;
+    hudLVL.textContent = player.level;
+    hudXP.textContent = player.xp + '/' + player.xpNext;
+    hudGold.textContent = player.gold;
+    // color HP based on remaining
+    const ratio = player.hp / player.maxHp;
+    hudHP.style.color = ratio > 0.5 ? '#39ff14' : ratio > 0.25 ? '#ffb000' : '#ff1744';
+  }
+
+  // ── overlay ──
+  function showOverlay(title, msg, btnText) {
+    ovTitle.textContent = title;
+    ovTitle.style.color = title === 'VICTORY' ? '#39ff14' : '#ff2d7b';
+    ovMsg.innerHTML = msg;
+    ovBtn.textContent = btnText;
+    overlay.classList.add('show');
+  }
+
+  // ── render ──
+  function draw() {
+    ctx.fillStyle = C_VOID;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const x = c * TILE, y = r * TILE;
+        if (visible[r][c]) {
+          if (map[r][c] === T_WALL) {
+            ctx.fillStyle = C_WALL;
+            ctx.fillRect(x, y, TILE, TILE);
+            // wall top edge highlight
+            ctx.fillStyle = 'rgba(122,122,144,0.2)';
+            ctx.fillRect(x, y, TILE, 1);
+          } else if (map[r][c] === T_STAIR) {
+            ctx.fillStyle = C_FLOOR;
+            ctx.fillRect(x, y, TILE, TILE);
+            ctx.fillStyle = C_STAIR;
+            ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+            // glow
+            ctx.fillStyle = C_GLOW_S;
+            ctx.fillRect(x - 2, y - 2, TILE + 4, TILE + 4);
+          } else {
+            ctx.fillStyle = C_FLOOR;
+            ctx.fillRect(x, y, TILE, TILE);
+            // subtle floor dots
+            ctx.fillStyle = 'rgba(122,122,144,0.06)';
+            ctx.fillRect(x + TILE / 2, y + TILE / 2, 1, 1);
+          }
+        } else if (explored[r][c]) {
+          // explored but not visible - dimmed
+          if (map[r][c] === T_WALL) {
+            ctx.fillStyle = '#0e0e16';
+            ctx.fillRect(x, y, TILE, TILE);
+          } else {
+            ctx.fillStyle = '#0c0c12';
+            ctx.fillRect(x, y, TILE, TILE);
+          }
+        }
+      }
+    }
+
+    // items (only if visible)
+    for (const it of items) {
+      if (!visible[it.y][it.x]) continue;
+      const x = it.x * TILE, y = it.y * TILE;
+      if (it.type === 'potion') {
+        ctx.fillStyle = C_POTION;
+        ctx.fillRect(x + 4, y + 3, TILE - 8, TILE - 6);
+        ctx.fillRect(x + 5, y + 1, TILE - 10, 3);
+      } else if (it.type === 'gold') {
+        ctx.fillStyle = C_GOLD;
+        ctx.beginPath();
+        ctx.arc(x + TILE / 2, y + TILE / 2, 4, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (it.type === 'weapon') {
+        ctx.fillStyle = '#ff2d7b';
+        ctx.fillRect(x + 6, y + 2, 2, TILE - 4);
+        ctx.fillRect(x + 3, y + 4, 8, 2);
+      } else if (it.type === 'armor') {
+        ctx.fillStyle = '#00f0ff';
+        ctx.fillRect(x + 3, y + 3, TILE - 6, TILE - 6);
+        ctx.fillStyle = C_FLOOR;
+        ctx.fillRect(x + 5, y + 5, TILE - 10, TILE - 10);
+      }
+    }
+
+    // enemies (only if visible)
+    for (const e of entities) {
+      if (e.hp <= 0 || !visible[e.y][e.x]) continue;
+      const x = e.x * TILE, y = e.y * TILE;
+      ctx.fillStyle = C_ENEMY;
+      ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+      // glyph
+      ctx.fillStyle = '#0a0a0f';
+      ctx.font = 'bold 9px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(e.glyph, x + TILE / 2, y + TILE / 2 + 1);
+      // hp bar
+      if (e.hp < e.maxHp) {
+        const barW = TILE - 4;
+        const hpRatio = e.hp / e.maxHp;
+        ctx.fillStyle = 'rgba(10,10,15,0.6)';
+        ctx.fillRect(x + 2, y - 2, barW, 2);
+        ctx.fillStyle = hpRatio > 0.5 ? '#39ff14' : '#ff1744';
+        ctx.fillRect(x + 2, y - 2, Math.ceil(barW * hpRatio), 2);
+      }
+    }
+
+    // player
+    const px = player.x * TILE, py = player.y * TILE;
+    // glow
+    ctx.fillStyle = C_GLOW_P;
+    ctx.fillRect(px - 4, py - 4, TILE + 8, TILE + 8);
+    ctx.fillStyle = C_PLAYER;
+    ctx.fillRect(px + 1, py + 1, TILE - 2, TILE - 2);
+    ctx.fillStyle = '#0a0a0f';
+    ctx.font = 'bold 10px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('@', px + TILE / 2, py + TILE / 2 + 1);
+  }
+
+  // ── input ──
+  document.addEventListener('keydown', function(e) {
+    if (gameOver) return;
+    const key = e.key;
+    let dx = 0, dy = 0;
+    if (key === 'ArrowUp' || key === 'w' || key === 'W') dy = -1;
+    else if (key === 'ArrowDown' || key === 's' || key === 'S') dy = 1;
+    else if (key === 'ArrowLeft' || key === 'a' || key === 'A') dx = -1;
+    else if (key === 'ArrowRight' || key === 'd' || key === 'D') dx = 1;
+    else if (key === '.' || key === ' ') { dx = 0; dy = 0; } // wait
+    else return;
+    e.preventDefault();
+    if (dx === 0 && dy === 0 && key !== '.' && key !== ' ') return;
+    if (dx === 0 && dy === 0) {
+      // wait turn
+      enemyTurns();
+      computeFOV(player.x, player.y, 7);
+      updateHUD();
+      draw();
+      return;
+    }
+    movePlayer(dx, dy);
+  });
+
+  // ── touch controls ──
+  let touchStart = null;
+  canvas.addEventListener('touchstart', function(e) {
+    const t = e.touches[0];
+    touchStart = { x: t.clientX, y: t.clientY };
+  });
+  canvas.addEventListener('touchend', function(e) {
+    if (!touchStart) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.x;
+    const dy = t.clientY - touchStart.y;
+    touchStart = null;
+    const threshold = 20;
+    if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) return;
+    if (Math.abs(dx) > Math.abs(dy)) movePlayer(dx > 0 ? 1 : -1, 0);
+    else movePlayer(0, dy > 0 ? 1 : -1);
+    e.preventDefault();
+  }, { passive: false });
+
+  // ── start ──
+  window.startGame = function() {
+    overlay.classList.remove('show');
+    floor = 1;
+    gameOver = false;
+    logs = [];
+    logEl.innerHTML = '';
+    player = initPlayer();
+    generateFloor();
+    addLog('You enter the dungeon. Floor 1. Find the stairs.', 'info');
+    draw();
+  };
+
+  // show start screen
+  showOverlay('NEON DUNGEON', '9 floors of procedural dungeon.<br>Fight enemies, find loot, reach the exit.<br><br>Arrow keys / WASD to move.<br>Bump enemies to attack.<br>. or Space to wait a turn.', 'DESCEND');
+})();
+  </script>
+</body>
+</html>

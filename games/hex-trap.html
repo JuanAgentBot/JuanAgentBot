@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HEX TRAP / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    #game-canvas {
+      display: block;
+      margin: 0 auto 1rem;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    .hud {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1rem;
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+    }
+
+    .hud-label {
+      color: var(--text-dim);
+    }
+
+    .hud-value {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 10px var(--glow-cyan);
+    }
+
+    .hud-value.win { color: var(--accent-green); text-shadow: 0 0 10px rgba(57,255,20,0.5); }
+    .hud-value.lose { color: var(--accent-magenta); text-shadow: 0 0 10px var(--glow-magenta); }
+
+    .controls {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      line-height: 1.8;
+      margin-bottom: 1rem;
+    }
+
+    .controls kbd {
+      display: inline-block;
+      border: 1px solid var(--border);
+      padding: 0.1em 0.5em;
+      font-family: inherit;
+      color: var(--text-muted);
+    }
+
+    .message {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+      min-height: 1.4em;
+    }
+
+    .message.win {
+      color: var(--accent-green);
+      text-shadow: 0 0 15px rgba(57,255,20,0.6);
+    }
+
+    .message.lose {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 15px var(--glow-magenta);
+    }
+
+    .btn {
+      display: inline-block;
+      background: none;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      padding: 0.6em 1.8em;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin: 0 0.3rem;
+    }
+
+    .btn:hover {
+      background: var(--accent-cyan);
+      color: var(--bg);
+      box-shadow: 0 0 20px var(--glow-cyan);
+    }
+
+    .diff-btns {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .diff-btns .btn {
+      font-size: 0.65rem;
+      padding: 0.4em 1em;
+    }
+
+    .diff-btns .btn.active {
+      background: var(--accent-purple);
+      border-color: var(--accent-purple);
+      color: var(--bg);
+      box-shadow: 0 0 12px rgba(157,78,221,0.5);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>HEX TRAP</h1>
+    <p class="subtitle">TRAP THE DOT BEFORE IT ESCAPES</p>
+
+    <div class="hud">
+      <span><span class="hud-label">WINS </span><span class="hud-value" id="wins">0</span></span>
+      <span><span class="hud-label">LOSSES </span><span class="hud-value" id="losses">0</span></span>
+      <span><span class="hud-label">MOVES </span><span class="hud-value" id="moves">0</span></span>
+    </div>
+
+    <div class="diff-btns">
+      <button class="btn active" data-diff="easy" onclick="setDifficulty('easy')">EASY</button>
+      <button class="btn" data-diff="medium" onclick="setDifficulty('medium')">MEDIUM</button>
+      <button class="btn" data-diff="hard" onclick="setDifficulty('hard')">HARD</button>
+    </div>
+
+    <canvas id="game-canvas"></canvas>
+    <div class="message" id="message"></div>
+    <div>
+      <button class="btn" id="new-btn" onclick="newGame()">NEW GAME</button>
+    </div>
+
+    <div class="controls" style="margin-top: 1.5rem;">
+      <kbd>CLICK</kbd> A HEX TO BLOCK IT &mdash; TRAP THE DOT BEFORE IT REACHES THE EDGE<br>
+      THE DOT TAKES THE SHORTEST PATH TO FREEDOM EACH TURN
+    </div>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const msgEl = document.getElementById('message');
+    const winsEl = document.getElementById('wins');
+    const lossesEl = document.getElementById('losses');
+    const movesEl = document.getElementById('moves');
+
+    // Colors
+    const VOID = '#0a0a0f';
+    const MAGENTA = '#ff2d7b';
+    const CYAN = '#00f0ff';
+    const GREEN = '#39ff14';
+    const PURPLE = '#9d4edd';
+    const CRT_WHITE = '#e0e0e8';
+    const DIM_GRAY = '#7a7a90';
+    const TERMINAL_DARK = '#121218';
+
+    // Grid
+    const GRID_SIZE = 11;
+    const HEX_RADIUS = 22;
+    const HEX_GAP = 3;
+
+    // State
+    let grid = []; // 0 = open, 1 = blocked, 2 = dot
+    let dotR, dotC;
+    let gameOver = false;
+    let wins = 0, losses = 0, moveCount = 0;
+    let difficulty = 'easy';
+    let animFrame = 0;
+
+    // Difficulty settings: how many pre-blocked cells
+    const DIFF = { easy: 12, medium: 8, hard: 4 };
+
+    function setDifficulty(d) {
+      difficulty = d;
+      document.querySelectorAll('.diff-btns .btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.diff === d);
+      });
+      newGame();
+    }
+
+    function hexToPixel(r, c) {
+      const w = (HEX_RADIUS + HEX_GAP) * Math.sqrt(3);
+      const h = (HEX_RADIUS + HEX_GAP) * 2;
+      const x = c * w + (r % 2 === 1 ? w / 2 : 0);
+      const y = r * h * 0.75;
+      return { x: x + HEX_RADIUS + 20, y: y + HEX_RADIUS + 20 };
+    }
+
+    function resizeCanvas() {
+      const lastPos = hexToPixel(GRID_SIZE - 1, GRID_SIZE - 1);
+      const cw = lastPos.x + HEX_RADIUS + 20;
+      const ch = lastPos.y + HEX_RADIUS + 20;
+      const maxW = Math.min(600, window.innerWidth - 40);
+      const scale = maxW / cw;
+      canvas.width = Math.floor(cw * scale);
+      canvas.height = Math.floor(ch * scale);
+      canvas.style.width = canvas.width + 'px';
+      canvas.style.height = canvas.height + 'px';
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    }
+
+    function isEdge(r, c) {
+      return r === 0 || r === GRID_SIZE - 1 || c === 0 || c === GRID_SIZE - 1;
+    }
+
+    function neighbors(r, c) {
+      const even = r % 2 === 0;
+      const dirs = even
+        ? [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]]
+        : [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]];
+      const result = [];
+      for (const [dr, dc] of dirs) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+          result.push([nr, nc]);
+        }
+      }
+      return result;
+    }
+
+    // BFS: find shortest path from dot to any edge cell
+    function bfsToEdge(startR, startC) {
+      const visited = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
+      const parent = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
+      const queue = [[startR, startC]];
+      visited[startR][startC] = true;
+
+      while (queue.length > 0) {
+        const [r, c] = queue.shift();
+        if (isEdge(r, c) && !(r === startR && c === startC)) {
+          // Trace path back
+          const path = [];
+          let cr = r, cc = c;
+          while (cr !== startR || cc !== startC) {
+            path.unshift([cr, cc]);
+            const p = parent[cr][cc];
+            cr = p[0]; cc = p[1];
+          }
+          return path;
+        }
+        for (const [nr, nc] of neighbors(r, c)) {
+          if (!visited[nr][nc] && grid[nr][nc] !== 1) {
+            visited[nr][nc] = true;
+            parent[nr][nc] = [r, c];
+            queue.push([nr, nc]);
+          }
+        }
+      }
+      return null; // Trapped!
+    }
+
+    function newGame() {
+      grid = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
+      dotR = Math.floor(GRID_SIZE / 2);
+      dotC = Math.floor(GRID_SIZE / 2);
+      grid[dotR][dotC] = 2;
+      gameOver = false;
+      moveCount = 0;
+      movesEl.textContent = '0';
+      msgEl.textContent = '';
+      msgEl.className = 'message';
+
+      // Pre-block some random cells
+      const numBlocked = DIFF[difficulty];
+      let placed = 0;
+      while (placed < numBlocked) {
+        const r = Math.floor(Math.random() * GRID_SIZE);
+        const c = Math.floor(Math.random() * GRID_SIZE);
+        if (grid[r][c] === 0 && !(r === dotR && c === dotC)) {
+          // Don't block if it would make the puzzle unsolvable from the start
+          grid[r][c] = 1;
+          const path = bfsToEdge(dotR, dotC);
+          if (path === null) {
+            grid[r][c] = 0; // Would trap immediately, skip
+          } else {
+            placed++;
+          }
+        }
+      }
+
+      resizeCanvas();
+      draw();
+    }
+
+    function drawHex(cx, cy, radius, fill, stroke, lineWidth) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = Math.PI / 180 * (60 * i - 30);
+        const x = cx + radius * Math.cos(angle);
+        const y = cy + radius * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      if (fill) {
+        ctx.fillStyle = fill;
+        ctx.fill();
+      }
+      if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = lineWidth || 1;
+        ctx.stroke();
+      }
+    }
+
+    function draw() {
+      const cw = canvas.width / (ctx.getTransform().a || 1);
+      const ch = canvas.height / (ctx.getTransform().d || 1);
+
+      // Get computed styles for theme support
+      const styles = getComputedStyle(document.documentElement);
+      const bgColor = styles.getPropertyValue('--bg').trim() || VOID;
+      const borderColor = styles.getPropertyValue('--border').trim() || DIM_GRAY;
+      const textDim = styles.getPropertyValue('--text-dim').trim() || DIM_GRAY;
+
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, cw, ch);
+
+      animFrame++;
+
+      for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+          const { x, y } = hexToPixel(r, c);
+          const cell = grid[r][c];
+
+          if (cell === 1) {
+            // Blocked
+            drawHex(x, y, HEX_RADIUS, PURPLE + '60', PURPLE, 1.5);
+            // Inner glow
+            drawHex(x, y, HEX_RADIUS * 0.6, PURPLE + '30', null);
+          } else if (cell === 2) {
+            // Dot
+            drawHex(x, y, HEX_RADIUS, TERMINAL_DARK, CYAN + '80', 1);
+            // Pulsing dot
+            const pulse = 0.7 + 0.3 * Math.sin(animFrame * 0.08);
+            const dotSize = 8 * pulse;
+            ctx.beginPath();
+            ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+            ctx.fillStyle = GREEN;
+            ctx.fill();
+            ctx.shadowColor = GREEN;
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(x, y, dotSize * 0.6, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          } else {
+            // Open
+            const edgeCell = isEdge(r, c);
+            const fill = edgeCell ? (CYAN + '08') : TERMINAL_DARK;
+            const stroke = edgeCell ? (CYAN + '40') : (borderColor + '60');
+            drawHex(x, y, HEX_RADIUS, fill, stroke, edgeCell ? 1.5 : 0.8);
+          }
+        }
+      }
+
+      if (!gameOver) {
+        requestAnimationFrame(draw);
+      }
+    }
+
+    function pixelToHex(px, py) {
+      const scale = ctx.getTransform().a || 1;
+      const mx = px / scale;
+      const my = py / scale;
+      let closest = null;
+      let minDist = Infinity;
+      for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+          const { x, y } = hexToPixel(r, c);
+          const d = Math.sqrt((mx - x) ** 2 + (my - y) ** 2);
+          if (d < HEX_RADIUS && d < minDist) {
+            minDist = d;
+            closest = [r, c];
+          }
+        }
+      }
+      return closest;
+    }
+
+    canvas.addEventListener('click', (e) => {
+      if (gameOver) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const cell = pixelToHex(px, py);
+      if (!cell) return;
+
+      const [r, c] = cell;
+
+      // Can only block open cells
+      if (grid[r][c] !== 0) return;
+
+      // Block this cell
+      grid[r][c] = 1;
+      moveCount++;
+      movesEl.textContent = moveCount;
+
+      // Check if dot is trapped
+      const path = bfsToEdge(dotR, dotC);
+      if (path === null) {
+        // Trapped! Player wins
+        gameOver = true;
+        wins++;
+        winsEl.textContent = wins;
+        winsEl.className = 'hud-value win';
+        msgEl.textContent = 'TRAPPED! YOU WIN';
+        msgEl.className = 'message win';
+        draw();
+        return;
+      }
+
+      // Dot moves toward edge
+      moveDot(path);
+    });
+
+    function moveDot(path) {
+      if (path.length === 0) return;
+
+      const [nr, nc] = path[0];
+
+      // Check if dot reached the edge
+      if (isEdge(nr, nc) && grid[nr][nc] !== 1) {
+        grid[dotR][dotC] = 0;
+        dotR = nr;
+        dotC = nc;
+        grid[dotR][dotC] = 2;
+
+        gameOver = true;
+        losses++;
+        lossesEl.textContent = losses;
+        lossesEl.className = 'hud-value lose';
+        msgEl.textContent = 'ESCAPED! YOU LOSE';
+        msgEl.className = 'message lose';
+        draw();
+        return;
+      }
+
+      // Move dot one step
+      grid[dotR][dotC] = 0;
+      dotR = nr;
+      dotC = nc;
+      grid[dotR][dotC] = 2;
+
+      // After moving, check again if dot is on edge (it escapes)
+      if (isEdge(dotR, dotC)) {
+        gameOver = true;
+        losses++;
+        lossesEl.textContent = losses;
+        lossesEl.className = 'hud-value lose';
+        msgEl.textContent = 'ESCAPED! YOU LOSE';
+        msgEl.className = 'message lose';
+        draw();
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      if (gameOver) draw();
+    });
+
+    // Keyboard shortcut
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'r' || e.key === 'R') newGame();
+    });
+
+    newGame();
+  </script>
+</body>
+</html>

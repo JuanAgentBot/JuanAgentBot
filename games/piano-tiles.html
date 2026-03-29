@@ -22,6 +22,8 @@
       overflow: hidden;
       height: 100vh;
       user-select: none;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .back {
@@ -73,10 +75,11 @@
 
     #board-wrapper {
       position: relative;
-      width: 320px;
+      width: min(320px, 100vw);
       height: calc(100vh - 44px - 80px);
       max-height: 600px;
       overflow: hidden;
+      touch-action: manipulation;
     }
 
     #board {
@@ -125,7 +128,7 @@
     }
 
     #hud {
-      width: 320px;
+      width: min(320px, 100vw);
       height: 80px;
       display: flex;
       align-items: center;
@@ -184,6 +187,59 @@
       opacity: 0.4;
     }
 
+    /* Touch lane buttons below game area for mobile */
+    .touch-lanes {
+      display: none;
+      width: min(320px, 100vw);
+      height: 56px;
+    }
+
+    .touch-lane-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border, #7a7a90);
+      border-top: none;
+      background: transparent;
+      color: var(--text-dim, #7a7a90);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s;
+    }
+
+    .touch-lane-btn:nth-child(1) { border-color: #ff2d7b; color: #ff2d7b; }
+    .touch-lane-btn:nth-child(2) { border-color: #00f0ff; color: #00f0ff; }
+    .touch-lane-btn:nth-child(3) { border-color: #39ff14; color: #39ff14; }
+    .touch-lane-btn:nth-child(4) { border-color: #9d4edd; color: #9d4edd; }
+
+    .touch-lane-btn:active {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      .touch-lanes {
+        display: flex;
+      }
+      .key-hints {
+        display: none;
+      }
+      #board-wrapper {
+        height: calc(100vh - 44px - 80px - 56px);
+      }
+      .controls-info .kb-hint { display: none; }
+      .controls-info .touch-hint { display: inline; }
+    }
+
+    @media (hover: hover) {
+      .controls-info .touch-hint { display: none; }
+    }
+
     /* Strike zone indicator */
     .strike-zone {
       position: absolute;
@@ -208,6 +264,8 @@
       justify-content: center;
       background: rgba(10, 10, 15, 0.92);
       z-index: 50;
+      overflow-y: auto;
+      padding: 20px 16px;
     }
 
     .overlay.hidden { display: none; }
@@ -245,8 +303,10 @@
       font-weight: 700;
       letter-spacing: 0.08em;
       padding: 14px 40px;
+      min-height: 48px;
       cursor: pointer;
       transition: all 0.2s;
+      touch-action: manipulation;
     }
 
     .mode-btn:hover {
@@ -270,9 +330,11 @@
       font-weight: 700;
       letter-spacing: 0.1em;
       padding: 14px 48px;
+      min-height: 48px;
       cursor: pointer;
       transition: all 0.2s;
       text-shadow: 0 0 10px rgba(255, 45, 123, 0.4);
+      touch-action: manipulation;
     }
 
     .start-btn:hover {
@@ -376,6 +438,12 @@
         <div class="key-hint">K</div>
       </div>
     </div>
+    <div class="touch-lanes" id="touch-lanes">
+      <button class="touch-lane-btn" data-lane="0">TAP</button>
+      <button class="touch-lane-btn" data-lane="1">TAP</button>
+      <button class="touch-lane-btn" data-lane="2">TAP</button>
+      <button class="touch-lane-btn" data-lane="3">TAP</button>
+    </div>
     <div id="hud">
       <div class="hud-item">
         <div class="hud-label">SCORE</div>
@@ -403,7 +471,8 @@
     </div>
     <button class="start-btn" id="btn-start">START</button>
     <div class="controls-info">
-      KEYS: D / F / J / K &nbsp;or&nbsp; CLICK LANES<br>
+      <span class="kb-hint">KEYS: D / F / J / K &nbsp;or&nbsp; CLICK LANES<br></span>
+      <span class="touch-hint">TAP LANES OR USE THE BUTTONS BELOW<br></span>
       TILES SCROLL DOWN &bull; HIT THEM BEFORE THEY PASS
     </div>
   </div>
@@ -774,6 +843,19 @@
         }
       }
     }, { passive: false });
+
+    // Touch lane buttons
+    document.querySelectorAll('.touch-lane-btn').forEach(btn => {
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const lane = parseInt(btn.dataset.lane);
+        hitTile(lane);
+      }, { passive: false });
+      btn.addEventListener('click', (e) => {
+        const lane = parseInt(btn.dataset.lane);
+        hitTile(lane);
+      });
+    });
 
     // Mode selection
     document.querySelectorAll('.mode-btn').forEach(btn => {

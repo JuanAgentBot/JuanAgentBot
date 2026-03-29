@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FARKLE / ZERO</title>
+  <meta name="description" content="Push-your-luck dice game. Roll, score, bank or bust. Neon-soaked Farkle by Zero.">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg, #0a0a0f);
+      color: var(--text-bright, #e0e0e8);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .top-bar {
+      width: 100%; max-width: 680px; padding: 1rem 1.5rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .top-bar a {
+      color: var(--text-dim, #7a7a90); text-decoration: none;
+      font-size: 0.75rem; letter-spacing: 0.08em; transition: color 0.3s;
+    }
+    .top-bar a:hover { color: var(--accent-cyan, #00f0ff); }
+    h1 {
+      font-size: 1.5rem; font-weight: 800;
+      color: var(--accent-magenta, #ff2d7b); letter-spacing: 0.1em;
+      text-shadow: 0 0 20px rgba(255,45,123,0.5);
+    }
+    .game-wrap { width: 100%; max-width: 680px; padding: 0 1.5rem 2rem; }
+    .scoreboard {
+      display: flex; justify-content: space-between; align-items: center;
+      border: 1px solid var(--border, #7a7a90);
+      padding: 0.8rem 1.2rem; margin-bottom: 1.2rem;
+    }
+    .score-item { text-align: center; }
+    .score-label { color: var(--text-dim, #7a7a90); font-size: 0.6rem; letter-spacing: 0.1em; margin-bottom: 0.25rem; }
+    .score-value { font-size: 1.1rem; font-weight: 700; }
+    .score-value.magenta { color: var(--accent-magenta, #ff2d7b); }
+    .score-value.cyan { color: var(--accent-cyan, #00f0ff); }
+    .score-value.green { color: var(--accent-green, #39ff14); }
+    .turn-info {
+      text-align: center; margin-bottom: 1rem; font-size: 0.75rem;
+      color: var(--text-dim, #7a7a90); letter-spacing: 0.06em; min-height: 1.2em;
+    }
+    .turn-info .hl { color: var(--accent-green, #39ff14); text-shadow: 0 0 8px rgba(57,255,20,0.4); }
+    .turn-info .warn { color: var(--accent-magenta, #ff2d7b); text-shadow: 0 0 8px rgba(255,45,123,0.4); }
+    .dice-area {
+      display: flex; justify-content: center; gap: 0.6rem; flex-wrap: wrap;
+      margin-bottom: 1.2rem; min-height: 72px; align-items: center;
+    }
+    .die {
+      width: 64px; height: 64px; border: 2px solid var(--border, #7a7a90);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; font-weight: 800; cursor: pointer;
+      user-select: none; transition: all 0.2s;
+    }
+    .die:hover:not(.locked) { border-color: var(--accent-cyan, #00f0ff); box-shadow: 0 0 12px rgba(0,240,255,0.3); }
+    .die.selected { border-color: var(--accent-green, #39ff14); box-shadow: 0 0 16px rgba(57,255,20,0.4); color: var(--accent-green, #39ff14); text-shadow: 0 0 10px rgba(57,255,20,0.5); }
+    .die.locked { cursor: default; }
+    .die.rolling { animation: dieRoll 0.4s ease-out; }
+    @keyframes dieRoll {
+      0% { transform: scale(0.8); opacity: 0.5; }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .scoring-preview { text-align: center; margin-bottom: 1rem; min-height: 2.4em; }
+    .scoring-preview .pts { font-size: 0.9rem; font-weight: 700; color: var(--accent-cyan, #00f0ff); text-shadow: 0 0 10px rgba(0,240,255,0.4); }
+    .scoring-preview .combos { font-size: 0.65rem; color: var(--text-dim, #7a7a90); margin-top: 0.2rem; }
+    .btn-row { display: flex; justify-content: center; gap: 0.8rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+    .btn {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 0.08em; padding: 0.6rem 1.4rem;
+      border: 1px solid var(--border, #7a7a90); background: transparent;
+      color: var(--text-bright, #e0e0e8); cursor: pointer; transition: all 0.2s;
+    }
+    .btn:hover:not(:disabled) { border-color: var(--accent-cyan, #00f0ff); color: var(--accent-cyan, #00f0ff); box-shadow: 0 0 16px rgba(0,240,255,0.2); }
+    .btn:disabled { opacity: 0.3; cursor: default; }
+    .btn.primary { border-color: var(--accent-green, #39ff14); color: var(--accent-green, #39ff14); }
+    .btn.primary:hover:not(:disabled) { box-shadow: 0 0 16px rgba(57,255,20,0.3); }
+    .btn.danger { border-color: var(--accent-magenta, #ff2d7b); color: var(--accent-magenta, #ff2d7b); }
+    .btn.danger:hover:not(:disabled) { box-shadow: 0 0 16px rgba(255,45,123,0.3); }
+    .tray { border: 1px dashed var(--border, #7a7a90); padding: 0.8rem; margin-bottom: 1.2rem; min-height: 50px; }
+    .tray-label { font-size: 0.6rem; color: var(--text-dim, #7a7a90); letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+    .tray-dice { display: flex; gap: 0.4rem; flex-wrap: wrap; min-height: 32px; }
+    .tray-die {
+      width: 40px; height: 40px; border: 1px solid var(--accent-purple, #9d4edd);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; font-weight: 700; color: var(--accent-purple, #9d4edd); opacity: 0.7;
+    }
+    .rules { border: 1px solid var(--border, #7a7a90); padding: 1rem; margin-top: 1rem; }
+    .rules summary { font-size: 0.75rem; color: var(--accent-cyan, #00f0ff); cursor: pointer; letter-spacing: 0.06em; }
+    .rules-content { margin-top: 0.8rem; font-size: 0.65rem; color: var(--text-dim, #7a7a90); line-height: 1.7; }
+    .rules-content h3 { color: var(--accent-magenta, #ff2d7b); font-size: 0.7rem; margin: 0.8rem 0 0.3rem; letter-spacing: 0.06em; }
+    .rules-content h3:first-child { margin-top: 0; }
+    .rules-content table { width: 100%; border-collapse: collapse; margin: 0.4rem 0; }
+    .rules-content td { padding: 0.25rem 0.5rem; border: 1px solid var(--border, #7a7a90); }
+    .rules-content td:last-child { text-align: right; color: var(--accent-green, #39ff14); }
+    .flash-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(10,10,15,0.85); z-index: 100;
+      pointer-events: none; opacity: 0; transition: opacity 0.3s;
+    }
+    .flash-overlay.show { opacity: 1; }
+    .flash-overlay .ftext { font-size: 3rem; font-weight: 800; letter-spacing: 0.2em; animation: flashPop 0.5s ease-out; }
+    .flash-overlay .farkle { color: var(--accent-magenta, #ff2d7b); text-shadow: 0 0 40px rgba(255,45,123,0.8); }
+    .flash-overlay .banked { color: var(--accent-green, #39ff14); text-shadow: 0 0 40px rgba(57,255,20,0.8); }
+    @keyframes flashPop { 0% { transform: scale(0.5); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+    .overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10,10,15,0.92); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 200;
+    }
+    .overlay.hidden { display: none; }
+    .overlay h2 { font-size: 2rem; font-weight: 800; color: var(--accent-magenta, #ff2d7b); text-shadow: 0 0 30px rgba(255,45,123,0.6); letter-spacing: 0.15em; margin-bottom: 1rem; }
+    .overlay .winner { font-size: 1rem; color: var(--accent-cyan, #00f0ff); margin-bottom: 0.5rem; }
+    .overlay .finals { font-size: 0.8rem; color: var(--text-dim, #7a7a90); margin-bottom: 1.5rem; }
+    .settings { display: flex; gap: 1rem; justify-content: center; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+    .settings label { font-size: 0.65rem; color: var(--text-dim, #7a7a90); letter-spacing: 0.06em; }
+    .settings select { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; background: transparent; color: var(--text-bright, #e0e0e8); border: 1px solid var(--border, #7a7a90); padding: 0.3rem 0.5rem; cursor: pointer; }
+    .settings select option { background: #0a0a0f; color: #e0e0e8; }
+    .controls { text-align: center; font-size: 0.6rem; color: var(--text-dim, #7a7a90); letter-spacing: 0.06em; margin-top: 0.5rem; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="./">&lt; GAME LAB</a>
+    <h1>FARKLE</h1>
+    <span></span>
+  </div>
+
+  <div class="game-wrap">
+    <div class="settings">
+      <label>TARGET <select id="sel-target"><option value="5000">5,000</option><option value="10000" selected>10,000</option><option value="15000">15,000</option></select></label>
+      <label>MODE <select id="sel-mode"><option value="cpu">VS CPU</option><option value="2p">2 PLAYER</option></select></label>
+      <button class="btn danger" id="btn-new">NEW GAME</button>
+    </div>
+
+    <div class="scoreboard">
+      <div class="score-item"><div class="score-label">PLAYER 1</div><div class="score-value cyan" id="s-p1">0</div></div>
+      <div class="score-item"><div class="score-label">TURN PTS</div><div class="score-value green" id="s-turn">0</div></div>
+      <div class="score-item"><div class="score-label" id="lbl-p2">CPU</div><div class="score-value magenta" id="s-p2">0</div></div>
+    </div>
+
+    <div class="turn-info" id="info">CLICK ROLL TO START</div>
+    <div class="dice-area" id="dice-area"></div>
+    <div class="scoring-preview" id="preview"></div>
+
+    <div class="btn-row">
+      <button class="btn primary" id="btn-roll">ROLL (R)</button>
+      <button class="btn" id="btn-set" disabled>SET ASIDE (S)</button>
+      <button class="btn" id="btn-bank" disabled>BANK (B)</button>
+    </div>
+
+    <div class="tray">
+      <div class="tray-label">SET ASIDE THIS TURN</div>
+      <div class="tray-dice" id="tray"></div>
+    </div>
+
+    <div class="rules">
+      <details>
+        <summary>&#9654; RULES &amp; SCORING</summary>
+        <div class="rules-content">
+          <h3>HOW TO PLAY</h3>
+          Roll 6 dice. After each roll, set aside at least one scoring die, then roll the rest or bank your turn points. If no dice score, you FARKLE and lose everything from this turn.
+          <h3>HOT DICE</h3>
+          Set aside all 6 dice as scoring combos? Roll all 6 again with your turn points intact.
+          <h3>SCORING</h3>
+          <table>
+            <tr><td>Single 1</td><td>100</td></tr>
+            <tr><td>Single 5</td><td>50</td></tr>
+            <tr><td>Three 1s</td><td>1,000</td></tr>
+            <tr><td>Three 2s</td><td>200</td></tr>
+            <tr><td>Three 3s</td><td>300</td></tr>
+            <tr><td>Three 4s</td><td>400</td></tr>
+            <tr><td>Three 5s</td><td>500</td></tr>
+            <tr><td>Three 6s</td><td>600</td></tr>
+            <tr><td>Four of a kind</td><td>2x triple</td></tr>
+            <tr><td>Five of a kind</td><td>4x triple</td></tr>
+            <tr><td>Six of a kind</td><td>8x triple</td></tr>
+            <tr><td>1-2-3-4-5-6 straight</td><td>1,500</td></tr>
+            <tr><td>Three pairs</td><td>1,500</td></tr>
+          </table>
+          <h3>WINNING</h3>
+          First to reach the target wins. The other player gets one final turn to try to overtake.
+        </div>
+      </details>
+    </div>
+
+    <div class="controls">
+      CLICK DICE TO SELECT &bull; R = ROLL &bull; S = SET ASIDE &bull; B = BANK &bull; 1-6 = TOGGLE DIE
+    </div>
+  </div>
+
+  <div class="flash-overlay" id="flash"><div class="ftext" id="flash-text"></div></div>
+  <div class="overlay hidden" id="gameover">
+    <h2>GAME OVER</h2>
+    <div class="winner" id="go-winner"></div>
+    <div class="finals" id="go-scores"></div>
+    <button class="btn primary" id="btn-again">PLAY AGAIN</button>
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    const FACES = ['', '\u2680', '\u2681', '\u2682', '\u2683', '\u2684', '\u2685'];
+
+    // DOM refs
+    const diceArea = document.getElementById('dice-area');
+    const trayEl = document.getElementById('tray');
+    const infoEl = document.getElementById('info');
+    const previewEl = document.getElementById('preview');
+    const btnRoll = document.getElementById('btn-roll');
+    const btnSet = document.getElementById('btn-set');
+    const btnBank = document.getElementById('btn-bank');
+    const flashEl = document.getElementById('flash');
+    const flashText = document.getElementById('flash-text');
+    const gameoverEl = document.getElementById('gameover');
+
+    // State
+    let scores, current, turnPts, dice, dState, aside, phase, target, vsCPU;
+    let finalTurn, finalPlayer, over, hotDice;
+
+    function init() {
+      scores = [0, 0]; current = 0; turnPts = 0;
+      dice = []; dState = []; aside = [];
+      phase = 'idle'; hotDice = false;
+      target = parseInt(document.getElementById('sel-target').value);
+      vsCPU = document.getElementById('sel-mode').value === 'cpu';
+      finalTurn = false; finalPlayer = -1; over = false;
+      document.getElementById('lbl-p2').textContent = vsCPU ? 'CPU' : 'PLAYER 2';
+      gameoverEl.classList.add('hidden');
+      render();
+      infoEl.innerHTML = 'CLICK ROLL TO START';
+    }
+
+    // Scoring engine
+    function scoreDice(d) {
+      if (!d.length) return { score: 0, combos: [] };
+      const c = new Array(7).fill(0);
+      d.forEach(v => c[v]++);
+      // Straight
+      if (d.length === 6 && c[1]===1 && c[2]===1 && c[3]===1 && c[4]===1 && c[5]===1 && c[6]===1)
+        return { score: 1500, combos: ['STRAIGHT 1,500'] };
+      // Three pairs
+      if (d.length === 6) {
+        let pairs = 0;
+        for (let i = 1; i <= 6; i++) if (c[i] === 2) pairs++;
+        if (pairs === 3) return { score: 1500, combos: ['THREE PAIRS 1,500'] };
+      }
+      let score = 0, combos = [], used = new Array(7).fill(0);
+      // N-of-a-kind (3+)
+      for (let f = 1; f <= 6; f++) {
+        if (c[f] >= 3) {
+          const base = f === 1 ? 1000 : f * 100;
+          const n = c[f];
+          const mult = n >= 6 ? 8 : n >= 5 ? 4 : n >= 4 ? 2 : 1;
+          const pts = base * mult;
+          score += pts; used[f] = n;
+          const label = n >= 6 ? 'SIX' : n >= 5 ? 'FIVE' : n >= 4 ? 'FOUR' : 'THREE';
+          combos.push(label + ' ' + f + 's ' + pts.toLocaleString());
+        }
+      }
+      // Remaining 1s and 5s
+      const r1 = c[1] - used[1];
+      if (r1 > 0) { score += r1 * 100; used[1] += r1; combos.push(r1 + 'x ONE ' + (r1*100)); }
+      const r5 = c[5] - used[5];
+      if (r5 > 0) { score += r5 * 50; used[5] += r5; combos.push(r5 + 'x FIVE ' + (r5*50)); }
+      return { score, combos };
+    }
+
+    function hasScoring(d) { return scoreDice(d).score > 0; }
+
+    // Validate that ALL selected dice contribute to scoring
+    function validateSelection(sel) {
+      if (!sel.length) return { score: 0, combos: [], valid: false };
+      const res = scoreDice(sel);
+      if (res.score === 0) return { ...res, valid: false };
+      const c = new Array(7).fill(0);
+      sel.forEach(v => c[v]++);
+      // Straight or three pairs handle all 6
+      if (sel.length === 6) {
+        if (c[1]===1&&c[2]===1&&c[3]===1&&c[4]===1&&c[5]===1&&c[6]===1) return { ...res, valid: true };
+        let pairs = 0;
+        for (let i = 1; i <= 6; i++) if (c[i] === 2) pairs++;
+        if (pairs === 3) return { ...res, valid: true };
+      }
+      // Every face must be scoring: 1s, 5s, or part of 3+
+      for (let f = 1; f <= 6; f++) {
+        if (c[f] > 0 && f !== 1 && f !== 5 && c[f] < 3) return { ...res, valid: false };
+      }
+      return { ...res, valid: true };
+    }
+
+    // Rendering
+    function render() {
+      // Scores
+      document.getElementById('s-p1').textContent = scores[0].toLocaleString();
+      document.getElementById('s-p2').textContent = scores[1].toLocaleString();
+      document.getElementById('s-turn').textContent = turnPts.toLocaleString();
+      // Dice
+      diceArea.innerHTML = '';
+      dice.forEach((v, i) => {
+        const el = document.createElement('div');
+        el.className = 'die';
+        if (dState[i] === 'sel') el.classList.add('selected');
+        if (phase !== 'selecting' || (current === 1 && vsCPU)) el.classList.add('locked');
+        el.textContent = FACES[v];
+        el.addEventListener('click', () => toggleDie(i));
+        diceArea.appendChild(el);
+      });
+      // Tray
+      trayEl.innerHTML = '';
+      aside.forEach(v => {
+        const el = document.createElement('div');
+        el.className = 'tray-die';
+        el.textContent = FACES[v];
+        trayEl.appendChild(el);
+      });
+      // Preview
+      updatePreview();
+      // Buttons
+      updateButtons();
+    }
+
+    function updatePreview() {
+      const sel = getSelected();
+      if (!sel.length) { previewEl.innerHTML = ''; return; }
+      const res = validateSelection(sel);
+      if (res.valid && res.score > 0) {
+        previewEl.innerHTML = '<div class="pts">+' + res.score.toLocaleString() + '</div><div class="combos">' + res.combos.join(' \u2022 ') + '</div>';
+      } else {
+        previewEl.innerHTML = '<div class="combos" style="color:var(--accent-magenta,#ff2d7b)">INVALID SELECTION</div>';
+      }
+    }
+
+    function updateButtons() {
+      const sel = getSelected();
+      const res = validateSelection(sel);
+      const isHuman = current === 0 || !vsCPU;
+      btnRoll.disabled = phase !== 'idle' || over || !isHuman;
+      btnSet.disabled = phase !== 'selecting' || !res.valid || res.score === 0 || !isHuman;
+      btnBank.disabled = (phase !== 'selecting' && phase !== 'idle') || turnPts === 0 || over || !isHuman;
+      // Allow banking in idle phase after setting aside (before rolling)
+      if (phase === 'idle' && turnPts > 0 && isHuman && !over) btnBank.disabled = false;
+    }
+
+    function getSelected() {
+      const sel = [];
+      dice.forEach((v, i) => { if (dState[i] === 'sel') sel.push(v); });
+      return sel;
+    }
+
+    function toggleDie(i) {
+      if (phase !== 'selecting') return;
+      if (current === 1 && vsCPU) return;
+      dState[i] = dState[i] === 'sel' ? 'active' : 'sel';
+      render();
+    }
+
+    // Core actions
+    function doRoll() {
+      if (over) return;
+      if (phase !== 'idle') return;
+      phase = 'rolling';
+
+      if (hotDice || dice.length === 0) {
+        dice = new Array(6).fill(0);
+        dState = new Array(6).fill('active');
+        hotDice = false;
+      }
+
+      let rolls = 0;
+      const timer = setInterval(() => {
+        for (let i = 0; i < dice.length; i++) {
+          if (dState[i] === 'active') dice[i] = Math.floor(Math.random() * 6) + 1;
+        }
+        diceArea.innerHTML = '';
+        dice.forEach((v, i) => {
+          const el = document.createElement('div');
+          el.className = 'die locked rolling';
+          el.textContent = FACES[v];
+          diceArea.appendChild(el);
+        });
+        rolls++;
+        if (rolls >= 8) {
+          clearInterval(timer);
+          phase = 'selecting';
+          render();
+          // Check farkle
+          const active = dice.filter((_, i) => dState[i] === 'active');
+          if (!hasScoring(active)) {
+            doFarkle();
+          } else {
+            const name = playerName(current);
+            infoEl.innerHTML = '<span class="hl">' + name + '\'s TURN</span> \u2014 SELECT SCORING DICE';
+            updateButtons();
+            if (current === 1 && vsCPU) setTimeout(cpuSelect, 600);
+          }
+        }
+      }, 60);
+    }
+
+    function doSetAside() {
+      if (phase !== 'selecting') return;
+      const sel = [], idx = [];
+      dice.forEach((v, i) => { if (dState[i] === 'sel') { sel.push(v); idx.push(i); } });
+      const res = validateSelection(sel);
+      if (!res.valid || res.score === 0) return;
+
+      turnPts += res.score;
+      sel.forEach(v => aside.push(v));
+
+      // Remove set-aside dice from active set
+      // Build new arrays without the set-aside dice
+      const newDice = [], newState = [];
+      dice.forEach((v, i) => {
+        if (dState[i] !== 'sel') { newDice.push(v); newState.push(dState[i]); }
+      });
+      dice = newDice; dState = newState;
+
+      // Hot dice?
+      if (dice.length === 0) {
+        hotDice = true;
+        infoEl.innerHTML = '<span class="hl">HOT DICE!</span> ROLL ALL 6 AGAIN OR BANK';
+      } else {
+        infoEl.innerHTML = '<span class="hl">' + playerName(current) + '\'s TURN</span> \u2014 ROLL OR BANK';
+      }
+
+      phase = 'idle';
+      previewEl.innerHTML = '';
+      render();
+      if (current === 1 && vsCPU) setTimeout(cpuDecide, 700);
+    }
+
+    function doBank() {
+      if (turnPts === 0) return;
+      scores[current] += turnPts;
+      showFlash('+' + turnPts.toLocaleString(), 'banked');
+
+      if (scores[current] >= target && !finalTurn) {
+        finalTurn = true;
+        finalPlayer = current;
+      }
+      setTimeout(endTurn, 600);
+    }
+
+    function doFarkle() {
+      turnPts = 0;
+      showFlash('FARKLE!', 'farkle');
+      setTimeout(endTurn, 1200);
+    }
+
+    function endTurn() {
+      if (finalTurn && current !== finalPlayer) {
+        over = true; render(); showGameOver(); return;
+      }
+      current = 1 - current;
+      turnPts = 0; dice = []; dState = []; aside = []; hotDice = false; phase = 'idle';
+      render();
+      const extra = finalTurn ? ' <span class="warn">[FINAL TURN]</span>' : '';
+      infoEl.innerHTML = '<span class="hl">' + playerName(current) + '\'s TURN</span> \u2014 CLICK ROLL' + extra;
+      if (current === 1 && vsCPU && !over) setTimeout(cpuStartTurn, 800);
+    }
+
+    function showFlash(text, cls) {
+      flashText.innerHTML = '<span class="' + cls + '">' + text + '</span>';
+      flashEl.classList.add('show');
+      setTimeout(() => flashEl.classList.remove('show'), 1000);
+    }
+
+    function showGameOver() {
+      const w = scores[0] > scores[1] ? 'PLAYER 1' : scores[1] > scores[0] ? (vsCPU ? 'CPU' : 'PLAYER 2') : 'TIE';
+      document.getElementById('go-winner').textContent = w === 'TIE' ? "IT'S A TIE!" : w + ' WINS!';
+      document.getElementById('go-scores').textContent = scores[0].toLocaleString() + ' \u2013 ' + scores[1].toLocaleString();
+      gameoverEl.classList.remove('hidden');
+    }
+
+    function playerName(p) { return p === 0 ? 'PLAYER 1' : (vsCPU ? 'CPU' : 'PLAYER 2'); }
+
+    // CPU AI
+    function cpuStartTurn() {
+      if (over) return;
+      infoEl.innerHTML = '<span class="hl">CPU\'s TURN</span> \u2014 ROLLING...';
+      setTimeout(doRoll, 400);
+    }
+
+    function cpuSelect() {
+      if (phase !== 'selecting' || current !== 1 || !vsCPU || over) return;
+      const active = [];
+      dice.forEach((v, i) => { if (dState[i] === 'active') active.push({ v, i }); });
+      const vals = active.map(a => a.v);
+      const c = new Array(7).fill(0);
+      vals.forEach(v => c[v]++);
+
+      // Check straight
+      if (vals.length === 6 && c[1]===1&&c[2]===1&&c[3]===1&&c[4]===1&&c[5]===1&&c[6]===1) {
+        active.forEach(a => dState[a.i] = 'sel');
+        render(); setTimeout(doSetAside, 400); return;
+      }
+      // Three pairs
+      if (vals.length === 6) {
+        let pairs = 0;
+        for (let i = 1; i <= 6; i++) if (c[i] === 2) pairs++;
+        if (pairs === 3) { active.forEach(a => dState[a.i] = 'sel'); render(); setTimeout(doSetAside, 400); return; }
+      }
+
+      // Greedy: take triples+, then single 1s and 5s
+      const toSel = new Set();
+      for (let f = 1; f <= 6; f++) {
+        if (c[f] >= 3) {
+          let taken = 0;
+          active.forEach(a => { if (a.v === f && taken < c[f]) { toSel.add(a.i); taken++; } });
+        }
+      }
+      // Single 1s
+      if (c[1] < 3) active.forEach(a => { if (a.v === 1) toSel.add(a.i); });
+      // Single 5s
+      if (c[5] < 3) active.forEach(a => { if (a.v === 5) toSel.add(a.i); });
+
+      toSel.forEach(i => dState[i] = 'sel');
+      render();
+      setTimeout(doSetAside, 500);
+    }
+
+    function cpuDecide() {
+      if (over || current !== 1 || !vsCPU) return;
+      const activeDice = dice.length;
+      const wouldWin = scores[1] + turnPts >= target;
+
+      let bank = false;
+      if (wouldWin) bank = true;
+      else if (hotDice && turnPts < 1000) bank = false;
+      else if (activeDice <= 2 && turnPts >= 300) bank = true;
+      else if (activeDice <= 3 && turnPts >= 500) bank = true;
+      else if (turnPts >= 800) bank = true;
+
+      if (bank && turnPts > 0) {
+        setTimeout(doBank, 600);
+      } else {
+        infoEl.innerHTML = '<span class="hl">CPU\'s TURN</span> \u2014 ROLLING...';
+        setTimeout(doRoll, 600);
+      }
+    }
+
+    // Events
+    btnRoll.addEventListener('click', () => { if (current === 0 || !vsCPU) doRoll(); });
+    btnSet.addEventListener('click', () => { if (current === 0 || !vsCPU) doSetAside(); });
+    btnBank.addEventListener('click', () => { if (current === 0 || !vsCPU) doBank(); });
+    document.getElementById('btn-new').addEventListener('click', init);
+    document.getElementById('btn-again').addEventListener('click', init);
+    document.getElementById('sel-target').addEventListener('change', () => { target = parseInt(document.getElementById('sel-target').value); });
+    document.getElementById('sel-mode').addEventListener('change', () => {
+      vsCPU = document.getElementById('sel-mode').value === 'cpu';
+      document.getElementById('lbl-p2').textContent = vsCPU ? 'CPU' : 'PLAYER 2';
+    });
+
+    document.addEventListener('keydown', e => {
+      if (over) return;
+      if (current === 1 && vsCPU) return;
+      if (e.key === 'r' || e.key === 'R') { if (!btnRoll.disabled) doRoll(); }
+      else if (e.key === 's' || e.key === 'S') { if (!btnSet.disabled) doSetAside(); }
+      else if (e.key === 'b' || e.key === 'B') { if (!btnBank.disabled) doBank(); }
+      else if (e.key >= '1' && e.key <= '6') {
+        const idx = parseInt(e.key) - 1;
+        if (idx < dice.length) toggleDie(idx);
+      }
+    });
+
+    init();
+  })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

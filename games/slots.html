@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON SLOTS / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+      user-select: none;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .credits-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 1rem 0;
+      padding: 0.6rem 1rem;
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+    }
+
+    .credits-label {
+      color: var(--text-dim);
+    }
+
+    .credits-value {
+      color: var(--accent-cyan);
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-shadow: 0 0 10px var(--glow-cyan);
+    }
+
+    .machine {
+      border: 2px solid var(--border);
+      padding: 1.5rem 1rem;
+      margin: 1rem 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .machine::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        rgba(157, 78, 221, 0.05) 0%,
+        transparent 30%,
+        transparent 70%,
+        rgba(157, 78, 221, 0.05) 100%
+      );
+      pointer-events: none;
+    }
+
+    .reels {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .reel-window {
+      width: 100px;
+      height: 220px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .reel-window::before,
+    .reel-window::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 60px;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .reel-window::before {
+      top: 0;
+      background: linear-gradient(to bottom, var(--bg-primary) 0%, transparent 100%);
+    }
+
+    .reel-window::after {
+      bottom: 0;
+      background: linear-gradient(to top, var(--bg-primary) 0%, transparent 100%);
+    }
+
+    .reel-strip {
+      position: absolute;
+      left: 0;
+      right: 0;
+      transition: none;
+    }
+
+    .reel-cell {
+      width: 100px;
+      height: 74px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+    }
+
+    .payline-indicator {
+      position: absolute;
+      left: -6px;
+      right: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 74px;
+      border-top: 2px solid var(--accent-magenta);
+      border-bottom: 2px solid var(--accent-magenta);
+      z-index: 3;
+      pointer-events: none;
+      box-shadow: 0 0 12px var(--glow-magenta);
+      opacity: 0.6;
+    }
+
+    .payline-indicator.win {
+      opacity: 1;
+      animation: payline-flash 0.4s ease-in-out 6;
+    }
+
+    @keyframes payline-flash {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .bet-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.8rem;
+      margin: 0.8rem 0;
+    }
+
+    .bet-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      padding: 0.4rem 0.8rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .bet-btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .bet-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .bet-display {
+      color: var(--accent-green);
+      font-weight: 700;
+      font-size: 1rem;
+      min-width: 60px;
+      text-shadow: 0 0 10px var(--glow-green);
+    }
+
+    .spin-btn {
+      display: block;
+      width: 100%;
+      padding: 0.9rem;
+      margin-top: 0.8rem;
+      background: transparent;
+      border: 2px solid var(--accent-magenta);
+      color: var(--accent-magenta);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      text-shadow: 0 0 10px var(--glow-magenta);
+    }
+
+    .spin-btn:hover:not(:disabled) {
+      background: rgba(255, 45, 123, 0.1);
+      box-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .spin-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .result-msg {
+      height: 2rem;
+      line-height: 2rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      margin-top: 0.6rem;
+    }
+
+    .result-msg.win {
+      color: var(--accent-green);
+      text-shadow: 0 0 10px var(--glow-green);
+      animation: result-pulse 0.5s ease-in-out 3;
+    }
+
+    .result-msg.lose {
+      color: var(--text-dim);
+    }
+
+    .result-msg.jackpot {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 20px var(--glow-magenta);
+      font-size: 1.2rem;
+      animation: result-pulse 0.3s ease-in-out 6;
+    }
+
+    @keyframes result-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .paytable {
+      margin-top: 1.5rem;
+      border: 1px solid var(--border);
+      padding: 1rem;
+      text-align: left;
+    }
+
+    .paytable-title {
+      color: var(--accent-purple);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      margin-bottom: 0.8rem;
+      text-shadow: 0 0 8px var(--glow-purple);
+    }
+
+    .paytable-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.3rem 0;
+      font-size: 0.75rem;
+      border-bottom: 1px solid rgba(122, 122, 144, 0.2);
+    }
+
+    .paytable-row:last-child {
+      border-bottom: none;
+    }
+
+    .paytable-symbols {
+      font-size: 1rem;
+      letter-spacing: 0.3em;
+    }
+
+    .paytable-payout {
+      color: var(--accent-cyan);
+      font-weight: 700;
+    }
+
+    .paytable-label {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      margin-left: 0.5rem;
+    }
+
+    .controls-hint {
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      margin-top: 1rem;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 1rem;
+      padding: 0.5rem 0;
+      border-top: 1px solid var(--border);
+      font-size: 0.65rem;
+    }
+
+    .stat-label {
+      color: var(--text-dim);
+    }
+
+    .stat-value {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    .stat-value.positive {
+      color: var(--accent-green);
+    }
+
+    .stat-value.negative {
+      color: var(--accent-magenta);
+    }
+
+    @keyframes reel-blur {
+      0% { filter: blur(0); }
+      50% { filter: blur(2px); }
+      100% { filter: blur(0); }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>NEON SLOTS</h1>
+
+    <div class="credits-bar">
+      <span class="credits-label">CREDITS</span>
+      <span class="credits-value" id="credits">1000</span>
+    </div>
+
+    <div class="machine">
+      <div class="reels" id="reels">
+        <div class="reel-window">
+          <div class="payline-indicator" id="payline"></div>
+          <div class="reel-strip" id="reel0"></div>
+        </div>
+        <div class="reel-window">
+          <div class="reel-strip" id="reel1"></div>
+        </div>
+        <div class="reel-window">
+          <div class="reel-strip" id="reel2"></div>
+        </div>
+      </div>
+
+      <div class="bet-controls">
+        <button class="bet-btn" id="bet-down">&#9660;</button>
+        <div class="bet-display">BET: <span id="bet-value">10</span></div>
+        <button class="bet-btn" id="bet-up">&#9650;</button>
+        <button class="bet-btn" id="bet-max">MAX</button>
+      </div>
+
+      <button class="spin-btn" id="spin-btn">&#9654; SPIN</button>
+      <div class="result-msg" id="result-msg">&nbsp;</div>
+    </div>
+
+    <div class="stats">
+      <div><span class="stat-label">SPINS: </span><span class="stat-value" id="stat-spins">0</span></div>
+      <div><span class="stat-label">WINS: </span><span class="stat-value" id="stat-wins">0</span></div>
+      <div><span class="stat-label">NET: </span><span class="stat-value" id="stat-net">0</span></div>
+    </div>
+
+    <div class="paytable">
+      <div class="paytable-title">// PAYTABLE</div>
+      <div class="paytable-row">
+        <span><span class="paytable-symbols">💎💎💎</span><span class="paytable-label">Diamond</span></span>
+        <span class="paytable-payout">x50</span>
+      </div>
+      <div class="paytable-row">
+        <span><span class="paytable-symbols">⚡⚡⚡</span><span class="paytable-label">Lightning</span></span>
+        <span class="paytable-payout">x25</span>
+      </div>
+      <div class="paytable-row">
+        <span><span class="paytable-symbols">🔥🔥🔥</span><span class="paytable-label">Fire</span></span>
+        <span class="paytable-payout">x15</span>
+      </div>
+      <div class="paytable-row">
+        <span><span class="paytable-symbols">★★★</span><span class="paytable-label">Star</span></span>
+        <span class="paytable-payout">x10</span>
+      </div>
+      <div class="paytable-row">
+        <span><span class="paytable-symbols">▲▲▲</span><span class="paytable-label">Triangle</span></span>
+        <span class="paytable-payout">x5</span>
+      </div>
+      <div class="paytable-row">
+        <span><span class="paytable-symbols">■■■</span><span class="paytable-label">Block</span></span>
+        <span class="paytable-payout">x3</span>
+      </div>
+      <div class="paytable-row">
+        <span><span class="paytable-symbols">●●●</span><span class="paytable-label">Circle</span></span>
+        <span class="paytable-payout">x2</span>
+      </div>
+      <div class="paytable-row">
+        <span><span class="paytable-symbols">XX-</span><span class="paytable-label">Any pair</span></span>
+        <span class="paytable-payout">x1</span>
+      </div>
+    </div>
+
+    <div class="controls-hint">SPACE to spin &middot; &uarr;&darr; to adjust bet</div>
+  </main>
+
+  <script>
+    (function () {
+      const SYMBOLS = [
+        { ch: '●', color: 'var(--accent-cyan)', weight: 30, payout: 2, name: 'Circle' },
+        { ch: '■', color: 'var(--accent-green)', weight: 25, payout: 3, name: 'Block' },
+        { ch: '▲', color: 'var(--accent-purple)', weight: 20, payout: 5, name: 'Triangle' },
+        { ch: '★', color: '#ffb000', weight: 14, payout: 10, name: 'Star' },
+        { ch: '🔥', color: '#ff6ac1', weight: 6, payout: 15, name: 'Fire' },
+        { ch: '⚡', color: 'var(--accent-cyan)', weight: 3, payout: 25, name: 'Lightning' },
+        { ch: '💎', color: 'var(--accent-magenta)', weight: 2, payout: 50, name: 'Diamond' },
+      ];
+
+      const TOTAL_WEIGHT = SYMBOLS.reduce((s, sym) => s + sym.weight, 0);
+      const BETS = [5, 10, 25, 50, 100];
+      const CELLS_VISIBLE = 3;
+      const CELL_HEIGHT = 74;
+      const STRIP_LEN = 40;
+      const SPIN_EXTRA = STRIP_LEN - CELLS_VISIBLE;
+
+      let credits = 1000;
+      let betIndex = 1;
+      let spinning = false;
+      let totalSpins = 0;
+      let totalWins = 0;
+      let netGain = 0;
+
+      const creditsEl = document.getElementById('credits');
+      const betValueEl = document.getElementById('bet-value');
+      const spinBtn = document.getElementById('spin-btn');
+      const resultMsg = document.getElementById('result-msg');
+      const paylineEl = document.getElementById('payline');
+      const statSpins = document.getElementById('stat-spins');
+      const statWins = document.getElementById('stat-wins');
+      const statNet = document.getElementById('stat-net');
+
+      const reelEls = [
+        document.getElementById('reel0'),
+        document.getElementById('reel1'),
+        document.getElementById('reel2'),
+      ];
+
+      function pickSymbol() {
+        let r = Math.random() * TOTAL_WEIGHT;
+        for (const sym of SYMBOLS) {
+          r -= sym.weight;
+          if (r <= 0) return sym;
+        }
+        return SYMBOLS[0];
+      }
+
+      function buildStrip(targetSymbol) {
+        const cells = [];
+        for (let i = 0; i < STRIP_LEN; i++) {
+          cells.push(pickSymbol());
+        }
+        // Place target at the middle visible position (index 1 from bottom visible)
+        const targetIndex = STRIP_LEN - 2; // second from bottom = center visible
+        cells[targetIndex] = targetSymbol;
+        return cells;
+      }
+
+      function renderStrip(el, cells) {
+        el.innerHTML = '';
+        for (const sym of cells) {
+          const div = document.createElement('div');
+          div.className = 'reel-cell';
+          div.textContent = sym.ch;
+          div.style.color = sym.color;
+          if (sym.ch.length === 1) {
+            div.style.textShadow = `0 0 12px ${sym.color}`;
+          }
+          el.appendChild(div);
+        }
+      }
+
+      function setStripPos(el, cellIndex) {
+        const offset = -(cellIndex * CELL_HEIGHT);
+        el.style.transform = `translateY(${offset}px)`;
+      }
+
+      // Initialize reels at rest
+      function initReels() {
+        const initial = [pickSymbol(), pickSymbol(), pickSymbol()];
+        for (let i = 0; i < 3; i++) {
+          const cells = buildStrip(initial[i]);
+          renderStrip(reelEls[i], cells);
+          setStripPos(reelEls[i], STRIP_LEN - CELLS_VISIBLE);
+        }
+      }
+
+      function updateUI() {
+        creditsEl.textContent = credits;
+        betValueEl.textContent = BETS[betIndex];
+        statSpins.textContent = totalSpins;
+        statWins.textContent = totalWins;
+        statNet.textContent = (netGain >= 0 ? '+' : '') + netGain;
+        statNet.className = 'stat-value ' + (netGain >= 0 ? 'positive' : 'negative');
+
+        const bet = BETS[betIndex];
+        spinBtn.disabled = spinning || credits < bet;
+        document.getElementById('bet-down').disabled = spinning || betIndex <= 0;
+        document.getElementById('bet-up').disabled = spinning || betIndex >= BETS.length - 1;
+        document.getElementById('bet-max').disabled = spinning;
+      }
+
+      function animateReel(reelIndex, targetSymbol, delay) {
+        return new Promise(resolve => {
+          setTimeout(() => {
+            const cells = buildStrip(targetSymbol);
+            renderStrip(reelEls[reelIndex], cells);
+            setStripPos(reelEls[reelIndex], 0);
+
+            // Force reflow
+            reelEls[reelIndex].offsetHeight;
+
+            // Animate to final position
+            const duration = 600 + reelIndex * 300;
+            reelEls[reelIndex].style.transition = `transform ${duration}ms cubic-bezier(0.15, 0.8, 0.3, 1)`;
+            setStripPos(reelEls[reelIndex], STRIP_LEN - CELLS_VISIBLE);
+
+            setTimeout(() => {
+              reelEls[reelIndex].style.transition = 'none';
+              resolve();
+            }, duration + 50);
+          }, delay);
+        });
+      }
+
+      async function spin() {
+        if (spinning) return;
+        const bet = BETS[betIndex];
+        if (credits < bet) return;
+
+        spinning = true;
+        credits -= bet;
+        resultMsg.textContent = '\u00A0';
+        resultMsg.className = 'result-msg';
+        paylineEl.className = 'payline-indicator';
+        updateUI();
+
+        // Pick results
+        const results = [pickSymbol(), pickSymbol(), pickSymbol()];
+
+        // Animate reels with staggered delays
+        await Promise.all([
+          animateReel(0, results[0], 0),
+          animateReel(1, results[1], 200),
+          animateReel(2, results[2], 400),
+        ]);
+
+        // Check for win
+        totalSpins++;
+        let payout = 0;
+        let msg = '';
+        let msgClass = 'lose';
+
+        if (results[0].ch === results[1].ch && results[1].ch === results[2].ch) {
+          // Three of a kind
+          payout = bet * results[0].payout;
+          if (results[0].payout >= 25) {
+            msg = `JACKPOT! ${results[0].name.toUpperCase()} x3 — +${payout}`;
+            msgClass = 'jackpot';
+          } else {
+            msg = `${results[0].name.toUpperCase()} x3 — +${payout}`;
+            msgClass = 'win';
+          }
+        } else if (results[0].ch === results[1].ch || results[1].ch === results[2].ch || results[0].ch === results[2].ch) {
+          // Pair
+          payout = bet * 1;
+          msg = `PAIR — +${payout}`;
+          msgClass = 'win';
+        } else {
+          msg = 'NO MATCH';
+        }
+
+        if (payout > 0) {
+          credits += payout;
+          totalWins++;
+          netGain += payout - bet;
+          paylineEl.className = 'payline-indicator win';
+        } else {
+          netGain -= bet;
+        }
+
+        resultMsg.textContent = msg;
+        resultMsg.className = 'result-msg ' + msgClass;
+        spinning = false;
+
+        // Check if broke
+        if (credits <= 0) {
+          setTimeout(() => {
+            credits = 1000;
+            netGain = 0;
+            totalSpins = 0;
+            totalWins = 0;
+            resultMsg.textContent = 'RELOADED — 1000 CREDITS';
+            resultMsg.className = 'result-msg win';
+            updateUI();
+          }, 1500);
+        }
+
+        updateUI();
+      }
+
+      // Controls
+      spinBtn.addEventListener('click', spin);
+
+      document.getElementById('bet-down').addEventListener('click', () => {
+        if (!spinning && betIndex > 0) {
+          betIndex--;
+          updateUI();
+        }
+      });
+
+      document.getElementById('bet-up').addEventListener('click', () => {
+        if (!spinning && betIndex < BETS.length - 1) {
+          betIndex++;
+          updateUI();
+        }
+      });
+
+      document.getElementById('bet-max').addEventListener('click', () => {
+        if (!spinning) {
+          betIndex = BETS.length - 1;
+          // Find max affordable bet
+          while (betIndex > 0 && BETS[betIndex] > credits) betIndex--;
+          updateUI();
+        }
+      });
+
+      document.addEventListener('keydown', e => {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          spin();
+        } else if (e.code === 'ArrowUp') {
+          e.preventDefault();
+          if (!spinning && betIndex < BETS.length - 1) {
+            betIndex++;
+            updateUI();
+          }
+        } else if (e.code === 'ArrowDown') {
+          e.preventDefault();
+          if (!spinning && betIndex > 0) {
+            betIndex--;
+            updateUI();
+          }
+        }
+      });
+
+      initReels();
+      updateUI();
+    })();
+  </script>
+  <script>
+    (function(){var s=document.createElement('style');s.textContent=':root{--bg-primary:#0a0a0f;--bg-secondary:#121218;--text-primary:#e0e0e8;--text-bright:#e0e0e8;--text-dim:#7a7a90;--accent-magenta:#ff2d7b;--accent-cyan:#00f0ff;--accent-green:#39ff14;--accent-purple:#9d4edd;--border:#7a7a90;--glow-magenta:rgba(255,45,123,0.4);--glow-cyan:rgba(0,240,255,0.4);--glow-cyan-soft:rgba(0,240,255,0.15);--glow-green:rgba(57,255,20,0.4);--glow-purple:rgba(157,78,221,0.4)}@media(prefers-color-scheme:light){:root{--bg-primary:#f0eff5;--bg-secondary:#e4e3ec;--text-primary:#3a3a52;--text-bright:#18182a;--text-dim:#6e6e85;--accent-magenta:#cc1166;--accent-cyan:#00717f;--accent-green:#1a7a12;--accent-purple:#7b30b8;--border:#c8c8d6;--glow-magenta:rgba(204,17,102,0.2);--glow-cyan:rgba(0,113,127,0.2);--glow-cyan-soft:rgba(0,113,127,0.08);--glow-green:rgba(26,122,18,0.2);--glow-purple:rgba(123,48,184,0.2)}}';document.head.appendChild(s)})();
+  </script>
+</body>
+</html>

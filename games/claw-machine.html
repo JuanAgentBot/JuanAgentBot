@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CLAW MACHINE / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto 1rem;
+      border: 1px solid var(--border);
+      max-width: 100%;
+      cursor: crosshair;
+    }
+
+    .hud {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1rem;
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+    }
+
+    .hud-item {
+      color: var(--text-dim);
+    }
+
+    .hud-val {
+      color: var(--accent-cyan);
+      font-weight: 700;
+    }
+
+    .hud-val.magenta {
+      color: var(--accent-magenta);
+    }
+
+    .controls {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      line-height: 1.8;
+      margin-bottom: 1rem;
+    }
+
+    .controls kbd {
+      color: var(--accent-cyan);
+      border: 1px solid var(--border);
+      padding: 0.1rem 0.4rem;
+      font-family: inherit;
+    }
+
+    .msg {
+      font-size: 0.85rem;
+      color: var(--accent-green);
+      letter-spacing: 0.06em;
+      min-height: 1.4em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+    }
+
+    .msg.fail {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 10px var(--glow-magenta);
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      padding: 0.5rem 1.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--accent-cyan);
+      color: var(--bg);
+    }
+
+    .prize-list {
+      margin-top: 1.5rem;
+      border: 1px solid var(--border);
+      padding: 1rem;
+      text-align: left;
+    }
+
+    .prize-list h3 {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.6rem;
+    }
+
+    .prize-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.7rem;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid rgba(122, 122, 144, 0.2);
+    }
+
+    .prize-row:last-child {
+      border-bottom: none;
+    }
+
+    .prize-color {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+
+    .prize-name {
+      color: var(--text-muted);
+    }
+
+    .prize-pts {
+      color: var(--accent-green);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>CLAW MACHINE</h1>
+    <p class="subtitle">GRAB THE NEON PRIZES</p>
+
+    <div class="hud">
+      <div class="hud-item">SCORE <span class="hud-val" id="score">0</span></div>
+      <div class="hud-item">TRIES <span class="hud-val magenta" id="tries">5</span></div>
+      <div class="hud-item">CAUGHT <span class="hud-val" id="caught">0</span></div>
+    </div>
+
+    <canvas id="game" width="480" height="520"></canvas>
+
+    <div class="msg" id="msg">MOVE THE CLAW AND DROP!</div>
+
+    <div class="controls">
+      <kbd>&larr;</kbd> <kbd>&rarr;</kbd> MOVE CLAW &nbsp;|&nbsp;
+      <kbd>SPACE</kbd> DROP &nbsp;|&nbsp;
+      <kbd>R</kbd> RESTART
+    </div>
+
+    <div class="prize-list">
+      <h3>PRIZE VALUES</h3>
+      <div class="prize-row">
+        <span><span class="prize-color" style="background:#ff2d7b"></span><span class="prize-name">RUBY CRYSTAL</span></span>
+        <span class="prize-pts">50 PTS</span>
+      </div>
+      <div class="prize-row">
+        <span><span class="prize-color" style="background:#00f0ff"></span><span class="prize-name">CYAN GEM</span></span>
+        <span class="prize-pts">30 PTS</span>
+      </div>
+      <div class="prize-row">
+        <span><span class="prize-color" style="background:#39ff14"></span><span class="prize-name">MATRIX ORB</span></span>
+        <span class="prize-pts">20 PTS</span>
+      </div>
+      <div class="prize-row">
+        <span><span class="prize-color" style="background:#9d4edd"></span><span class="prize-name">PURPLE SHARD</span></span>
+        <span class="prize-pts">40 PTS</span>
+      </div>
+      <div class="prize-row">
+        <span><span class="prize-color" style="background:#ffb000"></span><span class="prize-name">AMBER CORE</span></span>
+        <span class="prize-pts">60 PTS</span>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const COLORS = {
+      void: '#0a0a0f',
+      magenta: '#ff2d7b',
+      cyan: '#00f0ff',
+      green: '#39ff14',
+      purple: '#9d4edd',
+      amber: '#ffb000',
+      white: '#e0e0e8',
+      dim: '#7a7a90',
+      darkPanel: '#121218'
+    };
+
+    const PRIZE_TYPES = [
+      { name: 'RUBY CRYSTAL', color: COLORS.magenta, glow: 'rgba(255,45,123,0.5)', points: 50, shape: 'diamond' },
+      { name: 'CYAN GEM', color: COLORS.cyan, glow: 'rgba(0,240,255,0.4)', points: 30, shape: 'hexagon' },
+      { name: 'MATRIX ORB', color: COLORS.green, glow: 'rgba(57,255,20,0.4)', points: 20, shape: 'circle' },
+      { name: 'PURPLE SHARD', color: COLORS.purple, glow: 'rgba(157,78,221,0.4)', points: 40, shape: 'triangle' },
+      { name: 'AMBER CORE', color: COLORS.amber, glow: 'rgba(255,176,0,0.4)', points: 60, shape: 'star' }
+    ];
+
+    // Game state
+    let state = 'idle'; // idle, moving, dropping, grabbing, rising, returning, gameover
+    let score = 0;
+    let tries = 5;
+    let caughtCount = 0;
+    let clawX = W / 2;
+    let clawY = 60;
+    let clawOpen = 1; // 1 = open, 0 = closed
+    let clawTargetY = 60;
+    let clawSpeed = 3;
+    let clawHolding = null;
+    let prizes = [];
+    let particles = [];
+    let msgEl = document.getElementById('msg');
+    let scoreEl = document.getElementById('score');
+    let triesEl = document.getElementById('tries');
+    let caughtEl = document.getElementById('caught');
+    let keys = {};
+    let wobble = 0;
+    let wobbleDir = 1;
+
+    // Rail
+    const RAIL_Y = 40;
+    const RAIL_LEFT = 40;
+    const RAIL_RIGHT = W - 40;
+    const CLAW_REST_Y = 60;
+    const PRIZE_FLOOR = H - 80;
+    const GRAB_ZONE = 18; // how close claw needs to be to grab
+
+    function initPrizes() {
+      prizes = [];
+      const count = 12 + Math.floor(Math.random() * 5);
+      for (let i = 0; i < count; i++) {
+        const type = PRIZE_TYPES[Math.floor(Math.random() * PRIZE_TYPES.length)];
+        const size = 14 + Math.random() * 8;
+        prizes.push({
+          x: RAIL_LEFT + 20 + Math.random() * (RAIL_RIGHT - RAIL_LEFT - 40),
+          y: PRIZE_FLOOR - 10 + Math.random() * 50,
+          size: size,
+          type: type,
+          grabbed: false,
+          removed: false
+        });
+      }
+      // Sort by y so lower ones draw first
+      prizes.sort((a, b) => a.y - b.y);
+    }
+
+    function reset() {
+      state = 'idle';
+      score = 0;
+      tries = 5;
+      caughtCount = 0;
+      clawX = W / 2;
+      clawY = CLAW_REST_Y;
+      clawOpen = 1;
+      clawHolding = null;
+      particles = [];
+      initPrizes();
+      updateHUD();
+      msgEl.textContent = 'MOVE THE CLAW AND DROP!';
+      msgEl.className = 'msg';
+    }
+
+    function updateHUD() {
+      scoreEl.textContent = score;
+      triesEl.textContent = tries;
+      caughtEl.textContent = caughtCount;
+    }
+
+    // Drawing functions
+    function drawMachine() {
+      // Machine background
+      ctx.fillStyle = COLORS.darkPanel;
+      ctx.fillRect(10, 10, W - 20, H - 20);
+
+      // Glass border
+      ctx.strokeStyle = COLORS.dim;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(10, 10, W - 20, H - 20);
+
+      // Inner edge glow
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(12, 12, W - 24, H - 24);
+
+      // Rail
+      ctx.strokeStyle = COLORS.dim;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(RAIL_LEFT, RAIL_Y);
+      ctx.lineTo(RAIL_RIGHT, RAIL_Y);
+      ctx.stroke();
+
+      // Rail end caps
+      ctx.fillStyle = COLORS.cyan;
+      ctx.shadowColor = COLORS.cyan;
+      ctx.shadowBlur = 8;
+      ctx.fillRect(RAIL_LEFT - 4, RAIL_Y - 4, 8, 8);
+      ctx.fillRect(RAIL_RIGHT - 4, RAIL_Y - 4, 8, 8);
+      ctx.shadowBlur = 0;
+
+      // Prize floor
+      ctx.fillStyle = 'rgba(122, 122, 144, 0.15)';
+      ctx.fillRect(20, PRIZE_FLOOR + 30, W - 40, 4);
+
+      // Drop chute
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.08)';
+      ctx.fillRect(W - 70, PRIZE_FLOOR - 60, 50, 100);
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(W - 70, PRIZE_FLOOR - 60, 50, 100);
+
+      // Chute label
+      ctx.fillStyle = COLORS.cyan;
+      ctx.font = '600 9px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillText('DROP', W - 45, PRIZE_FLOOR - 65);
+      ctx.fillText('ZONE', W - 45, PRIZE_FLOOR - 54);
+    }
+
+    function drawPrize(p) {
+      if (p.removed) return;
+      const { x, y, size, type } = p;
+
+      ctx.save();
+      ctx.shadowColor = type.glow;
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = type.color;
+      ctx.strokeStyle = type.color;
+      ctx.lineWidth = 2;
+
+      switch (type.shape) {
+        case 'diamond':
+          ctx.beginPath();
+          ctx.moveTo(x, y - size);
+          ctx.lineTo(x + size * 0.7, y);
+          ctx.lineTo(x, y + size * 0.6);
+          ctx.lineTo(x - size * 0.7, y);
+          ctx.closePath();
+          ctx.fill();
+          break;
+        case 'hexagon':
+          ctx.beginPath();
+          for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 3) * i - Math.PI / 6;
+            const px = x + size * 0.7 * Math.cos(angle);
+            const py = y + size * 0.7 * Math.sin(angle);
+            i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.fill();
+          break;
+        case 'circle':
+          ctx.beginPath();
+          ctx.arc(x, y, size * 0.65, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+        case 'triangle':
+          ctx.beginPath();
+          ctx.moveTo(x, y - size);
+          ctx.lineTo(x + size * 0.8, y + size * 0.6);
+          ctx.lineTo(x - size * 0.8, y + size * 0.6);
+          ctx.closePath();
+          ctx.fill();
+          break;
+        case 'star':
+          ctx.beginPath();
+          for (let i = 0; i < 10; i++) {
+            const angle = (Math.PI / 5) * i - Math.PI / 2;
+            const r = i % 2 === 0 ? size * 0.7 : size * 0.35;
+            const px = x + r * Math.cos(angle);
+            const py = y + r * Math.sin(angle);
+            i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.fill();
+          break;
+      }
+
+      // Inner highlight
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(x - size * 0.15, y - size * 0.2, size * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawClaw() {
+      const armWidth = 4;
+      const jawLen = 20;
+      const openAngle = clawOpen * 0.6; // radians
+
+      // Cable from rail to claw
+      ctx.strokeStyle = COLORS.dim;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(clawX, RAIL_Y);
+      ctx.lineTo(clawX, clawY - 10);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Rail indicator
+      ctx.fillStyle = COLORS.magenta;
+      ctx.shadowColor = COLORS.magenta;
+      ctx.shadowBlur = 10;
+      ctx.fillRect(clawX - 6, RAIL_Y - 6, 12, 12);
+      ctx.shadowBlur = 0;
+
+      // Claw body
+      ctx.fillStyle = COLORS.white;
+      ctx.shadowColor = 'rgba(224,224,232,0.4)';
+      ctx.shadowBlur = 8;
+      ctx.fillRect(clawX - 8, clawY - 10, 16, 14);
+      ctx.shadowBlur = 0;
+
+      // Left jaw
+      ctx.save();
+      ctx.translate(clawX - 6, clawY + 4);
+      ctx.rotate(-openAngle);
+      ctx.fillStyle = COLORS.cyan;
+      ctx.shadowColor = COLORS.cyan;
+      ctx.shadowBlur = 6;
+      ctx.fillRect(-armWidth / 2, 0, armWidth, jawLen);
+      // Tip
+      ctx.fillRect(-armWidth, jawLen - 4, armWidth * 2 + 2, 4);
+      ctx.restore();
+
+      // Right jaw
+      ctx.save();
+      ctx.translate(clawX + 6, clawY + 4);
+      ctx.rotate(openAngle);
+      ctx.fillStyle = COLORS.cyan;
+      ctx.shadowColor = COLORS.cyan;
+      ctx.shadowBlur = 6;
+      ctx.fillRect(-armWidth / 2, 0, armWidth, jawLen);
+      // Tip
+      ctx.fillRect(-2, jawLen - 4, armWidth * 2 + 2, 4);
+      ctx.restore();
+
+      ctx.shadowBlur = 0;
+
+      // Draw held prize near claw
+      if (clawHolding) {
+        clawHolding.x = clawX + wobble;
+        clawHolding.y = clawY + 30;
+        drawPrize(clawHolding);
+      }
+    }
+
+    function drawParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.1;
+        p.life -= 0.02;
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 6;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      }
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+    }
+
+    function spawnParticles(x, y, color, count) {
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          vx: (Math.random() - 0.5) * 6,
+          vy: (Math.random() - 0.5) * 6 - 2,
+          size: 3 + Math.random() * 4,
+          color: color,
+          life: 0.6 + Math.random() * 0.4
+        });
+      }
+    }
+
+    function drawGameOver() {
+      ctx.fillStyle = 'rgba(10, 10, 15, 0.85)';
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.fillStyle = COLORS.magenta;
+      ctx.shadowColor = COLORS.magenta;
+      ctx.shadowBlur = 20;
+      ctx.font = '800 28px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillText('GAME OVER', W / 2, H / 2 - 40);
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = COLORS.cyan;
+      ctx.font = '700 18px "JetBrains Mono"';
+      ctx.fillText('SCORE: ' + score, W / 2, H / 2 + 10);
+
+      ctx.fillStyle = COLORS.white;
+      ctx.font = '400 13px "JetBrains Mono"';
+      ctx.fillText('PRIZES CAUGHT: ' + caughtCount, W / 2, H / 2 + 40);
+
+      ctx.fillStyle = COLORS.dim;
+      ctx.font = '400 11px "JetBrains Mono"';
+      ctx.fillText('PRESS R TO PLAY AGAIN', W / 2, H / 2 + 75);
+    }
+
+    function tryGrab() {
+      const grabY = clawY + 24; // tip of closed jaws
+      let closest = null;
+      let closestDist = Infinity;
+
+      for (const p of prizes) {
+        if (p.removed || p.grabbed) continue;
+        const dx = clawX - p.x;
+        const dy = grabY - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < GRAB_ZONE + p.size * 0.5 && dist < closestDist) {
+          closest = p;
+          closestDist = dist;
+        }
+      }
+
+      if (closest) {
+        // Grab chance based on distance (closer = better chance)
+        const chance = Math.max(0.3, 1 - closestDist / (GRAB_ZONE + closest.size));
+        // Higher value prizes are slightly harder to grab
+        const valuePenalty = closest.type.points > 40 ? 0.15 : 0;
+        if (Math.random() < chance - valuePenalty) {
+          closest.grabbed = true;
+          clawHolding = closest;
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function update() {
+      const moveSpeed = 3;
+
+      if (state === 'idle') {
+        if (keys['ArrowLeft'] || keys['a']) {
+          clawX = Math.max(RAIL_LEFT + 20, clawX - moveSpeed);
+        }
+        if (keys['ArrowRight'] || keys['d']) {
+          clawX = Math.min(RAIL_RIGHT - 20, clawX + moveSpeed);
+        }
+      }
+
+      if (state === 'dropping') {
+        clawY += clawSpeed;
+        // Slowly close as it descends
+        clawOpen = Math.max(0.3, clawOpen - 0.008);
+
+        if (clawY >= PRIZE_FLOOR) {
+          clawY = PRIZE_FLOOR;
+          state = 'grabbing';
+          clawOpen = 0;
+          setTimeout(() => {
+            const grabbed = tryGrab();
+            if (grabbed) {
+              msgEl.textContent = 'GOT ONE! PULLING UP...';
+              msgEl.className = 'msg';
+            } else {
+              msgEl.textContent = 'MISSED! PULLING UP...';
+              msgEl.className = 'msg fail';
+            }
+            state = 'rising';
+          }, 400);
+        }
+      }
+
+      if (state === 'rising') {
+        clawY -= clawSpeed * 0.7;
+
+        // Wobble when holding a prize (might drop it!)
+        if (clawHolding) {
+          wobble += wobbleDir * 0.3;
+          if (Math.abs(wobble) > 3) wobbleDir *= -1;
+
+          // Small chance to drop during rise
+          if (clawY > CLAW_REST_Y + 60 && Math.random() < 0.003) {
+            // Drop the prize!
+            clawHolding.grabbed = false;
+            clawHolding.x = clawX + wobble;
+            clawHolding.y = clawY + 30;
+            clawHolding = null;
+            wobble = 0;
+            msgEl.textContent = 'DROPPED IT!';
+            msgEl.className = 'msg fail';
+          }
+        }
+
+        if (clawY <= CLAW_REST_Y) {
+          clawY = CLAW_REST_Y;
+          if (clawHolding) {
+            state = 'returning';
+          } else {
+            state = 'idle';
+            clawOpen = 1;
+            checkGameOver();
+          }
+        }
+      }
+
+      if (state === 'returning') {
+        // Move to drop zone
+        const targetX = W - 45;
+        const dx = targetX - clawX;
+        if (Math.abs(dx) > 2) {
+          clawX += Math.sign(dx) * moveSpeed;
+        } else {
+          // Drop prize in chute
+          const prize = clawHolding;
+          prize.removed = true;
+          score += prize.type.points;
+          caughtCount++;
+          spawnParticles(clawX, clawY + 30, prize.type.color, 20);
+          clawHolding = null;
+          clawOpen = 1;
+          wobble = 0;
+          state = 'idle';
+          updateHUD();
+
+          msgEl.textContent = prize.type.name + '! +' + prize.type.points + ' PTS';
+          msgEl.className = 'msg';
+
+          checkGameOver();
+        }
+      }
+    }
+
+    function checkGameOver() {
+      if (tries <= 0) {
+        state = 'gameover';
+        msgEl.textContent = 'NO TRIES LEFT';
+        msgEl.className = 'msg fail';
+      }
+    }
+
+    function draw() {
+      // Detect theme
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      ctx.fillStyle = isLight ? '#f0eff5' : COLORS.void;
+      ctx.fillRect(0, 0, W, H);
+
+      drawMachine();
+
+      // Draw prizes
+      for (const p of prizes) {
+        if (!p.grabbed) drawPrize(p);
+      }
+
+      drawClaw();
+      drawParticles();
+
+      if (state === 'gameover') {
+        drawGameOver();
+      }
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // Input
+    document.addEventListener('keydown', (e) => {
+      keys[e.key] = true;
+
+      if (e.key === 'r' || e.key === 'R') {
+        reset();
+        return;
+      }
+
+      if (e.key === ' ' && state === 'idle' && tries > 0) {
+        e.preventDefault();
+        state = 'dropping';
+        clawOpen = 0.8;
+        tries--;
+        updateHUD();
+        msgEl.textContent = 'DROPPING...';
+        msgEl.className = 'msg';
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      keys[e.key] = false;
+    });
+
+    // Touch/click support for mobile
+    let touchStartX = null;
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = W / rect.width;
+      touchStartX = (e.touches[0].clientX - rect.left) * scaleX;
+
+      if (state === 'idle' && tries > 0) {
+        // Tap to drop
+        state = 'dropping';
+        clawOpen = 0.8;
+        tries--;
+        updateHUD();
+        msgEl.textContent = 'DROPPING...';
+        msgEl.className = 'msg';
+      }
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (state === 'idle') {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = W / rect.width;
+        const tx = (e.touches[0].clientX - rect.left) * scaleX;
+        clawX = Math.max(RAIL_LEFT + 20, Math.min(RAIL_RIGHT - 20, tx));
+      }
+    });
+
+    canvas.addEventListener('click', (e) => {
+      if (state === 'gameover') {
+        reset();
+        return;
+      }
+      if (state === 'idle') {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = W / rect.width;
+        clawX = Math.max(RAIL_LEFT + 20, Math.min(RAIL_RIGHT - 20,
+          (e.clientX - rect.left) * scaleX));
+      }
+    });
+
+    // Start
+    reset();
+    loop();
+  </script>
+</body>
+</html>

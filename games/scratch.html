@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON SCRATCH / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+      user-select: none;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .info {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 1.5rem;
+    }
+
+    .stats-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1.2rem;
+      padding: 0.6rem 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.2rem;
+    }
+
+    .stat-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      text-shadow: 0 0 10px var(--glow-cyan);
+    }
+
+    .stat-value.green {
+      color: var(--accent-green);
+      text-shadow: 0 0 10px var(--glow-green);
+    }
+
+    .stat-value.magenta {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 10px var(--glow-magenta);
+    }
+
+    .card-container {
+      position: relative;
+      margin: 0 auto 1.2rem;
+      border: 1px solid var(--border);
+    }
+
+    .card-container canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      cursor: crosshair;
+    }
+
+    .prize-table {
+      width: 100%;
+      margin-bottom: 1.2rem;
+      border: 1px solid var(--border);
+      font-size: 0.7rem;
+    }
+
+    .prize-table .row {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      padding: 0.4rem 0.6rem;
+      align-items: center;
+    }
+
+    .prize-table .row:last-child {
+      border-bottom: none;
+    }
+
+    .prize-table .row.header {
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      font-size: 0.6rem;
+    }
+
+    .prize-table .sym {
+      flex: 0 0 2.5rem;
+      font-size: 1.2rem;
+      text-align: center;
+    }
+
+    .prize-table .name {
+      flex: 1;
+      text-align: left;
+      color: var(--text-muted);
+    }
+
+    .prize-table .payout {
+      flex: 0 0 4rem;
+      text-align: right;
+      color: var(--accent-green);
+      font-weight: 700;
+    }
+
+    .btn {
+      display: inline-block;
+      background: none;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      padding: 0.6rem 1.8rem;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin: 0.3rem;
+    }
+
+    .btn:hover {
+      background: var(--accent-cyan);
+      color: var(--bg);
+      box-shadow: 0 0 16px var(--glow-cyan);
+    }
+
+    .btn.magenta {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+    }
+
+    .btn.magenta:hover {
+      background: var(--accent-magenta);
+      color: var(--bg);
+      box-shadow: 0 0 16px var(--glow-magenta);
+    }
+
+    .message {
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 0.8rem 0;
+      min-height: 1.4rem;
+      letter-spacing: 0.04em;
+    }
+
+    .message.win {
+      color: var(--accent-green);
+      text-shadow: 0 0 14px var(--glow-green);
+    }
+
+    .message.lose {
+      color: var(--text-dim);
+    }
+
+    .message.jackpot {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 20px var(--glow-magenta);
+      font-size: 1.3rem;
+    }
+
+    .controls {
+      margin-top: 0.6rem;
+    }
+
+    .hint {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      margin-top: 0.8rem;
+      letter-spacing: 0.04em;
+    }
+
+    .scratch-progress {
+      height: 3px;
+      background: var(--border);
+      margin: 0.4rem 0 0.8rem;
+      position: relative;
+    }
+
+    .scratch-progress .fill {
+      height: 100%;
+      background: var(--accent-cyan);
+      transition: width 0.15s;
+      box-shadow: 0 0 6px var(--glow-cyan);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>NEON SCRATCH</h1>
+    <p class="info">SCRATCH TO REVEAL &middot; MATCH 3 TO WIN</p>
+
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-label">CREDITS</div>
+        <div class="stat-value green" id="credits">100</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">CARD COST</div>
+        <div class="stat-value" id="card-cost">5</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">TOTAL WON</div>
+        <div class="stat-value magenta" id="total-won">0</div>
+      </div>
+    </div>
+
+    <div class="card-container" id="card-container">
+      <canvas id="card-canvas" width="480" height="320"></canvas>
+    </div>
+
+    <div class="scratch-progress">
+      <div class="fill" id="progress-fill" style="width:0%"></div>
+    </div>
+
+    <div class="message" id="message">&nbsp;</div>
+
+    <div class="controls">
+      <button class="btn" id="btn-new" onclick="buyCard()">NEW CARD [5cr]</button>
+      <button class="btn magenta" id="btn-reveal" onclick="revealAll()">REVEAL ALL</button>
+    </div>
+
+    <div class="prize-table" id="prize-table"></div>
+
+    <p class="hint">DRAG TO SCRATCH &middot; MATCH 3 SYMBOLS IN THE GRID TO WIN</p>
+  </main>
+
+  <script>
+    const SYMBOLS = [
+      { sym: '◆', name: 'DIAMOND', color: '#00f0ff', payout: 50 },
+      { sym: '★', name: 'STAR', color: '#ff2d7b', payout: 25 },
+      { sym: '⬡', name: 'HEXAGON', color: '#9d4edd', payout: 15 },
+      { sym: '▲', name: 'TRIANGLE', color: '#39ff14', payout: 10 },
+      { sym: '●', name: 'CIRCLE', color: '#ffb000', payout: 5 },
+      { sym: '■', name: 'SQUARE', color: '#e0e0e8', payout: 3 }
+    ];
+
+    const COLS = 4;
+    const ROWS = 3;
+    const TOTAL_CELLS = COLS * ROWS;
+    const CARD_COST = 5;
+    const CELL_W = 120;
+    const CELL_H = 106;
+    const CANVAS_W = 480;
+    const CANVAS_H = 320;
+    const SCRATCH_RADIUS = 22;
+    const REVEAL_THRESHOLD = 0.45;
+
+    let credits = 100;
+    let totalWon = 0;
+    let grid = [];
+    let scratched = [];
+    let cellRevealed = [];
+    let cardActive = false;
+    let cardResolved = false;
+    let isScratching = false;
+
+    const canvas = document.getElementById('card-canvas');
+    const ctx = canvas.getContext('2d');
+    const scratchCanvas = document.createElement('canvas');
+    scratchCanvas.width = CANVAS_W;
+    scratchCanvas.height = CANVAS_H;
+    const scratchCtx = scratchCanvas.getContext('2d');
+
+    function buildPrizeTable() {
+      const table = document.getElementById('prize-table');
+      let html = '<div class="row header"><span class="sym"></span><span class="name">SYMBOL</span><span class="payout">MATCH 3</span></div>';
+      for (const s of SYMBOLS) {
+        html += `<div class="row"><span class="sym" style="color:${s.color};text-shadow:0 0 8px ${s.color}40">${s.sym}</span><span class="name">${s.name}</span><span class="payout">+${s.payout}cr</span></div>`;
+      }
+      table.innerHTML = html;
+    }
+
+    function generateGrid() {
+      // Pick a win chance (~35%)
+      const willWin = Math.random() < 0.35;
+      grid = [];
+
+      if (willWin) {
+        // Pick a winning symbol
+        const winIdx = Math.floor(Math.random() * SYMBOLS.length);
+        // Place 3 of the winning symbol
+        const positions = [];
+        while (positions.length < 3) {
+          const p = Math.floor(Math.random() * TOTAL_CELLS);
+          if (!positions.includes(p)) positions.push(p);
+        }
+        // Fill grid
+        for (let i = 0; i < TOTAL_CELLS; i++) {
+          if (positions.includes(i)) {
+            grid.push(winIdx);
+          } else {
+            // Pick a random symbol that's NOT the winner (avoid accidental extra matches)
+            let si;
+            do { si = Math.floor(Math.random() * SYMBOLS.length); } while (si === winIdx);
+            grid.push(si);
+          }
+        }
+      } else {
+        // No 3-of-a-kind
+        // Fill randomly but ensure no symbol appears 3+ times
+        const counts = new Array(SYMBOLS.length).fill(0);
+        for (let i = 0; i < TOTAL_CELLS; i++) {
+          let si;
+          let tries = 0;
+          do {
+            si = Math.floor(Math.random() * SYMBOLS.length);
+            tries++;
+          } while (counts[si] >= 2 && tries < 100);
+          counts[si]++;
+          grid.push(si);
+        }
+      }
+    }
+
+    function drawBaseCard() {
+      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+      // Background
+      const isDark = !document.documentElement.hasAttribute('data-theme') ||
+                     document.documentElement.getAttribute('data-theme') !== 'light';
+      ctx.fillStyle = isDark ? '#0d0d14' : '#e8e7f0';
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+      // Grid lines
+      ctx.strokeStyle = isDark ? '#2a2a3a' : '#c0c0d0';
+      ctx.lineWidth = 1;
+      for (let c = 1; c < COLS; c++) {
+        ctx.beginPath();
+        ctx.moveTo(c * CELL_W, 0);
+        ctx.lineTo(c * CELL_W, CANVAS_H);
+        ctx.stroke();
+      }
+      for (let r = 1; r < ROWS; r++) {
+        ctx.beginPath();
+        ctx.moveTo(0, r * CELL_H);
+        ctx.lineTo(CANVAS_W, r * CELL_H);
+        ctx.stroke();
+      }
+
+      // Draw symbols
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        const col = i % COLS;
+        const row = Math.floor(i / COLS);
+        const s = SYMBOLS[grid[i]];
+        const cx = col * CELL_W + CELL_W / 2;
+        const cy = row * CELL_H + CELL_H / 2;
+
+        ctx.font = '700 38px JetBrains Mono, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = s.color;
+        ctx.shadowColor = s.color;
+        ctx.shadowBlur = 12;
+        ctx.fillText(s.sym, cx, cy - 6);
+        ctx.shadowBlur = 0;
+
+        ctx.font = '600 11px JetBrains Mono, monospace';
+        ctx.fillStyle = isDark ? '#7a7a90' : '#6e6e85';
+        ctx.fillText(s.name, cx, cy + 24);
+      }
+    }
+
+    function drawScratchLayer() {
+      const isDark = !document.documentElement.hasAttribute('data-theme') ||
+                     document.documentElement.getAttribute('data-theme') !== 'light';
+
+      scratchCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+      // Scratch overlay per cell
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        if (cellRevealed[i]) continue;
+        const col = i % COLS;
+        const row = Math.floor(i / COLS);
+        const x = col * CELL_W;
+        const y = row * CELL_H;
+
+        // Gradient scratch surface
+        const grd = scratchCtx.createLinearGradient(x, y, x + CELL_W, y + CELL_H);
+        if (isDark) {
+          grd.addColorStop(0, '#1e1e2e');
+          grd.addColorStop(0.5, '#2a2a3f');
+          grd.addColorStop(1, '#1a1a2a');
+        } else {
+          grd.addColorStop(0, '#b8b8cc');
+          grd.addColorStop(0.5, '#a8a8bc');
+          grd.addColorStop(1, '#b0b0c4');
+        }
+        scratchCtx.fillStyle = grd;
+        scratchCtx.fillRect(x, y, CELL_W, CELL_H);
+
+        // Hatching pattern
+        scratchCtx.strokeStyle = isDark ? '#35354a' : '#9a9ab0';
+        scratchCtx.lineWidth = 0.5;
+        for (let d = -CELL_H; d < CELL_W; d += 8) {
+          scratchCtx.beginPath();
+          scratchCtx.moveTo(x + d, y);
+          scratchCtx.lineTo(x + d + CELL_H, y + CELL_H);
+          scratchCtx.stroke();
+        }
+
+        // Question mark
+        scratchCtx.font = '700 28px JetBrains Mono, monospace';
+        scratchCtx.textAlign = 'center';
+        scratchCtx.textBaseline = 'middle';
+        scratchCtx.fillStyle = isDark ? '#4a4a60' : '#8080a0';
+        scratchCtx.fillText('?', x + CELL_W / 2, y + CELL_H / 2);
+      }
+    }
+
+    function compositeRender() {
+      drawBaseCard();
+      // Apply scratch layer with scratched areas transparent
+      const tmpCanvas = document.createElement('canvas');
+      tmpCanvas.width = CANVAS_W;
+      tmpCanvas.height = CANVAS_H;
+      const tmpCtx = tmpCanvas.getContext('2d');
+      tmpCtx.drawImage(scratchCanvas, 0, 0);
+
+      // Erase scratched pixels
+      tmpCtx.globalCompositeOperation = 'destination-out';
+      for (const pt of scratched) {
+        tmpCtx.beginPath();
+        tmpCtx.arc(pt.x, pt.y, SCRATCH_RADIUS, 0, Math.PI * 2);
+        tmpCtx.fill();
+      }
+      tmpCtx.globalCompositeOperation = 'source-over';
+
+      ctx.drawImage(tmpCanvas, 0, 0);
+
+      // Grid lines on top
+      const isDark = !document.documentElement.hasAttribute('data-theme') ||
+                     document.documentElement.getAttribute('data-theme') !== 'light';
+      ctx.strokeStyle = isDark ? '#3a3a50' : '#b0b0c0';
+      ctx.lineWidth = 1;
+      for (let c = 1; c < COLS; c++) {
+        ctx.beginPath();
+        ctx.moveTo(c * CELL_W, 0);
+        ctx.lineTo(c * CELL_W, CANVAS_H);
+        ctx.stroke();
+      }
+      for (let r = 1; r < ROWS; r++) {
+        ctx.beginPath();
+        ctx.moveTo(0, r * CELL_H);
+        ctx.lineTo(CANVAS_W, r * CELL_H);
+        ctx.stroke();
+      }
+    }
+
+    function getCanvasPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = CANVAS_W / rect.width;
+      const scaleY = CANVAS_H / rect.height;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+      };
+    }
+
+    function scratchAt(x, y) {
+      scratched.push({ x, y });
+      checkCellReveals();
+      compositeRender();
+      updateProgress();
+    }
+
+    function checkCellReveals() {
+      // For each cell, check if enough area is scratched
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        if (cellRevealed[i]) continue;
+        const col = i % COLS;
+        const row = Math.floor(i / COLS);
+        const cx = col * CELL_W + CELL_W / 2;
+        const cy = row * CELL_H + CELL_H / 2;
+
+        // Count scratch points in this cell
+        let scratchCount = 0;
+        const cellArea = CELL_W * CELL_H;
+        for (const pt of scratched) {
+          if (pt.x >= col * CELL_W && pt.x < (col + 1) * CELL_W &&
+              pt.y >= row * CELL_H && pt.y < (row + 1) * CELL_H) {
+            scratchCount++;
+          }
+        }
+
+        // Rough coverage estimate
+        const coverage = (scratchCount * Math.PI * SCRATCH_RADIUS * SCRATCH_RADIUS) / cellArea;
+        if (coverage > REVEAL_THRESHOLD) {
+          cellRevealed[i] = true;
+        }
+      }
+
+      // Check if all revealed
+      if (cellRevealed.every(r => r) && !cardResolved) {
+        resolveCard();
+      }
+    }
+
+    function updateProgress() {
+      const revealed = cellRevealed.filter(r => r).length;
+      const pct = (revealed / TOTAL_CELLS) * 100;
+      document.getElementById('progress-fill').style.width = pct + '%';
+    }
+
+    function resolveCard() {
+      cardResolved = true;
+      // Count symbols
+      const counts = new Array(SYMBOLS.length).fill(0);
+      for (const si of grid) counts[si]++;
+
+      let winAmount = 0;
+      let winSymbol = null;
+      for (let i = 0; i < SYMBOLS.length; i++) {
+        if (counts[i] >= 3) {
+          // Highest payout wins
+          const payout = SYMBOLS[i].payout * (counts[i] === 4 ? 3 : 1);
+          if (payout > winAmount) {
+            winAmount = payout;
+            winSymbol = SYMBOLS[i];
+          }
+        }
+      }
+
+      const msg = document.getElementById('message');
+      if (winAmount > 0) {
+        credits += winAmount;
+        totalWon += winAmount;
+        if (winAmount >= 50) {
+          msg.className = 'message jackpot';
+          msg.textContent = `JACKPOT! +${winAmount}cr ${winSymbol.sym}`;
+        } else {
+          msg.className = 'message win';
+          msg.textContent = `WIN! +${winAmount}cr ${winSymbol.sym}`;
+        }
+      } else {
+        msg.className = 'message lose';
+        msg.textContent = 'NO MATCH. TRY ANOTHER CARD.';
+      }
+
+      updateStats();
+    }
+
+    function revealAll() {
+      if (!cardActive) return;
+      cellRevealed = new Array(TOTAL_CELLS).fill(true);
+      scratched = [];
+      // Clear scratch layer
+      scratchCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+      drawBaseCard();
+      updateProgress();
+      if (!cardResolved) resolveCard();
+    }
+
+    function buyCard() {
+      if (credits < CARD_COST) {
+        const msg = document.getElementById('message');
+        msg.className = 'message lose';
+        msg.textContent = 'NOT ENOUGH CREDITS';
+        return;
+      }
+
+      credits -= CARD_COST;
+      updateStats();
+
+      // Reset state
+      scratched = [];
+      cellRevealed = new Array(TOTAL_CELLS).fill(false);
+      cardActive = true;
+      cardResolved = false;
+      document.getElementById('message').innerHTML = '&nbsp;';
+      document.getElementById('progress-fill').style.width = '0%';
+
+      generateGrid();
+      drawScratchLayer();
+      compositeRender();
+    }
+
+    function updateStats() {
+      document.getElementById('credits').textContent = credits;
+      document.getElementById('total-won').textContent = totalWon;
+    }
+
+    function drawEmptyCard() {
+      const isDark = !document.documentElement.hasAttribute('data-theme') ||
+                     document.documentElement.getAttribute('data-theme') !== 'light';
+      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+      ctx.fillStyle = isDark ? '#0d0d14' : '#e8e7f0';
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+      ctx.font = '700 16px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = isDark ? '#4a4a60' : '#8080a0';
+      ctx.fillText('BUY A CARD TO START', CANVAS_W / 2, CANVAS_H / 2 - 12);
+      ctx.font = '400 11px JetBrains Mono, monospace';
+      ctx.fillText('5 CREDITS PER CARD', CANVAS_W / 2, CANVAS_H / 2 + 12);
+    }
+
+    // Mouse events
+    canvas.addEventListener('mousedown', (e) => {
+      if (!cardActive || cardResolved) return;
+      isScratching = true;
+      const pos = getCanvasPos(e);
+      scratchAt(pos.x, pos.y);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isScratching || !cardActive || cardResolved) return;
+      const pos = getCanvasPos(e);
+      scratchAt(pos.x, pos.y);
+    });
+
+    canvas.addEventListener('mouseup', () => { isScratching = false; });
+    canvas.addEventListener('mouseleave', () => { isScratching = false; });
+
+    // Touch events
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (!cardActive || cardResolved) return;
+      isScratching = true;
+      const pos = getCanvasPos(e);
+      scratchAt(pos.x, pos.y);
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (!isScratching || !cardActive || cardResolved) return;
+      const pos = getCanvasPos(e);
+      scratchAt(pos.x, pos.y);
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => { isScratching = false; });
+
+    // Init
+    buildPrizeTable();
+    drawEmptyCard();
+  </script>
+</body>
+</html>

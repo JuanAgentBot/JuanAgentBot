@@ -54,6 +54,9 @@
       margin: 0 auto 1rem;
       border: 1px solid var(--border);
       image-rendering: pixelated;
+      max-width: 100%;
+      height: auto;
+      touch-action: none;
     }
 
     .hud {
@@ -141,6 +144,7 @@
     .canvas-wrap {
       position: relative;
       display: inline-block;
+      max-width: 100%;
     }
 
     .powerup-list {
@@ -160,6 +164,85 @@
     .pu-item.range { color: #ff2d7b; border-color: #ff2d7b; }
     .pu-item.bombs { color: #00f0ff; border-color: #00f0ff; }
     .pu-item.speed { color: #39ff14; border-color: #39ff14; }
+
+    .touch-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 2.5rem;
+      margin: 1rem auto 0.5rem;
+      padding: 0 1rem;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 52px);
+      grid-template-rows: repeat(3, 52px);
+      gap: 4px;
+    }
+
+    .dpad-btn {
+      width: 52px;
+      height: 52px;
+      background: rgba(0, 240, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .dpad-btn:active {
+      background: rgba(0, 240, 255, 0.2);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+    }
+
+    .bomb-btn {
+      width: 76px;
+      height: 76px;
+      background: rgba(255, 45, 123, 0.05);
+      border: 2px solid var(--accent-magenta);
+      border-radius: 50%;
+      color: var(--accent-magenta);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      text-shadow: 0 0 8px var(--glow-magenta);
+      line-height: 1.6;
+    }
+
+    .bomb-btn:active {
+      background: rgba(255, 45, 123, 0.25);
+      box-shadow: 0 0 15px rgba(255, 45, 123, 0.4);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .touch-controls { display: none; }
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      .controls { display: none; }
+    }
+
+    @media (max-width: 520px) {
+      main { padding: 1.5rem 1rem 3rem; }
+      h1 { font-size: 1.2rem; }
+      .hud { gap: 1rem; }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -183,6 +266,21 @@
 
     <div class="controls">
       <kbd>&#8592;</kbd> <kbd>&#8593;</kbd> <kbd>&#8594;</kbd> <kbd>&#8595;</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE &nbsp;&middot;&nbsp; <kbd>SPACE</kbd> PLACE BOMB
+    </div>
+
+    <div class="touch-controls" id="touch-controls">
+      <div class="dpad">
+        <div></div>
+        <button class="dpad-btn" id="touch-up" aria-label="Up">&#9650;</button>
+        <div></div>
+        <button class="dpad-btn" id="touch-left" aria-label="Left">&#9664;</button>
+        <div></div>
+        <button class="dpad-btn" id="touch-right" aria-label="Right">&#9654;</button>
+        <div></div>
+        <button class="dpad-btn" id="touch-down" aria-label="Down">&#9660;</button>
+        <div></div>
+      </div>
+      <button class="bomb-btn" id="touch-bomb" aria-label="Place bomb">BOMB</button>
     </div>
   </main>
 
@@ -992,6 +1090,59 @@
     gameState = 'playing';
     updateHUD();
   }
+
+  // --- Touch Controls ---
+  function setupTouchControl(id, keyCode) {
+    var btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      keys[keyCode] = true;
+    }, { passive: false });
+    btn.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      keys[keyCode] = false;
+    }, { passive: false });
+    btn.addEventListener('touchcancel', function(e) {
+      keys[keyCode] = false;
+    });
+    btn.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      keys[keyCode] = true;
+    });
+    btn.addEventListener('mouseup', function() { keys[keyCode] = false; });
+    btn.addEventListener('mouseleave', function() { keys[keyCode] = false; });
+  }
+
+  setupTouchControl('touch-up', 'ArrowUp');
+  setupTouchControl('touch-down', 'ArrowDown');
+  setupTouchControl('touch-left', 'ArrowLeft');
+  setupTouchControl('touch-right', 'ArrowRight');
+
+  var bombBtnEl = document.getElementById('touch-bomb');
+  if (bombBtnEl) {
+    bombBtnEl.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      placeBomb();
+    }, { passive: false });
+    bombBtnEl.addEventListener('click', function() { placeBomb(); });
+  }
+
+  // Touch support for overlay buttons
+  canvas.addEventListener('touchstart', function(e) {
+    if (!overlayBtn) return;
+    e.preventDefault();
+    var touch = e.touches[0];
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = CANVAS_W / rect.width;
+    var scaleY = CANVAS_H / rect.height;
+    var mx = (touch.clientX - rect.left) * scaleX;
+    var my = (touch.clientY - rect.top) * scaleY;
+    if (mx >= overlayBtn.x && mx <= overlayBtn.x + overlayBtn.w &&
+        my >= overlayBtn.y && my <= overlayBtn.y + overlayBtn.h) {
+      handleOverlayClick();
+    }
+  }, { passive: false });
 
   // --- Init ---
   updateHUD();

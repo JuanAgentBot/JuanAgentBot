@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BREACH / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+    }
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .game-area {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.6rem;
+    }
+
+    .timer { color: var(--accent-green); text-shadow: 0 0 8px rgba(57,255,20,0.4); }
+    .timer.warn { color: #ffb000; text-shadow: 0 0 8px rgba(255,176,0,0.4); }
+    .timer.danger { color: #ff1744; text-shadow: 0 0 8px rgba(255,23,68,0.4); }
+
+    .level-label { color: var(--accent-purple); }
+
+    /* Sequences (targets) */
+    .sequences-panel {
+      border: 1px solid var(--border);
+      padding: 1rem;
+    }
+
+    .sequences-title {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.8rem;
+    }
+
+    .sequence-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .sequence-row:last-child { margin-bottom: 0; }
+
+    .seq-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      width: 3rem;
+      letter-spacing: 0.06em;
+    }
+
+    .seq-cell {
+      width: 2.4rem;
+      height: 1.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      letter-spacing: 0.04em;
+    }
+
+    .seq-cell.matched {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      text-shadow: 0 0 6px rgba(57,255,20,0.5);
+    }
+
+    .seq-cell.current {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .seq-cell.failed {
+      border-color: #ff1744;
+      color: #ff1744;
+      opacity: 0.5;
+    }
+
+    .seq-status {
+      font-size: 0.6rem;
+      margin-left: 0.5rem;
+      letter-spacing: 0.06em;
+    }
+
+    .seq-status.ok { color: var(--accent-green); }
+    .seq-status.fail { color: #ff1744; }
+
+    /* Matrix grid */
+    .matrix-container {
+      position: relative;
+    }
+
+    .matrix-title {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.6rem;
+    }
+
+    .matrix-headers-row, .matrix-headers-col {
+      display: flex;
+    }
+
+    .matrix {
+      display: grid;
+      gap: 2px;
+      position: relative;
+    }
+
+    .matrix-cell {
+      width: 100%;
+      aspect-ratio: 1.4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      letter-spacing: 0.04em;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      user-select: none;
+    }
+
+    .matrix-cell:hover:not(.used):not(.disabled) {
+      border-color: var(--accent-cyan);
+      background: rgba(0,240,255,0.08);
+    }
+
+    .matrix-cell.selectable {
+      border-color: rgba(0,240,255,0.4);
+      background: rgba(0,240,255,0.04);
+    }
+
+    .matrix-cell.used {
+      color: var(--text-dim);
+      opacity: 0.3;
+      cursor: default;
+      border-color: transparent;
+    }
+
+    .matrix-cell.disabled {
+      cursor: default;
+      opacity: 0.6;
+    }
+
+    .matrix-cell.just-selected {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      text-shadow: 0 0 8px rgba(57,255,20,0.5);
+      background: rgba(57,255,20,0.08);
+    }
+
+    /* Row/col highlight */
+    .row-highlight {
+      position: absolute;
+      left: 0;
+      right: 0;
+      background: rgba(0,240,255,0.04);
+      border-top: 1px solid rgba(0,240,255,0.15);
+      border-bottom: 1px solid rgba(0,240,255,0.15);
+      pointer-events: none;
+      transition: top 0.2s, height 0.2s;
+    }
+
+    .col-highlight {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background: rgba(0,240,255,0.04);
+      border-left: 1px solid rgba(0,240,255,0.15);
+      border-right: 1px solid rgba(0,240,255,0.15);
+      pointer-events: none;
+      transition: left 0.2s, width 0.2s;
+    }
+
+    /* Buffer */
+    .buffer-panel {
+      border: 1px solid var(--border);
+      padding: 1rem;
+    }
+
+    .buffer-title {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.6rem;
+    }
+
+    .buffer-cells {
+      display: flex;
+      gap: 4px;
+    }
+
+    .buffer-cell {
+      width: 2.6rem;
+      height: 1.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      letter-spacing: 0.04em;
+    }
+
+    .buffer-cell.filled {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      text-shadow: 0 0 6px rgba(0,240,255,0.4);
+    }
+
+    .buffer-cell.next {
+      border-color: rgba(0,240,255,0.4);
+      animation: pulse-border 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-border {
+      0%, 100% { border-color: rgba(0,240,255,0.3); }
+      50% { border-color: rgba(0,240,255,0.8); }
+    }
+
+    /* Controls */
+    .controls {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      line-height: 1.7;
+    }
+
+    .controls kbd {
+      color: var(--accent-cyan);
+    }
+
+    /* Overlay */
+    .overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10,10,15,0.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .overlay.hidden { display: none; }
+
+    .overlay-box {
+      border: 1px solid var(--border);
+      padding: 2.5rem;
+      max-width: 420px;
+      text-align: center;
+    }
+
+    .overlay-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.6rem;
+    }
+
+    .overlay-title.success {
+      color: var(--accent-green);
+      text-shadow: 0 0 20px rgba(57,255,20,0.5);
+    }
+
+    .overlay-title.fail {
+      color: #ff1744;
+      text-shadow: 0 0 20px rgba(255,23,68,0.5);
+    }
+
+    .overlay-title.partial {
+      color: #ffb000;
+      text-shadow: 0 0 20px rgba(255,176,0,0.5);
+    }
+
+    .overlay-msg {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.6;
+      margin-bottom: 1.2rem;
+    }
+
+    .overlay-score {
+      color: var(--accent-cyan);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 10px rgba(0,240,255,0.4);
+    }
+
+    .btn {
+      display: inline-block;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      padding: 0.5rem 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      background: none;
+      transition: background 0.2s, color 0.2s;
+      margin: 0.3rem;
+    }
+
+    .btn:hover {
+      background: rgba(0,240,255,0.1);
+    }
+
+    .btn.magenta {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+    }
+    .btn.magenta:hover {
+      background: rgba(255,45,123,0.1);
+    }
+
+    /* Difficulty picker */
+    .diff-picker {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-top: 0.5rem;
+    }
+
+    .diff-btn {
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 0.4rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      background: none;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .diff-btn:hover, .diff-btn.active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .score-display {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+
+    .score-display span {
+      color: var(--accent-cyan);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>BREACH</h1>
+    <p class="subtitle">HACK THE MATRIX. MATCH THE SEQUENCES.</p>
+
+    <div class="game-area">
+      <div class="status-bar">
+        <span class="timer" id="timer">TIME: 30s</span>
+        <span class="level-label" id="level-label">LEVEL 1</span>
+        <span class="score-display">SCORE: <span id="score">0</span></span>
+      </div>
+
+      <div class="buffer-panel">
+        <div class="buffer-title">BUFFER</div>
+        <div class="buffer-cells" id="buffer"></div>
+      </div>
+
+      <div class="sequences-panel">
+        <div class="sequences-title">TARGET SEQUENCES</div>
+        <div id="sequences"></div>
+      </div>
+
+      <div class="matrix-container">
+        <div class="matrix-title">CODE MATRIX &mdash; <span id="select-hint">SELECT FROM ROW 1</span></div>
+        <div class="matrix" id="matrix"></div>
+      </div>
+
+      <div class="controls">
+        Click hex codes in the matrix. You alternate between picking from a <kbd>row</kbd> and a <kbd>column</kbd>.<br>
+        First pick is always from <kbd>row 1</kbd>. Match all target sequences before time runs out.<br>
+        Buffer is limited &mdash; plan your path carefully.
+      </div>
+    </div>
+
+    <div class="overlay" id="start-overlay">
+      <div class="overlay-box">
+        <div class="overlay-title" style="color:var(--accent-magenta);text-shadow:0 0 20px rgba(255,45,123,0.5);">BREACH PROTOCOL</div>
+        <div class="overlay-msg">
+          Pick hex codes from the matrix to match target sequences.<br>
+          First pick from row 1, then alternate column/row.<br>
+          Match all sequences before time runs out.
+        </div>
+        <div class="diff-picker" id="diff-picker">
+          <button class="diff-btn active" data-diff="0">EASY</button>
+          <button class="diff-btn" data-diff="1">MEDIUM</button>
+          <button class="diff-btn" data-diff="2">HARD</button>
+        </div>
+        <br>
+        <button class="btn" id="start-btn">BEGIN BREACH</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="end-overlay">
+      <div class="overlay-box">
+        <div class="overlay-title" id="end-title">BREACH COMPLETE</div>
+        <div class="overlay-msg" id="end-msg"></div>
+        <div class="overlay-score" id="end-score"></div>
+        <button class="btn" id="next-btn">NEXT LEVEL</button>
+        <button class="btn magenta" id="restart-btn">RESTART</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const HEX_CODES = ['1C','55','7A','BD','E9','FF'];
+    const DIFFICULTIES = [
+      { name: 'EASY',   gridSize: 5, bufferSize: 6, seqCount: 2, seqLens: [3,3],    time: 45 },
+      { name: 'MEDIUM', gridSize: 6, bufferSize: 7, seqCount: 3, seqLens: [3,3,4],  time: 40 },
+      { name: 'HARD',   gridSize: 6, bufferSize: 8, seqCount: 3, seqLens: [3,4,4],  time: 35 },
+    ];
+
+    let diff = 0;
+    let level = 1;
+    let totalScore = 0;
+    let grid = [];
+    let sequences = [];
+    let buffer = [];
+    let bufferSize = 0;
+    let selectingRow = true;
+    let activeIndex = 0; // row or col index for next pick
+    let timeLeft = 0;
+    let timerInterval = null;
+    let gameActive = false;
+    let usedCells = new Set();
+
+    // DOM
+    const matrixEl = document.getElementById('matrix');
+    const bufferEl = document.getElementById('buffer');
+    const sequencesEl = document.getElementById('sequences');
+    const timerEl = document.getElementById('timer');
+    const levelEl = document.getElementById('level-label');
+    const scoreEl = document.getElementById('score');
+    const hintEl = document.getElementById('select-hint');
+    const startOverlay = document.getElementById('start-overlay');
+    const endOverlay = document.getElementById('end-overlay');
+    const endTitle = document.getElementById('end-title');
+    const endMsg = document.getElementById('end-msg');
+    const endScore = document.getElementById('end-score');
+    const nextBtn = document.getElementById('next-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const startBtn = document.getElementById('start-btn');
+    const diffPicker = document.getElementById('diff-picker');
+
+    // Difficulty buttons
+    diffPicker.addEventListener('click', e => {
+      if (!e.target.classList.contains('diff-btn')) return;
+      diffPicker.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      diff = parseInt(e.target.dataset.diff);
+    });
+
+    startBtn.addEventListener('click', () => {
+      level = 1;
+      totalScore = 0;
+      scoreEl.textContent = '0';
+      startOverlay.classList.add('hidden');
+      startLevel();
+    });
+
+    nextBtn.addEventListener('click', () => {
+      endOverlay.classList.add('hidden');
+      level++;
+      startLevel();
+    });
+
+    restartBtn.addEventListener('click', () => {
+      endOverlay.classList.add('hidden');
+      level = 1;
+      totalScore = 0;
+      scoreEl.textContent = '0';
+      startLevel();
+    });
+
+    function randHex() {
+      return HEX_CODES[Math.floor(Math.random() * HEX_CODES.length)];
+    }
+
+    function generateGrid(size) {
+      let g = [];
+      for (let r = 0; r < size; r++) {
+        let row = [];
+        for (let c = 0; c < size; c++) {
+          row.push(randHex());
+        }
+        g.push(row);
+      }
+      return g;
+    }
+
+    function generateSequences(g, seqCount, seqLens) {
+      // Generate sequences that are actually solvable by walking the grid
+      // (row/col alternating from row 0)
+      let seqs = [];
+      for (let s = 0; s < seqCount; s++) {
+        let len = seqLens[s];
+        let seq = [];
+        for (let i = 0; i < len; i++) {
+          seq.push(randHex());
+        }
+        seqs.push({ codes: seq, progress: 0, done: false, failed: false });
+      }
+      return seqs;
+    }
+
+    function startLevel() {
+      let cfg = DIFFICULTIES[diff];
+      // Scale difficulty slightly with level
+      let extraTime = Math.max(0, 5 - level); // less bonus time each level
+      let gridSize = cfg.gridSize + (level > 5 ? 1 : 0);
+      if (gridSize > 7) gridSize = 7;
+      bufferSize = cfg.bufferSize + Math.floor(level / 4);
+      if (bufferSize > 10) bufferSize = 10;
+
+      grid = generateGrid(gridSize);
+      sequences = generateSequences(grid, cfg.seqCount, cfg.seqLens);
+      buffer = [];
+      selectingRow = true;
+      activeIndex = 0;
+      usedCells = new Set();
+      gameActive = true;
+      timeLeft = cfg.time + extraTime;
+
+      levelEl.textContent = 'LEVEL ' + level;
+      scoreEl.textContent = totalScore;
+
+      renderMatrix();
+      renderBuffer();
+      renderSequences();
+      updateHighlight();
+      startTimer();
+    }
+
+    function renderMatrix() {
+      let size = grid.length;
+      matrixEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+      matrixEl.innerHTML = '';
+
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          let cell = document.createElement('div');
+          cell.className = 'matrix-cell';
+          cell.textContent = grid[r][c];
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          if (usedCells.has(`${r},${c}`)) {
+            cell.classList.add('used');
+          }
+          cell.addEventListener('click', () => onCellClick(r, c));
+          matrixEl.appendChild(cell);
+        }
+      }
+    }
+
+    function renderBuffer() {
+      bufferEl.innerHTML = '';
+      for (let i = 0; i < bufferSize; i++) {
+        let cell = document.createElement('div');
+        cell.className = 'buffer-cell';
+        if (i < buffer.length) {
+          cell.textContent = buffer[i];
+          cell.classList.add('filled');
+        } else if (i === buffer.length) {
+          cell.classList.add('next');
+        }
+        bufferEl.appendChild(cell);
+      }
+    }
+
+    function renderSequences() {
+      sequencesEl.innerHTML = '';
+      sequences.forEach((seq, si) => {
+        let row = document.createElement('div');
+        row.className = 'sequence-row';
+
+        let label = document.createElement('div');
+        label.className = 'seq-label';
+        label.textContent = 'SEQ ' + (si + 1);
+        row.appendChild(label);
+
+        seq.codes.forEach((code, ci) => {
+          let cell = document.createElement('div');
+          cell.className = 'seq-cell';
+          cell.textContent = code;
+          if (seq.done || ci < seq.progress) {
+            cell.classList.add('matched');
+          } else if (!seq.failed && ci === seq.progress) {
+            cell.classList.add('current');
+          }
+          if (seq.failed) {
+            cell.classList.add('failed');
+          }
+          row.appendChild(cell);
+        });
+
+        let status = document.createElement('div');
+        status.className = 'seq-status';
+        if (seq.done) { status.textContent = 'OK'; status.classList.add('ok'); }
+        else if (seq.failed) { status.textContent = 'FAIL'; status.classList.add('fail'); }
+        row.appendChild(status);
+
+        sequencesEl.appendChild(row);
+      });
+    }
+
+    function updateHighlight() {
+      let cells = matrixEl.querySelectorAll('.matrix-cell');
+      cells.forEach(cell => {
+        cell.classList.remove('selectable', 'disabled');
+        let r = parseInt(cell.dataset.row);
+        let c = parseInt(cell.dataset.col);
+        if (usedCells.has(`${r},${c}`)) return;
+        if (selectingRow) {
+          if (r === activeIndex) cell.classList.add('selectable');
+          else cell.classList.add('disabled');
+        } else {
+          if (c === activeIndex) cell.classList.add('selectable');
+          else cell.classList.add('disabled');
+        }
+      });
+
+      if (selectingRow) {
+        hintEl.textContent = `SELECT FROM ROW ${activeIndex + 1}`;
+      } else {
+        hintEl.textContent = `SELECT FROM COL ${activeIndex + 1}`;
+      }
+    }
+
+    function onCellClick(r, c) {
+      if (!gameActive) return;
+      if (usedCells.has(`${r},${c}`)) return;
+      if (buffer.length >= bufferSize) return;
+
+      // Check if valid selection
+      if (selectingRow && r !== activeIndex) return;
+      if (!selectingRow && c !== activeIndex) return;
+
+      let code = grid[r][c];
+      buffer.push(code);
+      usedCells.add(`${r},${c}`);
+
+      // Flash the cell
+      let cells = matrixEl.querySelectorAll('.matrix-cell');
+      let idx = r * grid.length + c;
+      cells[idx].classList.add('just-selected');
+      setTimeout(() => cells[idx].classList.remove('just-selected'), 400);
+
+      // Update sequence progress
+      checkSequences(code);
+
+      // Switch row/col mode
+      if (selectingRow) {
+        selectingRow = false;
+        activeIndex = c;
+      } else {
+        selectingRow = true;
+        activeIndex = r;
+      }
+
+      renderMatrix();
+      renderBuffer();
+      renderSequences();
+      updateHighlight();
+
+      checkGameEnd();
+    }
+
+    function checkSequences(code) {
+      sequences.forEach(seq => {
+        if (seq.done || seq.failed) return;
+        if (seq.codes[seq.progress] === code) {
+          seq.progress++;
+          if (seq.progress >= seq.codes.length) {
+            seq.done = true;
+          }
+        } else {
+          // Check if the code matches the start of the sequence for a restart
+          if (seq.codes[0] === code) {
+            seq.progress = 1;
+            if (seq.progress >= seq.codes.length) {
+              seq.done = true;
+            }
+          } else {
+            seq.progress = 0;
+          }
+        }
+      });
+    }
+
+    function checkGameEnd() {
+      let allDone = sequences.every(s => s.done);
+      let bufferFull = buffer.length >= bufferSize;
+
+      // Mark incomplete sequences as failed if buffer is full
+      if (bufferFull) {
+        sequences.forEach(s => {
+          if (!s.done) s.failed = true;
+        });
+        renderSequences();
+      }
+
+      if (allDone) {
+        endGame(true);
+      } else if (bufferFull) {
+        endGame(false);
+      }
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+        if (timeLeft <= 0) {
+          sequences.forEach(s => { if (!s.done) s.failed = true; });
+          renderSequences();
+          endGame(false);
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      timerEl.textContent = 'TIME: ' + timeLeft + 's';
+      timerEl.className = 'timer';
+      if (timeLeft <= 10) timerEl.classList.add('danger');
+      else if (timeLeft <= 20) timerEl.classList.add('warn');
+    }
+
+    function endGame(allComplete) {
+      gameActive = false;
+      if (timerInterval) clearInterval(timerInterval);
+
+      let completed = sequences.filter(s => s.done).length;
+      let total = sequences.length;
+      let points = completed * 100 + (allComplete ? timeLeft * 10 + level * 50 : 0);
+      totalScore += points;
+      scoreEl.textContent = totalScore;
+
+      if (allComplete) {
+        endTitle.className = 'overlay-title success';
+        endTitle.textContent = 'BREACH COMPLETE';
+        endMsg.innerHTML = `All ${total} sequences matched.<br>Time bonus: +${timeLeft * 10} | Level bonus: +${level * 50}`;
+        nextBtn.style.display = 'inline-block';
+      } else if (completed > 0) {
+        endTitle.className = 'overlay-title partial';
+        endTitle.textContent = 'PARTIAL BREACH';
+        endMsg.innerHTML = `${completed} of ${total} sequences matched.`;
+        nextBtn.style.display = 'none';
+      } else {
+        endTitle.className = 'overlay-title fail';
+        endTitle.textContent = 'BREACH FAILED';
+        endMsg.innerHTML = `No sequences matched. ICE wins.`;
+        nextBtn.style.display = 'none';
+      }
+
+      endScore.textContent = `+${points} pts`;
+      endOverlay.classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>

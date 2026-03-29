@@ -20,6 +20,10 @@
       font-family: 'JetBrains Mono', monospace;
       overflow: hidden;
       height: 100vh;
+      touch-action: manipulation;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     .back {
       position: fixed;
@@ -62,7 +66,7 @@
     #hud .val-time { color: #00f0ff; text-shadow: 0 0 8px rgba(0, 240, 255, 0.5); }
     #hud .val-level { color: #9d4edd; text-shadow: 0 0 8px rgba(157, 78, 221, 0.5); }
     #hud .val-best { color: #ffb000; text-shadow: 0 0 8px rgba(255, 176, 0, 0.5); }
-    canvas { display: block; }
+    canvas { display: block; touch-action: none; }
     #overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -108,6 +112,8 @@
       padding: 0.7rem 2rem;
       cursor: pointer;
       transition: all 0.2s;
+      min-height: 48px;
+      touch-action: manipulation;
     }
     #overlay button:hover {
       background: #ff2d7b;
@@ -125,6 +131,47 @@
       z-index: 100;
       white-space: nowrap;
     }
+    #touch-btn {
+      display: none;
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: clamp(120px, 40vw, 200px);
+      height: 56px;
+      border: 2px solid #ff2d7b;
+      border-radius: 8px;
+      background: rgba(255, 45, 123, 0.12);
+      color: #ff2d7b;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 10px rgba(255, 45, 123, 0.5);
+      box-shadow: 0 0 15px rgba(255, 45, 123, 0.2);
+      z-index: 150;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #touch-btn:active {
+      background: rgba(255, 45, 123, 0.3);
+      box-shadow: 0 0 25px rgba(255, 45, 123, 0.5);
+    }
+    @media (hover: none) and (pointer: coarse) {
+      #touch-btn { display: block; }
+      .controls-hint { display: none; }
+    }
+    @media (max-width: 480px) {
+      h1 { font-size: 0.9rem; }
+      #hud { gap: 0.8rem; font-size: 0.6rem; top: 2.4rem; }
+      #overlay h2 { font-size: 1.2rem; }
+      #overlay .info { font-size: 0.6rem; padding: 0 1rem; }
+      #overlay button { font-size: 0.8rem; padding: 0.8rem 2rem; min-height: 48px; }
+    }
+    @media (max-width: 360px) {
+      #hud { gap: 0.5rem; font-size: 0.55rem; }
+      h1 { font-size: 0.8rem; }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -139,13 +186,14 @@
   </div>
   <canvas id="c"></canvas>
   <div class="controls-hint">CLICK / SPACE to launch hook &middot; grab gems before time runs out</div>
+  <button id="touch-btn">⛏ MINE</button>
 
   <div id="overlay">
     <h2 id="overlay-title">NEON MINER</h2>
     <div class="info" id="overlay-info">
       A swinging hook descends into the mine.<br>
       Grab gold, diamonds, and gems. Avoid rocks.<br><br>
-      CLICK or SPACE to send the hook down.<br>
+      TAP, CLICK, or SPACE to send the hook down.<br>
       Heavier items reel in slower.<br>
       Reach the target score to advance levels.
     </div>
@@ -414,6 +462,32 @@
 
     canvas.addEventListener('click', () => {
       if (state === 'playing' || state === 'reeling') {
+        handleInput();
+      }
+    });
+
+    // Touch support
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (state === 'playing' || state === 'reeling') {
+        handleInput();
+      }
+    }, { passive: false });
+
+    const touchBtn = document.getElementById('touch-btn');
+    touchBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (state === 'menu' || state === 'gameover' || state === 'between-levels') {
+        overlayBtn.click();
+      } else {
+        handleInput();
+      }
+    }, { passive: false });
+    touchBtn.addEventListener('click', e => {
+      e.preventDefault();
+      if (state === 'menu' || state === 'gameover' || state === 'between-levels') {
+        overlayBtn.click();
+      } else {
         handleInput();
       }
     });

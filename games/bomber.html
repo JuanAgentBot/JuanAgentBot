@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON BOMBER / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+      transition: color 0.3s;
+    }
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .sub {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.2rem;
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto 1rem;
+      border: 1px solid var(--border);
+      image-rendering: pixelated;
+    }
+
+    .hud {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    .hud-item {
+      color: var(--text-muted);
+    }
+
+    .hud-val {
+      color: var(--accent-cyan);
+      font-weight: 700;
+      text-shadow: 0 0 8px var(--glow-cyan-soft);
+    }
+
+    .hud-val.lives { color: var(--accent-magenta); text-shadow: 0 0 8px var(--glow-magenta); }
+    .hud-val.level { color: var(--accent-green); text-shadow: 0 0 8px rgba(57,255,20,0.3); }
+
+    .controls {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      line-height: 1.8;
+      margin-bottom: 1rem;
+    }
+
+    .controls kbd {
+      display: inline-block;
+      border: 1px solid var(--border);
+      padding: 0.1em 0.45em;
+      font-family: inherit;
+      color: var(--text-muted);
+      font-size: 0.65rem;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10,10,15,0.85);
+      z-index: 10;
+    }
+
+    .overlay-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 20px var(--glow-magenta);
+      margin-bottom: 0.5rem;
+    }
+
+    .overlay-msg {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .overlay-btn {
+      background: none;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.5em 1.5em;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .overlay-btn:hover {
+      background: var(--accent-cyan);
+      color: var(--bg);
+    }
+
+    .canvas-wrap {
+      position: relative;
+      display: inline-block;
+    }
+
+    .powerup-list {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 0.8rem;
+      font-size: 0.65rem;
+      min-height: 1.2rem;
+    }
+
+    .pu-item {
+      padding: 0.15em 0.5em;
+      border: 1px solid var(--border);
+    }
+
+    .pu-item.range { color: #ff2d7b; border-color: #ff2d7b; }
+    .pu-item.bombs { color: #00f0ff; border-color: #00f0ff; }
+    .pu-item.speed { color: #39ff14; border-color: #39ff14; }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>NEON BOMBER</h1>
+    <p class="sub">BOMB THE MAZE. CLEAR THE LEVEL.</p>
+
+    <div class="hud">
+      <div class="hud-item">LEVEL <span class="hud-val level" id="hud-level">1</span></div>
+      <div class="hud-item">SCORE <span class="hud-val" id="hud-score">0</span></div>
+      <div class="hud-item">LIVES <span class="hud-val lives" id="hud-lives">3</span></div>
+    </div>
+
+    <div class="powerup-list" id="powerups"></div>
+
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="c" width="494" height="494"></canvas>
+    </div>
+
+    <div class="controls">
+      <kbd>&#8592;</kbd> <kbd>&#8593;</kbd> <kbd>&#8594;</kbd> <kbd>&#8595;</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE &nbsp;&middot;&nbsp; <kbd>SPACE</kbd> PLACE BOMB
+    </div>
+  </main>
+
+<script>
+(function() {
+  'use strict';
+
+  // --- Constants ---
+  const COLS = 13;
+  const ROWS = 13;
+  const TILE = 38;
+  const CANVAS_W = COLS * TILE;
+  const CANVAS_H = ROWS * TILE;
+
+  // Colors
+  const VOID = '#0a0a0f';
+  const WALL = '#2a2a3a';
+  const WALL_HIGHLIGHT = '#3a3a4f';
+  const SOFT_WALL = '#4a3a5a';
+  const SOFT_HIGHLIGHT = '#5a4a6a';
+  const MAGENTA = '#ff2d7b';
+  const CYAN = '#00f0ff';
+  const GREEN = '#39ff14';
+  const PURPLE = '#9d4edd';
+  const WHITE = '#e0e0e8';
+  const DIM = '#7a7a90';
+  const AMBER = '#ffb000';
+
+  // Tile types
+  const EMPTY = 0;
+  const HARD_WALL = 1;
+  const SOFT_WALL_T = 2;
+
+  // --- Canvas ---
+  const canvas = document.getElementById('c');
+  canvas.width = CANVAS_W;
+  canvas.height = CANVAS_H;
+  const ctx = canvas.getContext('2d');
+
+  // --- State ---
+  let grid = [];
+  let player = { x: 1, y: 1, moveTimer: 0 };
+  let bombs = [];
+  let explosions = [];
+  let enemies = [];
+  let powerups = [];
+  let particles = [];
+
+  let score = 0;
+  let lives = 3;
+  let level = 1;
+  let gameState = 'start'; // start, playing, dead, levelComplete, gameOver, win
+  let moveInterval = 140; // ms between moves
+
+  // Player stats
+  let bombRange = 2;
+  let maxBombs = 1;
+  let speedLevel = 0;
+
+  // Input
+  let keys = {};
+
+  // Timing
+  let lastTime = 0;
+  let moveAccum = 0;
+  let enemyMoveAccum = 0;
+
+  // --- HUD ---
+  const hudLevel = document.getElementById('hud-level');
+  const hudScore = document.getElementById('hud-score');
+  const hudLives = document.getElementById('hud-lives');
+  const puList = document.getElementById('powerups');
+
+  function updateHUD() {
+    hudLevel.textContent = level;
+    hudScore.textContent = score;
+    hudLives.textContent = lives;
+
+    let html = '';
+    if (bombRange > 2) html += '<span class="pu-item range">RANGE ' + bombRange + '</span>';
+    if (maxBombs > 1) html += '<span class="pu-item bombs">BOMBS ' + maxBombs + '</span>';
+    if (speedLevel > 0) html += '<span class="pu-item speed">SPEED +' + speedLevel + '</span>';
+    puList.innerHTML = html;
+  }
+
+  // --- Level Generation ---
+  function generateLevel() {
+    grid = [];
+    bombs = [];
+    explosions = [];
+    powerups = [];
+    particles = [];
+
+    for (let y = 0; y < ROWS; y++) {
+      grid[y] = [];
+      for (let x = 0; x < COLS; x++) {
+        if (y === 0 || y === ROWS - 1 || x === 0 || x === COLS - 1) {
+          grid[y][x] = HARD_WALL;
+        } else if (x % 2 === 0 && y % 2 === 0) {
+          grid[y][x] = HARD_WALL;
+        } else {
+          grid[y][x] = EMPTY;
+        }
+      }
+    }
+
+    // Place soft walls
+    let softWallDensity = Math.min(0.35 + level * 0.03, 0.55);
+    for (let y = 1; y < ROWS - 1; y++) {
+      for (let x = 1; x < COLS - 1; x++) {
+        if (grid[y][x] !== EMPTY) continue;
+        // Keep player start area clear
+        if ((x <= 2 && y <= 2)) continue;
+        if (Math.random() < softWallDensity) {
+          grid[y][x] = SOFT_WALL_T;
+        }
+      }
+    }
+
+    // Player start
+    player.x = 1;
+    player.y = 1;
+    player.moveTimer = 0;
+    grid[1][1] = EMPTY;
+    grid[1][2] = EMPTY;
+    grid[2][1] = EMPTY;
+
+    // Enemies
+    enemies = [];
+    let numEnemies = Math.min(3 + level, 10);
+    let attempts = 0;
+    while (enemies.length < numEnemies && attempts < 200) {
+      attempts++;
+      let ex = Math.floor(Math.random() * (COLS - 2)) + 1;
+      let ey = Math.floor(Math.random() * (ROWS - 2)) + 1;
+      if (grid[ey][ex] !== EMPTY) continue;
+      if (ex <= 3 && ey <= 3) continue; // away from player
+      // Check not on another enemy
+      let overlap = enemies.some(e => e.x === ex && e.y === ey);
+      if (overlap) continue;
+      enemies.push({
+        x: ex, y: ey,
+        moveTimer: 0,
+        dir: Math.floor(Math.random() * 4),
+        type: (level >= 4 && Math.random() < 0.3) ? 'fast' : 'normal'
+      });
+    }
+
+    // Place exit under a random soft wall far from player
+    let candidates = [];
+    for (let y = 1; y < ROWS - 1; y++) {
+      for (let x = 1; x < COLS - 1; x++) {
+        if (grid[y][x] === SOFT_WALL_T && (x + y) > 6) {
+          candidates.push({ x, y });
+        }
+      }
+    }
+    if (candidates.length > 0) {
+      let exit = candidates[Math.floor(Math.random() * candidates.length)];
+      grid[exit.y][exit.x] = SOFT_WALL_T; // will reveal exit tile when destroyed
+      // Mark exit position
+      grid.exitX = exit.x;
+      grid.exitY = exit.y;
+    } else {
+      grid.exitX = COLS - 2;
+      grid.exitY = ROWS - 2;
+      grid[grid.exitY][grid.exitX] = EMPTY;
+    }
+
+    // Hide powerups under some soft walls
+    let puCandidates = [];
+    for (let y = 1; y < ROWS - 1; y++) {
+      for (let x = 1; x < COLS - 1; x++) {
+        if (grid[y][x] === SOFT_WALL_T && !(x === grid.exitX && y === grid.exitY)) {
+          puCandidates.push({ x, y });
+        }
+      }
+    }
+    shuffle(puCandidates);
+    let puCount = Math.min(2 + Math.floor(level / 2), puCandidates.length, 4);
+    grid.hiddenPowerups = {};
+    for (let i = 0; i < puCount; i++) {
+      let p = puCandidates[i];
+      let types = ['range', 'bombs', 'speed'];
+      grid.hiddenPowerups[p.x + ',' + p.y] = types[Math.floor(Math.random() * types.length)];
+    }
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  // --- Drawing ---
+  function draw() {
+    ctx.fillStyle = VOID;
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    // Grid
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        let px = x * TILE;
+        let py = y * TILE;
+
+        if (grid[y][x] === HARD_WALL) {
+          ctx.fillStyle = WALL;
+          ctx.fillRect(px, py, TILE, TILE);
+          ctx.fillStyle = WALL_HIGHLIGHT;
+          ctx.fillRect(px, py, TILE, 2);
+          ctx.fillRect(px, py, 2, TILE);
+        } else if (grid[y][x] === SOFT_WALL_T) {
+          ctx.fillStyle = SOFT_WALL;
+          ctx.fillRect(px, py, TILE, TILE);
+          ctx.fillStyle = SOFT_HIGHLIGHT;
+          ctx.fillRect(px + 2, py + 2, TILE - 4, 2);
+          ctx.fillRect(px + 2, py + 2, 2, TILE - 4);
+          // brick pattern
+          ctx.strokeStyle = '#3a2a4a';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(px + 4, py + 4, TILE - 8, (TILE - 8) / 2);
+        } else {
+          // Floor tile subtle grid
+          ctx.fillStyle = '#0e0e16';
+          ctx.fillRect(px, py, TILE, TILE);
+          ctx.strokeStyle = '#14141f';
+          ctx.lineWidth = 0.5;
+          ctx.strokeRect(px, py, TILE, TILE);
+        }
+      }
+    }
+
+    // Exit (visible only when soft wall is cleared and all enemies dead)
+    if (grid[grid.exitY] && grid[grid.exitY][grid.exitX] === EMPTY) {
+      let ex = grid.exitX * TILE;
+      let ey = grid.exitY * TILE;
+      let pulse = 0.5 + 0.5 * Math.sin(Date.now() / 300);
+
+      if (enemies.length === 0) {
+        ctx.fillStyle = GREEN;
+        ctx.shadowColor = GREEN;
+        ctx.shadowBlur = 15 * pulse;
+        ctx.fillRect(ex + 6, ey + 6, TILE - 12, TILE - 12);
+        // Arrow
+        ctx.fillStyle = VOID;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(ex + 12, ey + 12);
+        ctx.lineTo(ex + TILE - 12, ey + TILE / 2);
+        ctx.lineTo(ex + 12, ey + TILE - 12);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.fillStyle = DIM;
+        ctx.globalAlpha = 0.3 + 0.2 * pulse;
+        ctx.fillRect(ex + 8, ey + 8, TILE - 16, TILE - 16);
+        ctx.globalAlpha = 1;
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    // Powerups on ground
+    for (let pu of powerups) {
+      let px = pu.x * TILE;
+      let py = pu.y * TILE;
+      let pulse = 0.7 + 0.3 * Math.sin(Date.now() / 250 + pu.x);
+      let col = pu.type === 'range' ? MAGENTA : pu.type === 'bombs' ? CYAN : GREEN;
+      ctx.fillStyle = col;
+      ctx.globalAlpha = pulse;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 8;
+      ctx.fillRect(px + 10, py + 10, TILE - 20, TILE - 20);
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+      // Label
+      ctx.fillStyle = VOID;
+      ctx.font = 'bold 10px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      let label = pu.type === 'range' ? 'R' : pu.type === 'bombs' ? 'B' : 'S';
+      ctx.fillText(label, px + TILE / 2, py + TILE / 2);
+    }
+
+    // Bombs
+    for (let bomb of bombs) {
+      let px = bomb.x * TILE;
+      let py = bomb.y * TILE;
+      let pulse = 0.6 + 0.4 * Math.sin(bomb.timer * 8);
+      let cx = px + TILE / 2;
+      let cy = py + TILE / 2;
+      let r = (TILE / 2 - 6) * (0.9 + 0.1 * pulse);
+
+      ctx.fillStyle = '#1a1a2a';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = MAGENTA;
+      ctx.shadowColor = MAGENTA;
+      ctx.shadowBlur = 10 * pulse;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Fuse spark
+      ctx.fillStyle = AMBER;
+      ctx.shadowColor = AMBER;
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.arc(cx, cy - r + 2, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // Explosions
+    for (let exp of explosions) {
+      let alpha = exp.timer / exp.maxTimer;
+      for (let cell of exp.cells) {
+        let px = cell.x * TILE;
+        let py = cell.y * TILE;
+        let pulse = 0.7 + 0.3 * Math.sin(Date.now() / 50);
+
+        ctx.globalAlpha = alpha * pulse;
+        ctx.fillStyle = AMBER;
+        ctx.shadowColor = AMBER;
+        ctx.shadowBlur = 15;
+        ctx.fillRect(px + 2, py + 2, TILE - 4, TILE - 4);
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(px + 8, py + 8, TILE - 16, TILE - 16);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // Particles
+    for (let p of particles) {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+
+    // Enemies
+    for (let e of enemies) {
+      let px = e.x * TILE;
+      let py = e.y * TILE;
+      let col = e.type === 'fast' ? PURPLE : MAGENTA;
+      let pulse = 0.8 + 0.2 * Math.sin(Date.now() / 200 + e.x * 3);
+
+      ctx.fillStyle = col;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 8 * pulse;
+      // Enemy body: diamond shape
+      ctx.beginPath();
+      ctx.moveTo(px + TILE / 2, py + 5);
+      ctx.lineTo(px + TILE - 5, py + TILE / 2);
+      ctx.lineTo(px + TILE / 2, py + TILE - 5);
+      ctx.lineTo(px + 5, py + TILE / 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Eyes
+      ctx.fillStyle = VOID;
+      ctx.fillRect(px + 13, py + 15, 4, 4);
+      ctx.fillRect(px + 21, py + 15, 4, 4);
+    }
+
+    // Player
+    if (gameState === 'playing' || gameState === 'levelComplete') {
+      let px = player.x * TILE;
+      let py = player.y * TILE;
+      let pulse = 0.8 + 0.2 * Math.sin(Date.now() / 150);
+
+      ctx.fillStyle = CYAN;
+      ctx.shadowColor = CYAN;
+      ctx.shadowBlur = 12 * pulse;
+      // Player body: rounded square with glow
+      ctx.fillRect(px + 5, py + 5, TILE - 10, TILE - 10);
+      ctx.shadowBlur = 0;
+
+      // Visor
+      ctx.fillStyle = VOID;
+      ctx.fillRect(px + 10, py + 14, TILE - 20, 5);
+      ctx.fillStyle = GREEN;
+      ctx.fillRect(px + 12, py + 15, 6, 3);
+      ctx.fillRect(px + 20, py + 15, 6, 3);
+    }
+
+    // Overlays
+    if (gameState === 'start') {
+      drawOverlay('NEON BOMBER', 'Bomb the maze. Clear all enemies.', 'START');
+    } else if (gameState === 'dead') {
+      drawOverlay('DESTROYED', 'Lives remaining: ' + lives, 'CONTINUE');
+    } else if (gameState === 'gameOver') {
+      drawOverlay('GAME OVER', 'Final score: ' + score, 'RESTART');
+    } else if (gameState === 'levelComplete') {
+      drawOverlay('LEVEL ' + level + ' CLEAR', 'Score: ' + score, 'NEXT LEVEL');
+    } else if (gameState === 'win') {
+      drawOverlay('YOU WIN!', 'All 10 levels cleared! Score: ' + score, 'PLAY AGAIN');
+    }
+  }
+
+  function drawOverlay(title, msg, btnText) {
+    ctx.fillStyle = 'rgba(10,10,15,0.85)';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    ctx.fillStyle = MAGENTA;
+    ctx.shadowColor = MAGENTA;
+    ctx.shadowBlur = 20;
+    ctx.font = 'bold 24px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(title, CANVAS_W / 2, CANVAS_H / 2 - 40);
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = DIM;
+    ctx.font = '13px JetBrains Mono';
+    ctx.fillText(msg, CANVAS_W / 2, CANVAS_H / 2);
+
+    // Button
+    let bw = 160, bh = 36;
+    let bx = CANVAS_W / 2 - bw / 2;
+    let by = CANVAS_H / 2 + 30;
+    ctx.strokeStyle = CYAN;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = CYAN;
+    ctx.font = 'bold 12px JetBrains Mono';
+    ctx.fillText(btnText, CANVAS_W / 2, by + bh / 2);
+
+    // Store button rect for click
+    overlayBtn = { x: bx, y: by, w: bw, h: bh };
+  }
+
+  let overlayBtn = null;
+
+  // --- Game Logic ---
+  function placeBomb() {
+    if (gameState !== 'playing') return;
+    let activeBombs = bombs.filter(b => b.owner === 'player').length;
+    if (activeBombs >= maxBombs) return;
+    if (bombs.some(b => b.x === player.x && b.y === player.y)) return;
+
+    bombs.push({
+      x: player.x,
+      y: player.y,
+      timer: 2.5,
+      range: bombRange,
+      owner: 'player'
+    });
+  }
+
+  function explodeBomb(bomb) {
+    let cells = [{ x: bomb.x, y: bomb.y }];
+    let dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+
+    for (let dir of dirs) {
+      for (let i = 1; i <= bomb.range; i++) {
+        let nx = bomb.x + dir[0] * i;
+        let ny = bomb.y + dir[1] * i;
+
+        if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) break;
+        if (grid[ny][nx] === HARD_WALL) break;
+
+        cells.push({ x: nx, y: ny });
+
+        if (grid[ny][nx] === SOFT_WALL_T) {
+          grid[ny][nx] = EMPTY;
+          score += 10;
+
+          // Spawn particles
+          for (let p = 0; p < 6; p++) {
+            particles.push({
+              x: nx * TILE + TILE / 2,
+              y: ny * TILE + TILE / 2,
+              vx: (Math.random() - 0.5) * 4,
+              vy: (Math.random() - 0.5) * 4,
+              life: 1,
+              size: 3 + Math.random() * 3,
+              color: Math.random() > 0.5 ? PURPLE : AMBER
+            });
+          }
+
+          // Check for hidden powerup
+          let key = nx + ',' + ny;
+          if (grid.hiddenPowerups && grid.hiddenPowerups[key]) {
+            powerups.push({ x: nx, y: ny, type: grid.hiddenPowerups[key] });
+            delete grid.hiddenPowerups[key];
+          }
+
+          break; // explosion stops at soft wall
+        }
+      }
+    }
+
+    explosions.push({
+      cells: cells,
+      timer: 0.4,
+      maxTimer: 0.4
+    });
+
+    // Chain reaction: detonate other bombs in blast
+    for (let cell of cells) {
+      for (let i = bombs.length - 1; i >= 0; i--) {
+        if (bombs[i] !== bomb && bombs[i].x === cell.x && bombs[i].y === cell.y) {
+          let chainBomb = bombs.splice(i, 1)[0];
+          explodeBomb(chainBomb);
+        }
+      }
+    }
+
+    // Kill enemies in blast
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      if (cells.some(c => c.x === enemies[i].x && c.y === enemies[i].y)) {
+        // Kill particles
+        for (let p = 0; p < 10; p++) {
+          particles.push({
+            x: enemies[i].x * TILE + TILE / 2,
+            y: enemies[i].y * TILE + TILE / 2,
+            vx: (Math.random() - 0.5) * 6,
+            vy: (Math.random() - 0.5) * 6,
+            life: 1,
+            size: 4 + Math.random() * 4,
+            color: enemies[i].type === 'fast' ? PURPLE : MAGENTA
+          });
+        }
+        enemies.splice(i, 1);
+        score += 100;
+      }
+    }
+
+    // Check if player is in blast
+    if (cells.some(c => c.x === player.x && c.y === player.y)) {
+      playerDied();
+    }
+
+    updateHUD();
+  }
+
+  function playerDied() {
+    lives--;
+    if (lives <= 0) {
+      gameState = 'gameOver';
+    } else {
+      gameState = 'dead';
+    }
+    // Death particles
+    for (let p = 0; p < 15; p++) {
+      particles.push({
+        x: player.x * TILE + TILE / 2,
+        y: player.y * TILE + TILE / 2,
+        vx: (Math.random() - 0.5) * 8,
+        vy: (Math.random() - 0.5) * 8,
+        life: 1,
+        size: 4 + Math.random() * 4,
+        color: CYAN
+      });
+    }
+    updateHUD();
+  }
+
+  function movePlayer(dx, dy) {
+    let nx = player.x + dx;
+    let ny = player.y + dy;
+
+    if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) return;
+    if (grid[ny][nx] !== EMPTY) return;
+    if (bombs.some(b => b.x === nx && b.y === ny)) return;
+
+    player.x = nx;
+    player.y = ny;
+
+    // Check powerup pickup
+    for (let i = powerups.length - 1; i >= 0; i--) {
+      if (powerups[i].x === player.x && powerups[i].y === player.y) {
+        let pu = powerups.splice(i, 1)[0];
+        if (pu.type === 'range') bombRange = Math.min(bombRange + 1, 6);
+        else if (pu.type === 'bombs') maxBombs = Math.min(maxBombs + 1, 5);
+        else if (pu.type === 'speed') {
+          speedLevel = Math.min(speedLevel + 1, 3);
+          moveInterval = Math.max(80, 140 - speedLevel * 20);
+        }
+        score += 50;
+        // Pickup particles
+        for (let p = 0; p < 8; p++) {
+          let col = pu.type === 'range' ? MAGENTA : pu.type === 'bombs' ? CYAN : GREEN;
+          particles.push({
+            x: player.x * TILE + TILE / 2,
+            y: player.y * TILE + TILE / 2,
+            vx: (Math.random() - 0.5) * 5,
+            vy: (Math.random() - 0.5) * 5,
+            life: 1,
+            size: 3,
+            color: col
+          });
+        }
+        updateHUD();
+      }
+    }
+
+    // Check exit
+    if (player.x === grid.exitX && player.y === grid.exitY && enemies.length === 0) {
+      if (level >= 10) {
+        gameState = 'win';
+      } else {
+        gameState = 'levelComplete';
+      }
+      score += 200;
+      updateHUD();
+    }
+
+    // Check enemy collision
+    if (enemies.some(e => e.x === player.x && e.y === player.y)) {
+      playerDied();
+    }
+  }
+
+  function moveEnemies() {
+    let dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+
+    for (let e of enemies) {
+      // Chance to change direction
+      if (Math.random() < 0.25) {
+        e.dir = Math.floor(Math.random() * 4);
+      }
+
+      let d = dirs[e.dir];
+      let nx = e.x + d[0];
+      let ny = e.y + d[1];
+
+      // Avoid bombs
+      let bombThere = bombs.some(b => b.x === nx && b.y === ny);
+
+      if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS &&
+          grid[ny][nx] === EMPTY && !bombThere &&
+          !enemies.some(o => o !== e && o.x === nx && o.y === ny)) {
+        e.x = nx;
+        e.y = ny;
+      } else {
+        e.dir = Math.floor(Math.random() * 4);
+      }
+
+      // Check player collision
+      if (e.x === player.x && e.y === player.y && gameState === 'playing') {
+        playerDied();
+      }
+    }
+  }
+
+  function update(dt) {
+    if (gameState !== 'playing') return;
+
+    // Player movement
+    moveAccum += dt;
+    let currentMoveInterval = moveInterval;
+    if (moveAccum >= currentMoveInterval / 1000) {
+      moveAccum = 0;
+      let dx = 0, dy = 0;
+      if (keys['ArrowLeft'] || keys['KeyA']) dx = -1;
+      else if (keys['ArrowRight'] || keys['KeyD']) dx = 1;
+      else if (keys['ArrowUp'] || keys['KeyW']) dy = -1;
+      else if (keys['ArrowDown'] || keys['KeyS']) dy = 1;
+
+      if (dx !== 0 || dy !== 0) {
+        movePlayer(dx, dy);
+      }
+    }
+
+    // Enemy movement
+    let enemySpeed = 0.35 - Math.min(level * 0.015, 0.15);
+    enemyMoveAccum += dt;
+    if (enemyMoveAccum >= enemySpeed) {
+      enemyMoveAccum = 0;
+      moveEnemies();
+
+      // Fast enemies get a second move
+      if (level >= 4) {
+        for (let e of enemies) {
+          if (e.type === 'fast' && Math.random() < 0.5) {
+            let dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+            let d = dirs[e.dir];
+            let nx = e.x + d[0];
+            let ny = e.y + d[1];
+            if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS &&
+                grid[ny][nx] === EMPTY &&
+                !bombs.some(b => b.x === nx && b.y === ny)) {
+              e.x = nx;
+              e.y = ny;
+              if (e.x === player.x && e.y === player.y && gameState === 'playing') {
+                playerDied();
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Bombs
+    for (let i = bombs.length - 1; i >= 0; i--) {
+      bombs[i].timer -= dt;
+      if (bombs[i].timer <= 0) {
+        let bomb = bombs.splice(i, 1)[0];
+        explodeBomb(bomb);
+      }
+    }
+
+    // Explosions
+    for (let i = explosions.length - 1; i >= 0; i--) {
+      explosions[i].timer -= dt;
+      if (explosions[i].timer <= 0) {
+        explosions.splice(i, 1);
+      }
+    }
+
+    // Particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      let p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.95;
+      p.vy *= 0.95;
+      p.life -= dt * 2;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+  }
+
+  // --- Game Loop ---
+  function loop(time) {
+    let dt = Math.min((time - lastTime) / 1000, 0.05);
+    lastTime = time;
+
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // --- Input ---
+  document.addEventListener('keydown', function(e) {
+    keys[e.code] = true;
+
+    if (e.code === 'Space') {
+      e.preventDefault();
+      placeBomb();
+    }
+  });
+
+  document.addEventListener('keyup', function(e) {
+    keys[e.code] = false;
+  });
+
+  canvas.addEventListener('click', function(e) {
+    if (!overlayBtn) return;
+    let rect = canvas.getBoundingClientRect();
+    let scaleX = CANVAS_W / rect.width;
+    let scaleY = CANVAS_H / rect.height;
+    let mx = (e.clientX - rect.left) * scaleX;
+    let my = (e.clientY - rect.top) * scaleY;
+
+    if (mx >= overlayBtn.x && mx <= overlayBtn.x + overlayBtn.w &&
+        my >= overlayBtn.y && my <= overlayBtn.y + overlayBtn.h) {
+      handleOverlayClick();
+    }
+  });
+
+  // Also allow any key/click to advance from overlay
+  document.addEventListener('keydown', function(e) {
+    if ((gameState === 'start' || gameState === 'dead' || gameState === 'gameOver' ||
+         gameState === 'levelComplete' || gameState === 'win') && e.code === 'Enter') {
+      handleOverlayClick();
+    }
+  });
+
+  function handleOverlayClick() {
+    overlayBtn = null;
+    if (gameState === 'start') {
+      startGame();
+    } else if (gameState === 'dead') {
+      // Respawn
+      player.x = 1;
+      player.y = 1;
+      bombs = [];
+      explosions = [];
+      gameState = 'playing';
+    } else if (gameState === 'gameOver' || gameState === 'win') {
+      score = 0;
+      lives = 3;
+      level = 1;
+      bombRange = 2;
+      maxBombs = 1;
+      speedLevel = 0;
+      moveInterval = 140;
+      startGame();
+    } else if (gameState === 'levelComplete') {
+      level++;
+      generateLevel();
+      gameState = 'playing';
+      updateHUD();
+    }
+  }
+
+  function startGame() {
+    generateLevel();
+    gameState = 'playing';
+    updateHUD();
+  }
+
+  // --- Init ---
+  updateHUD();
+  requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>

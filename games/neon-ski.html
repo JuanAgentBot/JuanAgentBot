@@ -20,6 +20,8 @@
       color: #e0e0e8;
       font-family: 'JetBrains Mono', monospace;
       overflow: hidden;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .top-bar {
@@ -59,6 +61,7 @@
     canvas {
       display: block;
       margin: 0 auto;
+      max-width: 100%;
     }
 
     .overlay {
@@ -135,6 +138,83 @@
       50% { opacity: 0.4; }
     }
 
+    .touch-controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      z-index: 60;
+      pointer-events: none;
+    }
+
+    .touch-controls.hidden {
+      display: none;
+    }
+
+    .touch-btn-group {
+      display: flex;
+      gap: 0.5rem;
+      pointer-events: auto;
+    }
+
+    .touch-btn {
+      width: 56px;
+      height: 56px;
+      border: 2px solid rgba(0, 240, 255, 0.5);
+      border-radius: 10px;
+      background: rgba(10, 10, 15, 0.7);
+      color: #00f0ff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      outline: none;
+    }
+
+    .touch-btn:active, .touch-btn.active {
+      background: rgba(0, 240, 255, 0.2);
+      border-color: #00f0ff;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+    }
+
+    .touch-btn.brake {
+      border-color: rgba(255, 45, 123, 0.5);
+      color: #ff2d7b;
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    .touch-btn.brake:active, .touch-btn.brake.active {
+      background: rgba(255, 45, 123, 0.2);
+      border-color: #ff2d7b;
+      box-shadow: 0 0 12px rgba(255, 45, 123, 0.3);
+    }
+
+    .touch-btn.tuck {
+      border-color: rgba(57, 255, 20, 0.5);
+      color: #39ff14;
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    .touch-btn.tuck:active, .touch-btn.tuck.active {
+      background: rgba(57, 255, 20, 0.2);
+      border-color: #39ff14;
+      box-shadow: 0 0 12px rgba(57, 255, 20, 0.3);
+    }
+
     .hud {
       position: fixed;
       top: 42px;
@@ -207,6 +287,17 @@
     <div class="stat" id="go-distance">0m</div>
     <div class="stat-label">DISTANCE</div>
     <div class="prompt">PRESS SPACE OR TAP TO RETRY</div>
+  </div>
+
+  <div class="touch-controls hidden" id="touch-controls">
+    <div class="touch-btn-group">
+      <button class="touch-btn" id="btn-left">◀</button>
+      <button class="touch-btn" id="btn-right">▶</button>
+    </div>
+    <div class="touch-btn-group">
+      <button class="touch-btn brake" id="btn-brake">BRK</button>
+      <button class="touch-btn tuck" id="btn-tuck">TUCK</button>
+    </div>
   </div>
 
   <script>
@@ -879,6 +970,39 @@
 
     gameOverScreen.addEventListener('click', () => {
       if (state === 'dead') startGame();
+    });
+
+    // Touch controls
+    const touchControls = document.getElementById('touch-controls');
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (isTouchDevice) {
+      touchControls.classList.remove('hidden');
+    }
+
+    function setupTouchBtn(id, keyCode, onPress) {
+      const btn = document.getElementById(id);
+      btn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        keys[keyCode] = true;
+        btn.classList.add('active');
+        if (onPress) onPress();
+      });
+      btn.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        keys[keyCode] = false;
+        btn.classList.remove('active');
+      });
+      btn.addEventListener('touchcancel', function() {
+        keys[keyCode] = false;
+        btn.classList.remove('active');
+      });
+    }
+
+    setupTouchBtn('btn-left', 'ArrowLeft');
+    setupTouchBtn('btn-right', 'ArrowRight');
+    setupTouchBtn('btn-brake', 'ShiftLeft');
+    setupTouchBtn('btn-tuck', 'Space', function() {
+      if (state === 'start' || state === 'dead') startGame();
     });
 
     // Init

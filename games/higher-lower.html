@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HIGHER LOWER / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 2rem;
+    }
+
+    /* Score bar */
+    .score-bar {
+      display: flex;
+      justify-content: center;
+      gap: 2.5rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .score-item { text-align: center; }
+
+    .score-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+    }
+
+    .score-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      letter-spacing: 0.04em;
+    }
+
+    .score-value.streak { color: #39ff14; text-shadow: 0 0 10px rgba(57,255,20,0.4); }
+    .score-value.banked { color: var(--accent-cyan); text-shadow: 0 0 10px var(--glow-cyan); }
+    .score-value.best { color: var(--accent-magenta); text-shadow: 0 0 10px var(--glow-magenta); }
+
+    /* Cards area */
+    .cards-area {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+      min-height: 200px;
+    }
+
+    .card-slot {
+      width: 130px;
+      height: 190px;
+      border: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: var(--bg-secondary);
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .card-slot.revealed {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 15px var(--glow-cyan-soft);
+    }
+
+    .card-slot.face-down {
+      border-color: var(--accent-magenta);
+      box-shadow: 0 0 10px var(--glow-magenta);
+    }
+
+    .card-slot.correct {
+      border-color: #39ff14;
+      box-shadow: 0 0 20px rgba(57,255,20,0.4);
+    }
+
+    .card-slot.wrong {
+      border-color: #ff1744;
+      box-shadow: 0 0 20px rgba(255,23,68,0.4);
+    }
+
+    .card-rank {
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      line-height: 1;
+    }
+
+    .card-suit {
+      font-size: 1.6rem;
+      margin-top: 0.3rem;
+    }
+
+    .card-corner {
+      position: absolute;
+      font-size: 0.7rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .card-corner.top { top: 8px; left: 10px; }
+    .card-corner.bottom { bottom: 8px; right: 10px; transform: rotate(180deg); }
+
+    .card-red .card-rank,
+    .card-red .card-suit,
+    .card-red .card-corner {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 8px var(--glow-magenta);
+    }
+
+    .card-black .card-rank,
+    .card-black .card-suit,
+    .card-black .card-corner {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 8px var(--glow-cyan);
+    }
+
+    .face-down-pattern {
+      font-size: 2.2rem;
+      color: var(--accent-magenta);
+      text-shadow: 0 0 15px var(--glow-magenta);
+      opacity: 0.7;
+    }
+
+    .arrow {
+      font-size: 1.8rem;
+      color: var(--text-dim);
+    }
+
+    /* Buttons */
+    .buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      padding: 0.8rem 1.8rem;
+      border: 2px solid var(--border);
+      background: transparent;
+      color: var(--text-bright);
+      cursor: pointer;
+      transition: all 0.2s;
+      min-width: 120px;
+    }
+
+    .btn:hover:not(:disabled) {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 15px var(--glow-cyan-soft);
+    }
+
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    .btn-higher:hover:not(:disabled) {
+      border-color: #39ff14;
+      color: #39ff14;
+      box-shadow: 0 0 15px rgba(57,255,20,0.3);
+    }
+
+    .btn-lower:hover:not(:disabled) {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+      box-shadow: 0 0 15px var(--glow-magenta);
+    }
+
+    .btn-cashout {
+      border-color: #ffb000;
+      color: #ffb000;
+    }
+
+    .btn-cashout:hover:not(:disabled) {
+      border-color: #ffb000;
+      color: #ffb000;
+      box-shadow: 0 0 15px rgba(255,176,0,0.4);
+      background: rgba(255,176,0,0.08);
+    }
+
+    /* Multiplier display */
+    .multiplier {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      margin-bottom: 1.5rem;
+      min-height: 1.2em;
+    }
+
+    .multiplier .val {
+      color: #ffb000;
+      text-shadow: 0 0 8px rgba(255,176,0,0.4);
+      font-weight: 700;
+    }
+
+    /* Message */
+    .message {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      margin-bottom: 1rem;
+      min-height: 1.4em;
+    }
+
+    .message.win { color: #39ff14; text-shadow: 0 0 15px rgba(57,255,20,0.5); }
+    .message.lose { color: #ff1744; text-shadow: 0 0 15px rgba(255,23,68,0.5); }
+    .message.cashout { color: #ffb000; text-shadow: 0 0 15px rgba(255,176,0,0.5); }
+    .message.info { color: var(--accent-cyan); text-shadow: 0 0 10px var(--glow-cyan); }
+
+    /* History */
+    .history {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .history-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.6rem;
+    }
+
+    .history-cards {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .history-card {
+      width: 32px;
+      height: 44px;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.55rem;
+      font-weight: 700;
+      line-height: 1.1;
+      opacity: 0.7;
+    }
+
+    .history-card.hc-red { color: var(--accent-magenta); border-color: rgba(255,45,123,0.3); }
+    .history-card.hc-black { color: var(--accent-cyan); border-color: rgba(0,240,255,0.3); }
+
+    .controls {
+      margin-top: 1.5rem;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      line-height: 1.8;
+    }
+
+    .controls kbd {
+      display: inline-block;
+      border: 1px solid var(--border);
+      padding: 0.15em 0.45em;
+      font-family: inherit;
+      font-size: inherit;
+      color: var(--text-muted);
+    }
+
+    /* Card flip animation */
+    @keyframes flip-in {
+      0% { transform: scaleX(0); }
+      100% { transform: scaleX(1); }
+    }
+
+    .card-slot.flip {
+      animation: flip-in 0.3s ease-out;
+    }
+
+    /* Streak pulse */
+    @keyframes streak-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+
+    .streak-bump {
+      animation: streak-pulse 0.3s ease-out;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>HIGHER LOWER</h1>
+    <p class="subtitle">GUESS THE NEXT CARD &middot; CASH OUT OR RISK IT ALL</p>
+
+    <div class="score-bar">
+      <div class="score-item">
+        <div class="score-label">STREAK</div>
+        <div class="score-value streak" id="streak">0</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">BANKED</div>
+        <div class="score-value banked" id="banked">0</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">BEST STREAK</div>
+        <div class="score-value best" id="best-streak">0</div>
+      </div>
+    </div>
+
+    <div class="cards-area">
+      <div class="card-slot revealed" id="current-card"></div>
+      <div class="arrow">&#9654;</div>
+      <div class="card-slot face-down" id="next-card">
+        <div class="face-down-pattern">?</div>
+      </div>
+    </div>
+
+    <div class="multiplier" id="multiplier"></div>
+    <div class="message" id="message">&nbsp;</div>
+
+    <div class="buttons" id="buttons">
+      <button class="btn btn-higher" id="btn-higher" onclick="guess('higher')">&#9650; HIGHER</button>
+      <button class="btn btn-cashout" id="btn-cashout" onclick="cashOut()" disabled>CASH OUT</button>
+      <button class="btn btn-lower" id="btn-lower" onclick="guess('lower')">&#9660; LOWER</button>
+    </div>
+
+    <div class="history" id="history-section" style="display:none">
+      <div class="history-label">CARDS PLAYED</div>
+      <div class="history-cards" id="history-cards"></div>
+    </div>
+
+    <div class="controls">
+      <kbd>H</kbd> higher &middot; <kbd>L</kbd> lower &middot; <kbd>C</kbd> cash out &middot; <kbd>SPACE</kbd> new round
+    </div>
+  </main>
+
+  <script>
+    (function() {
+      // Suits and ranks
+      var SUITS = [
+        { symbol: '\u2660', name: 'spades', color: 'black' },
+        { symbol: '\u2665', name: 'hearts', color: 'red' },
+        { symbol: '\u2666', name: 'diamonds', color: 'red' },
+        { symbol: '\u2663', name: 'clubs', color: 'black' }
+      ];
+      var RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+      var RANK_VALUES = { 'A':1, '2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13 };
+
+      // State
+      var deck = [];
+      var currentCard = null;
+      var nextCard = null;
+      var streak = 0;
+      var banked = 0;
+      var bestStreak = parseInt(localStorage.getItem('hl-best') || '0');
+      var history = [];
+      var gameOver = false;
+
+      // DOM
+      var elStreak = document.getElementById('streak');
+      var elBanked = document.getElementById('banked');
+      var elBestStreak = document.getElementById('best-streak');
+      var elCurrentCard = document.getElementById('current-card');
+      var elNextCard = document.getElementById('next-card');
+      var elMultiplier = document.getElementById('multiplier');
+      var elMessage = document.getElementById('message');
+      var elBtnHigher = document.getElementById('btn-higher');
+      var elBtnLower = document.getElementById('btn-lower');
+      var elBtnCashout = document.getElementById('btn-cashout');
+      var elHistorySection = document.getElementById('history-section');
+      var elHistoryCards = document.getElementById('history-cards');
+
+      function makeDeck() {
+        var d = [];
+        for (var s = 0; s < SUITS.length; s++) {
+          for (var r = 0; r < RANKS.length; r++) {
+            d.push({ rank: RANKS[r], suit: SUITS[s], value: RANK_VALUES[RANKS[r]] });
+          }
+        }
+        return d;
+      }
+
+      function shuffle(arr) {
+        for (var i = arr.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+        }
+        return arr;
+      }
+
+      function drawCard() {
+        if (deck.length === 0) deck = shuffle(makeDeck());
+        return deck.pop();
+      }
+
+      function renderCard(el, card, extraClass) {
+        var colorClass = 'card-' + card.suit.color;
+        el.className = 'card-slot ' + colorClass + (extraClass ? ' ' + extraClass : '');
+        el.innerHTML =
+          '<div class="card-corner top">' + card.rank + card.suit.symbol + '</div>' +
+          '<div class="card-rank">' + card.rank + '</div>' +
+          '<div class="card-suit">' + card.suit.symbol + '</div>' +
+          '<div class="card-corner bottom">' + card.rank + card.suit.symbol + '</div>';
+      }
+
+      function renderFaceDown(el) {
+        el.className = 'card-slot face-down';
+        el.innerHTML = '<div class="face-down-pattern">?</div>';
+      }
+
+      function updateScores() {
+        elStreak.textContent = streak;
+        elBanked.textContent = banked;
+        elBestStreak.textContent = bestStreak;
+
+        // Streak bump animation
+        if (streak > 0) {
+          elStreak.classList.remove('streak-bump');
+          void elStreak.offsetWidth;
+          elStreak.classList.add('streak-bump');
+        }
+      }
+
+      function getPointsForStreak(s) {
+        // Escalating points: 10, 30, 60, 100, 150, ...
+        return s * (s + 1) * 5;
+      }
+
+      function updateMultiplier() {
+        if (streak === 0) {
+          elMultiplier.innerHTML = '';
+        } else {
+          var pts = getPointsForStreak(streak);
+          elMultiplier.innerHTML = 'STREAK WORTH <span class="val">' + pts + '</span> POINTS';
+        }
+      }
+
+      function updateHistory() {
+        if (history.length === 0) {
+          elHistorySection.style.display = 'none';
+          return;
+        }
+        elHistorySection.style.display = 'block';
+        var html = '';
+        var show = history.slice(-20);
+        for (var i = 0; i < show.length; i++) {
+          var c = show[i];
+          var cls = c.suit.color === 'red' ? 'hc-red' : 'hc-black';
+          html += '<div class="history-card ' + cls + '">' +
+            '<span>' + c.rank + '</span>' +
+            '<span>' + c.suit.symbol + '</span>' +
+            '</div>';
+        }
+        elHistoryCards.innerHTML = html;
+      }
+
+      function setButtons(enabled) {
+        elBtnHigher.disabled = !enabled;
+        elBtnLower.disabled = !enabled;
+        elBtnCashout.disabled = !enabled || streak === 0;
+      }
+
+      function startRound() {
+        gameOver = false;
+        streak = 0;
+        history = [];
+        deck = shuffle(makeDeck());
+        currentCard = drawCard();
+        nextCard = drawCard();
+        renderCard(elCurrentCard, currentCard, 'revealed');
+        renderFaceDown(elNextCard);
+        history.push(currentCard);
+        updateScores();
+        updateMultiplier();
+        updateHistory();
+        setButtons(true);
+        elMessage.innerHTML = '&nbsp;';
+        elMessage.className = 'message';
+      }
+
+      function revealNext(isCorrect) {
+        var cls = isCorrect ? 'correct flip' : 'wrong flip';
+        renderCard(elNextCard, nextCard, cls);
+      }
+
+      window.guess = function(dir) {
+        if (gameOver) return;
+
+        var curVal = currentCard.value;
+        var nxtVal = nextCard.value;
+        var correct = false;
+
+        if (dir === 'higher') {
+          correct = nxtVal >= curVal;
+        } else {
+          correct = nxtVal <= curVal;
+        }
+
+        // Equal value is always correct (either guess works)
+        if (nxtVal === curVal) correct = true;
+
+        revealNext(correct);
+        history.push(nextCard);
+        updateHistory();
+
+        if (correct) {
+          streak++;
+          if (streak > bestStreak) {
+            bestStreak = streak;
+            localStorage.setItem('hl-best', bestStreak.toString());
+          }
+          updateScores();
+          updateMultiplier();
+
+          var rankName = nextCard.rank;
+          if (nxtVal === curVal) {
+            elMessage.textContent = 'EQUAL! BOTH COUNT \u2714';
+          } else {
+            elMessage.textContent = 'CORRECT! STREAK: ' + streak;
+          }
+          elMessage.className = 'message win';
+
+          setButtons(false);
+
+          // Move to next after a brief pause
+          setTimeout(function() {
+            if (gameOver) return;
+            currentCard = nextCard;
+            nextCard = drawCard();
+            renderCard(elCurrentCard, currentCard, 'revealed');
+            renderFaceDown(elNextCard);
+            setButtons(true);
+            elMessage.innerHTML = '&nbsp;';
+            elMessage.className = 'message';
+          }, 800);
+
+        } else {
+          // Wrong!
+          gameOver = true;
+          var lost = getPointsForStreak(streak);
+          elMessage.textContent = 'WRONG! LOST ' + lost + ' POINTS';
+          elMessage.className = 'message lose';
+          streak = 0;
+          updateScores();
+          updateMultiplier();
+          setButtons(false);
+
+          // Show restart hint
+          setTimeout(function() {
+            elMessage.innerHTML = 'WRONG! PRESS <kbd style="border:1px solid var(--border);padding:0.1em 0.4em;font-family:inherit">SPACE</kbd> FOR NEW ROUND';
+            elMessage.className = 'message lose';
+          }, 1200);
+        }
+      };
+
+      window.cashOut = function() {
+        if (gameOver || streak === 0) return;
+
+        var pts = getPointsForStreak(streak);
+        banked += pts;
+        elMessage.textContent = 'CASHED OUT +' + pts + ' POINTS!';
+        elMessage.className = 'message cashout';
+        streak = 0;
+        updateScores();
+        updateMultiplier();
+
+        setButtons(false);
+
+        // Start fresh after a pause
+        setTimeout(function() {
+          currentCard = drawCard();
+          nextCard = drawCard();
+          history = [currentCard];
+          renderCard(elCurrentCard, currentCard, 'revealed');
+          renderFaceDown(elNextCard);
+          updateHistory();
+          setButtons(true);
+          elMessage.innerHTML = '&nbsp;';
+          elMessage.className = 'message';
+        }, 1200);
+      };
+
+      // Keyboard controls
+      document.addEventListener('keydown', function(e) {
+        var key = e.key.toLowerCase();
+        if (key === 'h' && !elBtnHigher.disabled) {
+          e.preventDefault();
+          window.guess('higher');
+        } else if (key === 'l' && !elBtnLower.disabled) {
+          e.preventDefault();
+          window.guess('lower');
+        } else if (key === 'c' && !elBtnCashout.disabled) {
+          e.preventDefault();
+          window.cashOut();
+        } else if (key === ' ' || e.code === 'Space') {
+          e.preventDefault();
+          if (gameOver) startRound();
+        }
+      });
+
+      // Init
+      elBestStreak.textContent = bestStreak;
+      startRound();
+    })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

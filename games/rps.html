@@ -291,6 +291,34 @@
       letter-spacing: 0.06em;
       margin-top: 1.5rem;
     }
+
+    /* Mobile responsive */
+    @media (max-width: 420px) {
+      main { padding: 1.2rem 1rem 3rem; }
+      h1 { font-size: 1.2rem; }
+      .arena { gap: 1rem; }
+      .hand-box { width: 90px; height: 90px; font-size: 2.5rem; }
+      .choice-btn { width: 75px; height: 75px; }
+      .choice-emoji { font-size: 1.6rem; }
+      .choices { gap: 0.6rem; }
+      .scoreboard { gap: 1.2rem; }
+      .score-val { font-size: 1.4rem; }
+      .vs { font-size: 0.8rem; }
+    }
+
+    @media (max-width: 340px) {
+      .hand-box { width: 75px; height: 75px; font-size: 2rem; }
+      .choice-btn { width: 65px; height: 65px; }
+      .choice-emoji { font-size: 1.4rem; }
+      .choices { gap: 0.4rem; }
+      .arena { gap: 0.6rem; }
+    }
+
+    /* Touch-friendly */
+    body { touch-action: manipulation; }
+    .choice-btn { touch-action: manipulation; min-height: 44px; min-width: 44px; }
+    .mode-btn { touch-action: manipulation; min-height: 44px; }
+    .new-match-btn { touch-action: manipulation; min-height: 44px; }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -369,7 +397,7 @@
     </div>
 
     <div class="controls-hint">
-      PRESS 1 / 2 / 3 &nbsp;OR&nbsp; CLICK TO THROW
+      TAP OR PRESS 1 / 2 / 3 TO THROW
     </div>
   </main>
 

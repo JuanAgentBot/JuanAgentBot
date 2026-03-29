@@ -58,9 +58,12 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.7rem;
       padding: 0.4rem 0.8rem;
+      min-height: 44px;
+      min-width: 44px;
       cursor: pointer;
       letter-spacing: 0.06em;
       transition: all 0.2s;
+      touch-action: manipulation;
     }
     .controls-bar button:hover {
       border-color: var(--accent-cyan);
@@ -87,6 +90,8 @@
       margin: 0 auto;
       cursor: crosshair;
       image-rendering: auto;
+      touch-action: manipulation;
+      max-width: 100%;
     }
     .stats {
       display: flex;
@@ -127,6 +132,7 @@
       <button onclick="setSize(9)" id="btn9">9x9</button>
       <button onclick="newPuzzle()" id="btnNew">NEW</button>
       <button onclick="clearAll()" id="btnClear">CLEAR</button>
+      <button onclick="undoLast()" id="btnUndo">UNDO</button>
     </div>
 
     <div id="status">DRAW PATHS BETWEEN MATCHING DOTS</div>
@@ -141,10 +147,9 @@
     </div>
 
     <p class="instructions">
-      CLICK A DOT AND DRAG TO DRAW A PATH TO ITS MATCH<br>
+      TAP A DOT AND DRAG TO DRAW A PATH TO ITS MATCH<br>
       PATHS CANNOT CROSS OR OVERLAP<br>
-      FILL EVERY CELL TO SOLVE THE PUZZLE<br>
-      <kbd>R</kbd> CLEAR ALL &middot; <kbd>N</kbd> NEW PUZZLE &middot; <kbd>Z</kbd> UNDO LAST FLOW
+      FILL EVERY CELL TO SOLVE THE PUZZLE
     </p>
   </main>
 

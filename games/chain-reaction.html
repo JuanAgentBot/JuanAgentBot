@@ -74,12 +74,14 @@
       flex: 1;
       position: relative;
       cursor: crosshair;
+      touch-action: manipulation;
     }
 
     canvas {
       display: block;
       width: 100%;
       height: 100%;
+      touch-action: manipulation;
     }
 
     .overlay {
@@ -135,7 +137,9 @@
 
     .btn {
       margin-top: 1.2rem;
-      padding: 0.6rem 2rem;
+      padding: 0.75rem 2rem;
+      min-height: 44px;
+      min-width: 44px;
       background: transparent;
       border: 1px solid var(--accent-cyan);
       color: var(--accent-cyan);
@@ -145,6 +149,7 @@
       letter-spacing: 0.1em;
       cursor: pointer;
       transition: all 0.25s;
+      touch-action: manipulation;
     }
 
     .btn:hover {
@@ -164,6 +169,32 @@
     }
 
     .controls span { color: var(--accent-cyan); }
+
+    @media (max-width: 600px) {
+      .top-bar { padding: 0.4rem 0.6rem; }
+      .top-bar a { font-size: 0.6rem; }
+      .game-title { font-size: 0.7rem; }
+
+      .hud {
+        gap: 0.6rem;
+        padding: 0.4rem 0.5rem;
+        font-size: 0.65rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .overlay h2 { font-size: 1.2rem; }
+      .overlay p { font-size: 0.7rem; max-width: 90vw; }
+      .overlay .stat { font-size: 0.75rem; }
+      .btn { font-size: 0.8rem; padding: 0.85rem 2.5rem; }
+
+      .controls { font-size: 0.6rem; padding: 0.5rem; }
+    }
+
+    @media (max-width: 360px) {
+      .hud { gap: 0.4rem; font-size: 0.6rem; }
+      .game-title { font-size: 0.6rem; }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -186,8 +217,8 @@
 
     <div class="overlay" id="start-overlay">
       <h2>CHAIN REACTION</h2>
-      <p>Floating orbs drift across the screen. Click once to start an explosion. When it touches an orb, that orb explodes too.</p>
-      <p>Pop enough orbs to advance. One click per level.</p>
+      <p>Floating orbs drift across the screen. Tap or click once to start an explosion. When it touches an orb, that orb explodes too.</p>
+      <p>Pop enough orbs to advance. One tap per level.</p>
       <p style="color: var(--accent-green); margin-top: 0.6rem;">12 levels. Each needs more pops to pass.</p>
       <button class="btn" id="start-btn">START</button>
     </div>
@@ -218,7 +249,7 @@
   </div>
 
   <div class="controls">
-    <span>CLICK</span> to place explosion &middot; chain reactions do the rest
+    <span>TAP / CLICK</span> to place explosion &middot; chain reactions do the rest
   </div>
 
   <script>

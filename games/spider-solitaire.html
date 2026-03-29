@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spider Solitaire / ZERO</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg, #0a0a0f);
+      color: var(--text-bright, #e0e0e8);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.8rem 1.2rem;
+      border-bottom: 1px solid var(--border, #7a7a90);
+    }
+    .top-bar a {
+      color: var(--text-dim, #7a7a90);
+      text-decoration: none;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      transition: color 0.3s;
+    }
+    .top-bar a:hover { color: var(--accent-cyan, #00f0ff); }
+    .title {
+      color: var(--accent-magenta, #ff2d7b);
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 10px var(--glow-magenta, rgba(255,45,123,0.4));
+    }
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.6rem 1.2rem;
+      flex-wrap: wrap;
+      align-items: center;
+      border-bottom: 1px solid var(--border, #7a7a90);
+    }
+    .controls button, .controls select {
+      background: transparent;
+      border: 1px solid var(--border, #7a7a90);
+      color: var(--text-bright, #e0e0e8);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      padding: 0.3rem 0.7rem;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .controls button:hover, .controls select:hover {
+      border-color: var(--accent-cyan, #00f0ff);
+      color: var(--accent-cyan, #00f0ff);
+    }
+    .controls select { background: var(--bg, #0a0a0f); }
+    .controls select option { background: #121218; }
+    .info-bar {
+      display: flex;
+      gap: 1.5rem;
+      padding: 0.4rem 1.2rem;
+      font-size: 0.65rem;
+      color: var(--text-dim, #7a7a90);
+      border-bottom: 1px solid var(--border, #7a7a90);
+    }
+    .info-bar span { letter-spacing: 0.04em; }
+    .info-val { color: var(--accent-cyan, #00f0ff); }
+
+    #game-area {
+      position: relative;
+      width: 100%;
+      padding: 1rem 0.5rem;
+      min-height: calc(100vh - 120px);
+      user-select: none;
+    }
+
+    .tableau {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+      flex-wrap: nowrap;
+    }
+
+    .column {
+      position: relative;
+      width: 72px;
+      min-height: 100px;
+      flex-shrink: 0;
+    }
+
+    .card {
+      position: absolute;
+      width: 72px;
+      height: 100px;
+      border: 1px solid var(--border, #7a7a90);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: box-shadow 0.15s, border-color 0.15s;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 4px 6px;
+    }
+
+    .card.face-down {
+      background: linear-gradient(135deg, #1a1a2e 25%, #16162a 25%, #16162a 50%, #1a1a2e 50%, #1a1a2e 75%, #16162a 75%);
+      background-size: 8px 8px;
+      border-color: var(--accent-purple, #9d4edd);
+      cursor: default;
+    }
+
+    .card.face-up {
+      background: var(--bg-panel, #121218);
+    }
+
+    .card.face-up:hover {
+      border-color: var(--accent-cyan, #00f0ff);
+    }
+
+    .card.selected {
+      border-color: var(--accent-green, #39ff14) !important;
+      box-shadow: 0 0 12px var(--glow-green, rgba(57,255,20,0.3));
+    }
+
+    .card.valid-target {
+      border-color: var(--accent-cyan, #00f0ff);
+      box-shadow: 0 0 8px var(--glow-cyan-soft, rgba(0,240,255,0.15));
+    }
+
+    .card .rank-suit {
+      font-weight: 700;
+    }
+    .card .rank-suit-bottom {
+      font-weight: 700;
+      align-self: flex-end;
+      transform: rotate(180deg);
+    }
+
+    .suit-spade, .suit-club { color: var(--accent-cyan, #00f0ff); }
+    .suit-heart, .suit-diamond { color: var(--accent-magenta, #ff2d7b); }
+
+    .stock-area {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .stock-pile {
+      width: 72px;
+      height: 100px;
+      border: 2px solid var(--accent-purple, #9d4edd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: linear-gradient(135deg, #1a1a2e 25%, #16162a 25%, #16162a 50%, #1a1a2e 50%, #1a1a2e 75%, #16162a 75%);
+      background-size: 8px 8px;
+      font-size: 0.6rem;
+      color: var(--text-dim, #7a7a90);
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .stock-pile:hover {
+      border-color: var(--accent-cyan, #00f0ff);
+      box-shadow: 0 0 16px var(--glow-cyan-soft, rgba(0,240,255,0.2));
+    }
+
+    .stock-pile.empty {
+      border-style: dashed;
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    .foundations {
+      position: fixed;
+      bottom: 1rem;
+      left: 1rem;
+      display: flex;
+      gap: 4px;
+      z-index: 100;
+    }
+
+    .foundation-slot {
+      width: 36px;
+      height: 50px;
+      border: 1px dashed var(--border, #7a7a90);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.55rem;
+      color: var(--text-dim, #7a7a90);
+      opacity: 0.5;
+    }
+    .foundation-slot.filled {
+      border-style: solid;
+      border-color: var(--accent-green, #39ff14);
+      opacity: 1;
+      color: var(--accent-green, #39ff14);
+    }
+
+    .win-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10,10,15,0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    .win-overlay h2 {
+      color: var(--accent-green, #39ff14);
+      font-size: 2rem;
+      text-shadow: 0 0 30px var(--glow-green, rgba(57,255,20,0.5));
+      margin-bottom: 1rem;
+    }
+    .win-overlay p {
+      color: var(--text-dim, #7a7a90);
+      font-size: 0.8rem;
+      margin-bottom: 0.5rem;
+    }
+    .win-overlay button {
+      margin-top: 1rem;
+      background: transparent;
+      border: 1px solid var(--accent-green, #39ff14);
+      color: var(--accent-green, #39ff14);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      padding: 0.5rem 1.5rem;
+      cursor: pointer;
+    }
+    .win-overlay button:hover {
+      background: rgba(57,255,20,0.1);
+    }
+
+    .hint-text {
+      position: fixed;
+      bottom: 7.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.6rem;
+      color: var(--text-dim, #7a7a90);
+      text-align: center;
+      letter-spacing: 0.05em;
+      z-index: 50;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .hint-text.show { opacity: 1; }
+
+    @media (max-width: 800px) {
+      .column { width: 56px; }
+      .card { width: 56px; height: 80px; font-size: 0.6rem; padding: 2px 4px; }
+      .stock-pile { width: 56px; height: 80px; }
+      .foundation-slot { width: 28px; height: 40px; font-size: 0.45rem; }
+    }
+    @media (max-width: 620px) {
+      .column { width: 34px; }
+      .card { width: 34px; height: 50px; font-size: 0.45rem; padding: 1px 2px; }
+      .card .rank-suit-bottom { display: none; }
+      .stock-pile { width: 48px; height: 66px; font-size: 0.5rem; }
+      .foundation-slot { width: 22px; height: 32px; font-size: 0.35rem; }
+      .tableau { gap: 2px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="./">&lt; GAME LAB</a>
+    <span class="title">SPIDER SOLITAIRE</span>
+    <span></span>
+  </div>
+  <div class="controls">
+    <select id="suit-mode">
+      <option value="1">1 SUIT</option>
+      <option value="2">2 SUITS</option>
+      <option value="4" selected>4 SUITS</option>
+    </select>
+    <button id="btn-new">NEW GAME</button>
+    <button id="btn-undo">UNDO</button>
+    <button id="btn-hint">HINT</button>
+  </div>
+  <div class="info-bar">
+    <span>MOVES: <span class="info-val" id="move-count">0</span></span>
+    <span>SCORE: <span class="info-val" id="score-val">500</span></span>
+    <span>COMPLETED: <span class="info-val" id="completed-val">0</span>/8</span>
+  </div>
+
+  <div id="game-area">
+    <div class="tableau" id="tableau"></div>
+  </div>
+
+  <div class="foundations" id="foundations"></div>
+
+  <div class="stock-area">
+    <div class="stock-pile" id="stock-pile">DEAL<br>10</div>
+  </div>
+
+  <div class="hint-text" id="hint-text"></div>
+
+  <script>
+    const SUITS = ['♠','♥','♦','♣'];
+    const SUIT_CLASS = {'♠':'suit-spade','♥':'suit-heart','♦':'suit-diamond','♣':'suit-club'};
+    const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+    const RANK_VAL = {'A':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13};
+
+    let columns = [];
+    let stock = [];
+    let completed = 0;
+    let moves = 0;
+    let score = 500;
+    let history = [];
+    let selectedCol = -1;
+    let selectedIdx = -1;
+    let suitMode = 4;
+    let gameWon = false;
+
+    function makeDeck() {
+      let suits;
+      if (suitMode === 1) suits = [SUITS[0], SUITS[0], SUITS[0], SUITS[0], SUITS[0], SUITS[0], SUITS[0], SUITS[0]];
+      else if (suitMode === 2) suits = [SUITS[0], SUITS[1], SUITS[0], SUITS[1], SUITS[0], SUITS[1], SUITS[0], SUITS[1]];
+      else suits = [SUITS[0], SUITS[1], SUITS[2], SUITS[3], SUITS[0], SUITS[1], SUITS[2], SUITS[3]];
+
+      let deck = [];
+      for (let s of suits) {
+        for (let r of RANKS) {
+          deck.push({ rank: r, suit: s, faceUp: false });
+        }
+      }
+      return shuffle(deck);
+    }
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function newGame() {
+      suitMode = parseInt(document.getElementById('suit-mode').value);
+      let deck = makeDeck();
+      columns = [];
+      for (let i = 0; i < 10; i++) columns.push([]);
+
+      // Deal: first 4 columns get 6 cards, last 6 get 5
+      let idx = 0;
+      for (let row = 0; row < 6; row++) {
+        for (let col = 0; col < 10; col++) {
+          if (row === 5 && col >= 4) continue;
+          columns[col].push(deck[idx]);
+          idx++;
+        }
+      }
+
+      // Top card of each column face up
+      for (let col of columns) {
+        if (col.length > 0) col[col.length - 1].faceUp = true;
+      }
+
+      // Remaining cards go to stock
+      stock = deck.slice(idx);
+
+      completed = 0;
+      moves = 0;
+      score = 500;
+      history = [];
+      selectedCol = -1;
+      selectedIdx = -1;
+      gameWon = false;
+
+      // Remove win overlay if present
+      let overlay = document.querySelector('.win-overlay');
+      if (overlay) overlay.remove();
+
+      renderFoundations();
+      render();
+    }
+
+    function renderFoundations() {
+      let el = document.getElementById('foundations');
+      el.innerHTML = '';
+      for (let i = 0; i < 8; i++) {
+        let slot = document.createElement('div');
+        slot.className = 'foundation-slot' + (i < completed ? ' filled' : '');
+        slot.textContent = i < completed ? '✓' : (i + 1);
+        el.appendChild(slot);
+      }
+    }
+
+    function cardOffset(idx, total) {
+      // Face-down cards overlap more tightly
+      return idx * 22;
+    }
+
+    function render() {
+      document.getElementById('move-count').textContent = moves;
+      document.getElementById('score-val').textContent = score;
+      document.getElementById('completed-val').textContent = completed;
+
+      let tableau = document.getElementById('tableau');
+      tableau.innerHTML = '';
+
+      for (let c = 0; c < 10; c++) {
+        let colDiv = document.createElement('div');
+        colDiv.className = 'column';
+        colDiv.dataset.col = c;
+
+        let col = columns[c];
+        let faceDownCount = 0;
+        let offsets = [];
+        let y = 0;
+        for (let i = 0; i < col.length; i++) {
+          if (!col[i].faceUp) {
+            offsets.push(y);
+            y += 12;
+          } else {
+            offsets.push(y);
+            y += 22;
+          }
+        }
+
+        let colHeight = col.length > 0 ? offsets[col.length - 1] + 100 : 100;
+        colDiv.style.minHeight = colHeight + 'px';
+
+        if (col.length === 0) {
+          // Empty column - clickable target
+          let empty = document.createElement('div');
+          empty.className = 'card';
+          empty.style.top = '0px';
+          empty.style.background = 'transparent';
+          empty.style.border = '1px dashed var(--border, #7a7a90)';
+          empty.style.opacity = '0.3';
+          empty.style.cursor = 'pointer';
+          empty.dataset.col = c;
+          empty.dataset.idx = '0';
+          empty.addEventListener('click', () => handleClick(c, 0));
+          colDiv.appendChild(empty);
+        }
+
+        for (let i = 0; i < col.length; i++) {
+          let card = col[i];
+          let el = document.createElement('div');
+          el.className = 'card ' + (card.faceUp ? 'face-up' : 'face-down');
+          el.style.top = offsets[i] + 'px';
+          el.style.zIndex = i + 1;
+          el.dataset.col = c;
+          el.dataset.idx = i;
+
+          if (card.faceUp) {
+            let cls = SUIT_CLASS[card.suit];
+            el.innerHTML = `<span class="rank-suit ${cls}">${card.rank}${card.suit}</span><span class="rank-suit-bottom ${cls}">${card.rank}${card.suit}</span>`;
+            el.addEventListener('click', () => handleClick(c, i));
+          }
+
+          // Highlight selected
+          if (selectedCol === c && i >= selectedIdx && col[i].faceUp) {
+            el.classList.add('selected');
+          }
+
+          colDiv.appendChild(el);
+        }
+
+        tableau.appendChild(colDiv);
+      }
+
+      // Stock pile
+      let stockEl = document.getElementById('stock-pile');
+      if (stock.length === 0) {
+        stockEl.className = 'stock-pile empty';
+        stockEl.textContent = 'EMPTY';
+      } else {
+        stockEl.className = 'stock-pile';
+        stockEl.innerHTML = 'DEAL<br>' + stock.length;
+      }
+    }
+
+    function isValidSequence(col, fromIdx) {
+      // Check that cards from fromIdx to end form a descending same-suit sequence
+      for (let i = fromIdx; i < col.length - 1; i++) {
+        if (!col[i].faceUp) return false;
+        if (col[i].suit !== col[i + 1].suit) return false;
+        if (RANK_VAL[col[i].rank] !== RANK_VAL[col[i + 1].rank] + 1) return false;
+      }
+      return col[fromIdx].faceUp;
+    }
+
+    function canPlace(targetCol, card) {
+      if (targetCol.length === 0) return true;
+      let top = targetCol[targetCol.length - 1];
+      return top.faceUp && RANK_VAL[top.rank] === RANK_VAL[card.rank] + 1;
+    }
+
+    function handleClick(col, idx) {
+      if (gameWon) return;
+
+      if (selectedCol === -1) {
+        // Select
+        if (columns[col].length === 0) return;
+        if (!columns[col][idx].faceUp) return;
+        if (!isValidSequence(columns[col], idx)) return;
+        selectedCol = col;
+        selectedIdx = idx;
+        render();
+      } else if (selectedCol === col) {
+        // Deselect
+        selectedCol = -1;
+        selectedIdx = -1;
+        render();
+      } else {
+        // Try to move
+        let srcCol = columns[selectedCol];
+        let dstCol = columns[col];
+        let movingCard = srcCol[selectedIdx];
+
+        if (canPlace(dstCol, movingCard)) {
+          let cards = srcCol.splice(selectedIdx);
+          let flipped = false;
+          if (srcCol.length > 0 && !srcCol[srcCol.length - 1].faceUp) {
+            srcCol[srcCol.length - 1].faceUp = true;
+            flipped = true;
+          }
+
+          history.push({
+            type: 'move',
+            from: selectedCol,
+            to: col,
+            cards: cards,
+            flipped: flipped
+          });
+
+          for (let c of cards) dstCol.push(c);
+          moves++;
+          score = Math.max(0, score - 1);
+
+          // Check for completed sequence
+          checkCompleted(col);
+
+          selectedCol = -1;
+          selectedIdx = -1;
+          render();
+          renderFoundations();
+
+          if (completed === 8) winGame();
+        } else {
+          // Invalid move, deselect
+          selectedCol = -1;
+          selectedIdx = -1;
+          render();
+        }
+      }
+    }
+
+    function checkCompleted(colIdx) {
+      let col = columns[colIdx];
+      if (col.length < 13) return;
+
+      // Check if bottom 13 cards form K to A of same suit
+      let start = col.length - 13;
+      let suit = col[start].suit;
+      if (RANK_VAL[col[start].rank] !== 13) return;
+
+      for (let i = 0; i < 13; i++) {
+        if (!col[start + i].faceUp) return;
+        if (col[start + i].suit !== suit) return;
+        if (RANK_VAL[col[start + i].rank] !== 13 - i) return;
+      }
+
+      // Remove the completed sequence
+      let removed = col.splice(start, 13);
+      completed++;
+      score += 100;
+
+      // Flip newly exposed card
+      if (col.length > 0 && !col[col.length - 1].faceUp) {
+        col[col.length - 1].faceUp = true;
+      }
+
+      history.push({
+        type: 'complete',
+        col: colIdx,
+        cards: removed,
+        flipped: col.length > 0 && col[col.length - 1].faceUp
+      });
+    }
+
+    function dealFromStock() {
+      if (gameWon) return;
+      if (stock.length === 0) return;
+
+      // Check no empty columns (standard spider rule)
+      let hasEmpty = columns.some(c => c.length === 0);
+      if (hasEmpty) {
+        showHint('Fill all empty columns before dealing');
+        return;
+      }
+
+      let dealt = [];
+      for (let i = 0; i < 10; i++) {
+        if (stock.length > 0) {
+          let card = stock.pop();
+          card.faceUp = true;
+          columns[i].push(card);
+          dealt.push(i);
+        }
+      }
+
+      history.push({ type: 'deal', count: dealt.length });
+      moves++;
+
+      // Check for completed sequences after deal
+      for (let i = 0; i < 10; i++) {
+        checkCompleted(i);
+      }
+
+      render();
+      renderFoundations();
+
+      if (completed === 8) winGame();
+    }
+
+    function undo() {
+      if (history.length === 0) return;
+      let action = history.pop();
+
+      if (action.type === 'move') {
+        let cards = columns[action.to].splice(columns[action.to].length - action.cards.length);
+        if (action.flipped && columns[action.from].length > 0) {
+          columns[action.from][columns[action.from].length - 1].faceUp = false;
+        }
+        for (let c of cards) columns[action.from].push(c);
+        moves = Math.max(0, moves - 1);
+        score = Math.max(0, score - 1);
+      } else if (action.type === 'deal') {
+        for (let i = 9; i >= 0; i--) {
+          if (columns[i].length > 0) {
+            let card = columns[i].pop();
+            card.faceUp = false;
+            stock.push(card);
+          }
+        }
+        moves = Math.max(0, moves - 1);
+      } else if (action.type === 'complete') {
+        // Undo a completed sequence is complex, skip for simplicity
+        showHint('Cannot undo completed sequences');
+        history.push(action);
+        return;
+      }
+
+      selectedCol = -1;
+      selectedIdx = -1;
+      render();
+      renderFoundations();
+    }
+
+    function findHint() {
+      // Find a valid move to suggest
+      for (let c = 0; c < 10; c++) {
+        let col = columns[c];
+        if (col.length === 0) continue;
+
+        // Find longest valid sequence from bottom
+        let start = col.length - 1;
+        while (start > 0 && col[start - 1].faceUp &&
+               col[start - 1].suit === col[start].suit &&
+               RANK_VAL[col[start - 1].rank] === RANK_VAL[col[start].rank] + 1) {
+          start--;
+        }
+
+        // Try moving this sequence to each other column
+        for (let t = 0; t < 10; t++) {
+          if (t === c) continue;
+          if (canPlace(columns[t], col[start])) {
+            // Prefer non-empty columns for hints (empty is always valid but less useful)
+            if (columns[t].length > 0) {
+              return { from: c, fromIdx: start, to: t };
+            }
+          }
+        }
+
+        // Also try sub-sequences
+        for (let s = start + 1; s < col.length; s++) {
+          if (!isValidSequence(col, s)) continue;
+          for (let t = 0; t < 10; t++) {
+            if (t === c) continue;
+            if (canPlace(columns[t], col[s]) && columns[t].length > 0) {
+              return { from: c, fromIdx: s, to: t };
+            }
+          }
+        }
+      }
+
+      // Try empty column moves
+      for (let c = 0; c < 10; c++) {
+        let col = columns[c];
+        if (col.length === 0) continue;
+        let start = col.length - 1;
+        while (start > 0 && col[start - 1].faceUp &&
+               col[start - 1].suit === col[start].suit &&
+               RANK_VAL[col[start - 1].rank] === RANK_VAL[col[start].rank] + 1) {
+          start--;
+        }
+        for (let t = 0; t < 10; t++) {
+          if (t === c) continue;
+          if (columns[t].length === 0) {
+            return { from: c, fromIdx: start, to: t };
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function showHintMove() {
+      let hint = findHint();
+      if (hint) {
+        selectedCol = hint.from;
+        selectedIdx = hint.fromIdx;
+        showHint('Move from column ' + (hint.from + 1) + ' to column ' + (hint.to + 1));
+        render();
+        setTimeout(() => {
+          selectedCol = -1;
+          selectedIdx = -1;
+          render();
+        }, 1500);
+      } else if (stock.length > 0) {
+        showHint('No moves found. Try dealing from stock.');
+      } else {
+        showHint('No moves available. Game may be stuck.');
+      }
+    }
+
+    function showHint(text) {
+      let el = document.getElementById('hint-text');
+      el.textContent = text;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    function winGame() {
+      gameWon = true;
+      let overlay = document.createElement('div');
+      overlay.className = 'win-overlay';
+      overlay.innerHTML = `
+        <h2>YOU WIN!</h2>
+        <p>All 8 sequences completed</p>
+        <p>Moves: ${moves} | Score: ${score}</p>
+        <p>Mode: ${suitMode} suit${suitMode > 1 ? 's' : ''}</p>
+        <button onclick="this.parentElement.remove(); newGame();">PLAY AGAIN</button>
+      `;
+      document.body.appendChild(overlay);
+    }
+
+    // Event listeners
+    document.getElementById('btn-new').addEventListener('click', newGame);
+    document.getElementById('btn-undo').addEventListener('click', undo);
+    document.getElementById('btn-hint').addEventListener('click', showHintMove);
+    document.getElementById('stock-pile').addEventListener('click', dealFromStock);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); undo(); }
+      if (e.key === 'h') showHintMove();
+      if (e.key === 'n') newGame();
+      if (e.key === 'd') dealFromStock();
+      if (e.key === 'Escape') { selectedCol = -1; selectedIdx = -1; render(); }
+    });
+
+    newGame();
+  </script>
+</body>
+</html>

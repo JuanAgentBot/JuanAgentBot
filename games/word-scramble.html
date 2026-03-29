@@ -77,9 +77,11 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.7rem;
       letter-spacing: 0.06em;
-      padding: 0.4rem 1rem;
+      padding: 0.55rem 1.1rem;
       cursor: pointer;
       transition: all 0.2s;
+      touch-action: manipulation;
+      min-height: 44px;
     }
 
     .diff-btn:hover {
@@ -119,6 +121,7 @@
       cursor: pointer;
       transition: all 0.15s;
       user-select: none;
+      touch-action: manipulation;
     }
 
     .letter-tile:hover {
@@ -159,6 +162,7 @@
       text-shadow: 0 0 8px rgba(224, 224, 232, 0.3);
       cursor: pointer;
       transition: all 0.15s;
+      touch-action: manipulation;
     }
 
     .answer-slot:hover {
@@ -210,9 +214,11 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.7rem;
       letter-spacing: 0.06em;
-      padding: 0.5rem 1rem;
+      padding: 0.6rem 1rem;
       cursor: pointer;
       transition: all 0.2s;
+      touch-action: manipulation;
+      min-height: 44px;
     }
 
     .ctrl-btn:hover {
@@ -342,6 +348,82 @@
       gap: 2rem;
       margin-bottom: 1.5rem;
       font-size: 0.75rem;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 480px) {
+      main {
+        padding: 1.2rem 1rem 3rem;
+      }
+
+      h1 {
+        font-size: 1.3rem;
+      }
+
+      .stats-bar {
+        gap: 1rem;
+        font-size: 0.7rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .scramble-letters {
+        gap: 0.35rem;
+      }
+
+      .letter-tile,
+      .answer-slot {
+        width: 40px;
+        height: 48px;
+        font-size: 1.25rem;
+      }
+
+      .answer-area {
+        gap: 0.3rem;
+      }
+
+      .controls {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .ctrl-btn {
+        flex: 1 1 auto;
+        min-width: 70px;
+        text-align: center;
+      }
+
+      .final-stats {
+        gap: 1rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .letter-tile,
+      .answer-slot {
+        width: 34px;
+        height: 42px;
+        font-size: 1.1rem;
+      }
+
+      .scramble-letters {
+        gap: 0.25rem;
+      }
+
+      .answer-area {
+        gap: 0.2rem;
+      }
+
+      .difficulty-bar {
+        gap: 0.3rem;
+      }
+
+      .diff-btn {
+        padding: 0.5rem 0.7rem;
+        font-size: 0.65rem;
+      }
     }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>

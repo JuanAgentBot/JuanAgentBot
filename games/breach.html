@@ -13,6 +13,11 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    *, *::before, *::after {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
     main {
       max-width: 640px;
       margin: 0 auto;
@@ -49,6 +54,7 @@
       display: flex;
       flex-direction: column;
       gap: 1.2rem;
+      overflow: hidden;
     }
 
     .status-bar {
@@ -100,6 +106,7 @@
 
     .seq-cell {
       width: 2.4rem;
+      min-width: 1.8rem;
       height: 1.6rem;
       display: flex;
       align-items: center;
@@ -162,10 +169,11 @@
     .matrix-cell {
       width: 100%;
       aspect-ratio: 1.4;
+      min-height: 44px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.85rem;
+      font-size: clamp(0.7rem, 2.5vw, 0.85rem);
       font-weight: 700;
       color: var(--text-bright);
       letter-spacing: 0.04em;
@@ -243,10 +251,12 @@
     .buffer-cells {
       display: flex;
       gap: 4px;
+      flex-wrap: wrap;
     }
 
     .buffer-cell {
       width: 2.6rem;
+      min-width: 2rem;
       height: 1.8rem;
       display: flex;
       align-items: center;
@@ -256,6 +266,8 @@
       font-weight: 700;
       color: var(--text-bright);
       letter-spacing: 0.04em;
+      flex: 1 1 2rem;
+      max-width: 3rem;
     }
 
     .buffer-cell.filled {
@@ -303,7 +315,10 @@
       border: 1px solid var(--border);
       padding: 2.5rem;
       max-width: 420px;
+      width: calc(100% - 2rem);
+      margin: 0 1rem;
       text-align: center;
+      box-sizing: border-box;
     }
 
     .overlay-title {
@@ -405,6 +420,69 @@
 
     .score-display span {
       color: var(--accent-cyan);
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 480px) {
+      main {
+        padding: 1rem 0.75rem 3rem;
+      }
+
+      h1 {
+        font-size: 1.3rem;
+      }
+
+      .status-bar {
+        font-size: 0.65rem;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+      }
+
+      .sequences-panel, .buffer-panel {
+        padding: 0.7rem;
+      }
+
+      .sequence-row {
+        font-size: 0.7rem;
+        flex-wrap: wrap;
+      }
+
+      .seq-label {
+        width: 2.6rem;
+        font-size: 0.55rem;
+      }
+
+      .seq-cell {
+        width: 2rem;
+        min-width: 1.6rem;
+        height: 1.4rem;
+        font-size: 0.65rem;
+      }
+
+      .buffer-cell {
+        height: 1.6rem;
+        font-size: 0.7rem;
+      }
+
+      .overlay-box {
+        padding: 1.5rem;
+      }
+
+      .overlay-title {
+        font-size: 1.1rem;
+      }
+
+      .overlay-msg {
+        font-size: 0.7rem;
+      }
+
+      .diff-picker {
+        flex-wrap: wrap;
+      }
+
+      .controls {
+        font-size: 0.6rem;
+      }
     }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>

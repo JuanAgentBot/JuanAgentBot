@@ -21,6 +21,10 @@
       font-family: 'JetBrains Mono', monospace;
       overflow: hidden;
       height: 100vh;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .back {
@@ -92,6 +96,7 @@
       display: block;
       width: 100vw;
       height: 100vh;
+      touch-action: manipulation;
     }
 
     #overlay {
@@ -182,6 +187,32 @@
     }
 
     .shield-indicator.visible { opacity: 1; }
+
+    /* Mobile responsive */
+    @media (max-width: 600px) {
+      .back { top: 0.5rem; left: 0.75rem; font-size: 0.6rem; }
+      .title-bar { padding: 0.5rem; }
+      .title-bar h1 { font-size: 0.8rem; }
+      #hud { top: 2.2rem; gap: 1.5rem; }
+      .hud-label { font-size: 0.5rem; }
+      .hud-value { font-size: 1rem; }
+      .overlay-title { font-size: 1.2rem; }
+      .overlay-sub { font-size: 0.65rem; margin-bottom: 1rem; }
+      .overlay-score { font-size: 1.6rem; }
+      .overlay-controls { font-size: 0.6rem; line-height: 2; padding: 0 1rem; }
+      .overlay-start { font-size: 0.65rem; }
+      .shield-indicator { bottom: 1rem; font-size: 0.55rem; }
+    }
+
+    @media (max-height: 500px) {
+      .title-bar { padding: 0.3rem; }
+      .title-bar h1 { font-size: 0.7rem; }
+      #hud { top: 1.8rem; gap: 1rem; }
+      .hud-value { font-size: 0.9rem; }
+      .overlay-title { font-size: 1rem; }
+      .overlay-sub { font-size: 0.55rem; margin-bottom: 0.5rem; }
+      .overlay-controls { margin-bottom: 1rem; }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -211,11 +242,11 @@
     <div class="overlay-title">NEON ORBIT</div>
     <div class="overlay-sub">SURVIVE THE ASTEROID FIELD</div>
     <div class="overlay-controls">
-      <span class="key">SPACE</span> / <span class="key">CLICK</span> — reverse orbit<br>
+      <span class="key">SPACE</span> / <span class="key">TAP</span> — reverse orbit<br>
       dodge asteroids, collect pickups<br>
       survive as long as you can
     </div>
-    <div class="overlay-start">[ PRESS SPACE OR CLICK TO START ]</div>
+    <div class="overlay-start">[ TAP OR PRESS SPACE TO START ]</div>
   </div>
 
   <div class="shield-indicator" id="shield-ind">&#9632; SHIELD ACTIVE</div>
@@ -392,7 +423,7 @@
         }
         scoreDiv.textContent = score;
         scoreLabelDiv.textContent = score >= bestScore ? 'NEW BEST' : 'SCORE';
-        ov.querySelector('.overlay-start').textContent = '[ PRESS SPACE OR CLICK TO RETRY ]';
+        ov.querySelector('.overlay-start').textContent = '[ TAP OR PRESS SPACE TO RETRY ]';
         ov.classList.remove('hidden');
         document.getElementById('best').textContent = bestScore;
       }, 800);

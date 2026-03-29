@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON BOWLING / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+    .back:hover { color: var(--accent-cyan); }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.2rem;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto 1rem;
+      border: 1px solid var(--border);
+      cursor: crosshair;
+    }
+    .controls {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      line-height: 1.8;
+      margin-bottom: 1rem;
+    }
+    .controls span { color: var(--accent-cyan); }
+    #scoreboard {
+      margin: 0 auto 1rem;
+      border-collapse: collapse;
+      font-size: 0.6rem;
+      letter-spacing: 0.04em;
+    }
+    #scoreboard td, #scoreboard th {
+      border: 1px solid var(--border);
+      padding: 2px 5px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+    #scoreboard th {
+      color: var(--accent-magenta);
+      font-weight: 700;
+    }
+    #scoreboard .active-frame {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 6px var(--glow-cyan-soft);
+    }
+    #scoreboard .total-row td {
+      color: var(--text-bright);
+      font-weight: 700;
+    }
+    #status {
+      color: var(--accent-green);
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.8rem;
+      min-height: 1.2em;
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+    }
+    #restart-btn {
+      display: none;
+      margin: 0.5rem auto;
+      padding: 0.5rem 1.5rem;
+      background: transparent;
+      border: 1px solid var(--accent-magenta);
+      color: var(--accent-magenta);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    #restart-btn:hover {
+      background: var(--accent-magenta);
+      color: var(--bg);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>NEON BOWLING</h1>
+    <p class="subtitle">10 FRAMES &middot; STRIKES &middot; SPARES &middot; CLASSIC RULES</p>
+
+    <div id="status">AIM WITH MOUSE &middot; CLICK TO THROW</div>
+    <canvas id="c" width="560" height="500"></canvas>
+    <div class="controls">
+      <span>MOUSE</span> AIM &middot; <span>CLICK</span> SET POWER &amp; THROW &middot; <span>R</span> RESTART
+    </div>
+    <table id="scoreboard"></table>
+    <button id="restart-btn" onclick="initGame()">PLAY AGAIN</button>
+  </main>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+// Colors
+const VOID = '#0a0a0f';
+const MAGENTA = '#ff2d7b';
+const CYAN = '#00f0ff';
+const GREEN = '#39ff14';
+const PURPLE = '#9d4edd';
+const WHITE = '#e0e0e8';
+const DIM = '#7a7a90';
+const DARK = '#121218';
+
+// Lane geometry
+const LANE_LEFT = 140;
+const LANE_RIGHT = 420;
+const LANE_W = LANE_RIGHT - LANE_LEFT;
+const LANE_CENTER = (LANE_LEFT + LANE_RIGHT) / 2;
+const GUTTER_W = 20;
+const PIN_AREA_Y = 60;
+const BALL_START_Y = 440;
+
+// Pin layout - standard triangle
+const PIN_RADIUS = 8;
+const PIN_SPACING = 22;
+const PIN_POSITIONS = [];
+// Row 0 (front): pin 1
+// Row 1: pins 2, 3
+// Row 2: pins 4, 5, 6
+// Row 3: pins 7, 8, 9, 10
+const rows = [[0], [-0.5, 0.5], [-1, 0, 1], [-1.5, -0.5, 0.5, 1.5]];
+for (let r = 0; r < rows.length; r++) {
+  for (let c = 0; c < rows[r].length; c++) {
+    PIN_POSITIONS.push({
+      x: LANE_CENTER + rows[r][c] * PIN_SPACING,
+      y: PIN_AREA_Y + 50 + r * PIN_SPACING
+    });
+  }
+}
+
+// Ball
+const BALL_RADIUS = 10;
+
+// Game state
+let game, mouseX, mouseY, animFrame;
+
+function initGame() {
+  if (animFrame) cancelAnimationFrame(animFrame);
+  game = {
+    frames: [],
+    currentFrame: 0,
+    rollInFrame: 0,
+    pins: [],
+    ball: null,
+    phase: 'aim',   // aim, power, rolling, settling, scored, done
+    aimX: LANE_CENTER,
+    powerLevel: 0,
+    powerDir: 1,
+    throwAngle: 0,
+    pinsDown: [],
+    totalPinsDown: 0,
+    message: '',
+    gutterHit: false
+  };
+
+  // Initialize 10 frames
+  for (let i = 0; i < 10; i++) {
+    game.frames.push({ rolls: [], score: null, display: [] });
+  }
+
+  resetPins();
+  updateScoreboard();
+  document.getElementById('restart-btn').style.display = 'none';
+  document.getElementById('status').textContent = 'FRAME 1 \u2022 AIM WITH MOUSE \u2022 CLICK TO THROW';
+  game.phase = 'aim';
+  loop();
+}
+
+function resetPins() {
+  game.pins = PIN_POSITIONS.map((p, i) => ({
+    x: p.x, y: p.y,
+    vx: 0, vy: 0,
+    standing: true,
+    id: i
+  }));
+}
+
+function resetPinsForSecondRoll() {
+  // Keep knocked-down pins gone, reset positions of standing ones
+  game.pins.forEach((pin, i) => {
+    if (pin.standing) {
+      pin.x = PIN_POSITIONS[i].x;
+      pin.y = PIN_POSITIONS[i].y;
+      pin.vx = 0;
+      pin.vy = 0;
+    }
+  });
+}
+
+// Physics
+function throwBall() {
+  const angle = game.throwAngle;
+  const speed = 4 + game.powerLevel * 8;
+  game.ball = {
+    x: game.aimX,
+    y: BALL_START_Y,
+    vx: Math.sin(angle) * speed * 0.3,
+    vy: -speed,
+    trail: [],
+    active: true
+  };
+  game.phase = 'rolling';
+  game.gutterHit = false;
+}
+
+function updateBall() {
+  const b = game.ball;
+  if (!b || !b.active) return;
+
+  // Store trail
+  b.trail.push({ x: b.x, y: b.y });
+  if (b.trail.length > 30) b.trail.shift();
+
+  b.x += b.vx;
+  b.y += b.vy;
+
+  // Slight curve physics (hook)
+  b.vx *= 0.995;
+
+  // Gutter check
+  if (b.x - BALL_RADIUS < LANE_LEFT + GUTTER_W) {
+    b.x = LANE_LEFT + GUTTER_W + BALL_RADIUS;
+    b.vx = 0;
+    game.gutterHit = true;
+  }
+  if (b.x + BALL_RADIUS > LANE_RIGHT - GUTTER_W) {
+    b.x = LANE_RIGHT - GUTTER_W - BALL_RADIUS;
+    b.vx = 0;
+    game.gutterHit = true;
+  }
+
+  // Check pin collisions
+  game.pins.forEach(pin => {
+    if (!pin.standing) return;
+    const dx = b.x - pin.x;
+    const dy = b.y - pin.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const minDist = BALL_RADIUS + PIN_RADIUS;
+    if (dist < minDist && !game.gutterHit) {
+      // Knock pin
+      const nx = dx / dist;
+      const ny = dy / dist;
+      pin.vx = -nx * 5 + b.vx * 0.5;
+      pin.vy = -ny * 5 + b.vy * 0.3;
+      pin.standing = false;
+
+      // Ball deflection (slight)
+      b.vx += nx * 0.5;
+      b.vy += ny * 0.3;
+    }
+  });
+
+  // Pin-to-pin collisions
+  for (let i = 0; i < game.pins.length; i++) {
+    if (game.pins[i].standing) continue;
+    for (let j = 0; j < game.pins.length; j++) {
+      if (i === j || !game.pins[j].standing) continue;
+      const pi = game.pins[i], pj = game.pins[j];
+      const dx = pj.x - pi.x;
+      const dy = pj.y - pi.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < PIN_RADIUS * 2.5) {
+        const speed = Math.sqrt(pi.vx * pi.vx + pi.vy * pi.vy);
+        if (speed > 1) {
+          const nx = dx / dist, ny = dy / dist;
+          pj.vx = nx * speed * 0.7;
+          pj.vy = ny * speed * 0.7;
+          pj.standing = false;
+        }
+      }
+    }
+  }
+
+  // Update fallen pins
+  game.pins.forEach(pin => {
+    if (pin.standing) return;
+    pin.x += pin.vx;
+    pin.y += pin.vy;
+    pin.vx *= 0.92;
+    pin.vy *= 0.92;
+  });
+
+  // Ball off screen or stopped
+  if (b.y < -20 || b.y > H + 20) {
+    b.active = false;
+    game.phase = 'settling';
+    game.settleTimer = 30;
+  }
+}
+
+function updateSettling() {
+  game.settleTimer--;
+  if (game.settleTimer <= 0) {
+    scoreRoll();
+  }
+}
+
+function scoreRoll() {
+  const frame = game.frames[game.currentFrame];
+  const pinsDown = game.pins.filter(p => !p.standing).length;
+  const newPinsDown = pinsDown - game.totalPinsDown;
+
+  frame.rolls.push(newPinsDown);
+  game.totalPinsDown = pinsDown;
+
+  const f = game.currentFrame;
+  const isLastFrame = f === 9;
+
+  if (isLastFrame) {
+    handleLastFrame(frame, pinsDown, newPinsDown);
+  } else {
+    handleNormalFrame(frame, pinsDown, newPinsDown);
+  }
+
+  calculateScores();
+  updateScoreboard();
+}
+
+function handleNormalFrame(frame, pinsDown, newPinsDown) {
+  if (frame.rolls.length === 1 && pinsDown === 10) {
+    // Strike
+    frame.display = ['X'];
+    game.message = '\u2728 STRIKE!';
+    advanceFrame();
+  } else if (frame.rolls.length === 2) {
+    if (pinsDown === 10) {
+      // Spare
+      frame.display = [frame.rolls[0] === 0 ? '-' : String(frame.rolls[0]), '/'];
+      game.message = 'SPARE!';
+    } else {
+      frame.display = [
+        frame.rolls[0] === 0 ? '-' : String(frame.rolls[0]),
+        frame.rolls[1] === 0 ? '-' : String(frame.rolls[1])
+      ];
+      game.message = pinsDown + ' PINS DOWN';
+    }
+    advanceFrame();
+  } else {
+    // First roll, not a strike
+    game.message = newPinsDown + ' PIN' + (newPinsDown !== 1 ? 'S' : '') + ' DOWN';
+    game.rollInFrame = 1;
+    resetPinsForSecondRoll();
+    game.ball = null;
+    game.phase = 'aim';
+    updateStatusText();
+  }
+}
+
+function handleLastFrame(frame, pinsDown, newPinsDown) {
+  const rolls = frame.rolls;
+
+  if (rolls.length === 1) {
+    if (pinsDown === 10) {
+      frame.display = ['X'];
+      game.message = '\u2728 STRIKE!';
+      game.totalPinsDown = 0;
+      resetPins();
+    } else {
+      frame.display = [rolls[0] === 0 ? '-' : String(rolls[0])];
+      game.message = newPinsDown + ' PIN' + (newPinsDown !== 1 ? 'S' : '') + ' DOWN';
+      resetPinsForSecondRoll();
+    }
+    game.rollInFrame++;
+    game.ball = null;
+    game.phase = 'aim';
+    updateStatusText();
+  } else if (rolls.length === 2) {
+    // Check if first was strike
+    if (rolls[0] === 10) {
+      if (rolls[1] === 10) {
+        frame.display = ['X', 'X'];
+        game.message = '\u2728 DOUBLE STRIKE!';
+        game.totalPinsDown = 0;
+        resetPins();
+      } else {
+        frame.display = ['X', rolls[1] === 0 ? '-' : String(rolls[1])];
+        game.message = newPinsDown + ' PIN' + (newPinsDown !== 1 ? 'S' : '') + ' DOWN';
+        // Check if all 10 knocked on this set
+        if (game.totalPinsDown === 10) {
+          frame.display[1] = '/';
+          game.message = 'SPARE!';
+          game.totalPinsDown = 0;
+          resetPins();
+        } else {
+          resetPinsForSecondRoll();
+        }
+      }
+      game.rollInFrame++;
+      game.ball = null;
+      game.phase = 'aim';
+      updateStatusText();
+    } else {
+      // First was not strike
+      if (pinsDown === 10) {
+        frame.display = [rolls[0] === 0 ? '-' : String(rolls[0]), '/'];
+        game.message = 'SPARE!';
+        game.totalPinsDown = 0;
+        resetPins();
+        game.rollInFrame++;
+        game.ball = null;
+        game.phase = 'aim';
+        updateStatusText();
+      } else {
+        // No spare, no bonus roll
+        frame.display = [
+          rolls[0] === 0 ? '-' : String(rolls[0]),
+          rolls[1] === 0 ? '-' : String(rolls[1])
+        ];
+        game.message = 'GAME OVER!';
+        endGame();
+      }
+    }
+  } else if (rolls.length === 3) {
+    // Third roll in 10th frame
+    if (frame.display[1] === 'X' || frame.display[1] === '/') {
+      if (rolls[2] === 10 && game.totalPinsDown === 0 + 10) {
+        frame.display.push('X');
+      } else if (game.totalPinsDown === 10 && rolls[2] !== 10) {
+        frame.display.push('/');
+      } else {
+        frame.display.push(rolls[2] === 0 ? '-' : String(rolls[2]));
+      }
+    } else {
+      // After spare
+      if (rolls[2] === 10) {
+        frame.display.push('X');
+      } else {
+        frame.display.push(rolls[2] === 0 ? '-' : String(rolls[2]));
+      }
+    }
+    game.message = 'GAME OVER!';
+    endGame();
+  }
+}
+
+function advanceFrame() {
+  game.currentFrame++;
+  game.rollInFrame = 0;
+  game.totalPinsDown = 0;
+  if (game.currentFrame >= 10) {
+    endGame();
+    return;
+  }
+  resetPins();
+  game.ball = null;
+  game.phase = 'aim';
+  updateStatusText();
+}
+
+function endGame() {
+  game.phase = 'done';
+  game.ball = null;
+  calculateScores();
+  updateScoreboard();
+  const total = game.frames[9].score || 0;
+  document.getElementById('status').textContent = 'GAME OVER \u2022 FINAL SCORE: ' + total;
+  document.getElementById('restart-btn').style.display = 'inline-block';
+}
+
+function calculateScores() {
+  // Flatten all rolls for scoring
+  const allRolls = [];
+  game.frames.forEach(f => f.rolls.forEach(r => allRolls.push(r)));
+
+  let rollIdx = 0;
+  let cumulative = 0;
+
+  for (let f = 0; f < 10; f++) {
+    const frame = game.frames[f];
+    if (frame.rolls.length === 0) {
+      frame.score = null;
+      continue;
+    }
+
+    if (f < 9) {
+      // Normal frame
+      if (frame.rolls[0] === 10) {
+        // Strike
+        const next1 = allRolls[rollIdx + 1];
+        const next2 = allRolls[rollIdx + 2];
+        if (next1 !== undefined && next2 !== undefined) {
+          cumulative += 10 + next1 + next2;
+          frame.score = cumulative;
+        } else {
+          frame.score = null;
+        }
+        rollIdx += 1;
+      } else if (frame.rolls.length >= 2) {
+        const sum = frame.rolls[0] + frame.rolls[1];
+        if (sum === 10) {
+          // Spare
+          const next1 = allRolls[rollIdx + 2];
+          if (next1 !== undefined) {
+            cumulative += 10 + next1;
+            frame.score = cumulative;
+          } else {
+            frame.score = null;
+          }
+        } else {
+          cumulative += sum;
+          frame.score = cumulative;
+        }
+        rollIdx += 2;
+      } else {
+        frame.score = null;
+        rollIdx += 1;
+      }
+    } else {
+      // 10th frame - just sum the rolls
+      const sum = frame.rolls.reduce((a, b) => a + b, 0);
+      cumulative += sum;
+      frame.score = cumulative;
+      rollIdx += frame.rolls.length;
+    }
+  }
+}
+
+function updateScoreboard() {
+  const table = document.getElementById('scoreboard');
+  let html = '<tr>';
+  for (let i = 0; i < 10; i++) {
+    const cls = i === game.currentFrame && game.phase !== 'done' ? ' class="active-frame"' : '';
+    html += '<th' + cls + '>' + (i + 1) + '</th>';
+  }
+  html += '</tr><tr>';
+  for (let i = 0; i < 10; i++) {
+    const f = game.frames[i];
+    const cls = i === game.currentFrame && game.phase !== 'done' ? ' class="active-frame"' : '';
+    const disp = f.display.join(' ');
+    html += '<td' + cls + ' style="min-width:' + (i === 9 ? '48px' : '36px') + '">' + disp + '</td>';
+  }
+  html += '</tr><tr class="total-row">';
+  for (let i = 0; i < 10; i++) {
+    const f = game.frames[i];
+    const cls = i === game.currentFrame && game.phase !== 'done' ? ' class="active-frame"' : '';
+    html += '<td' + cls + '>' + (f.score !== null ? f.score : '') + '</td>';
+  }
+  html += '</tr>';
+  table.innerHTML = html;
+}
+
+function updateStatusText() {
+  const f = game.currentFrame + 1;
+  const r = game.rollInFrame + 1;
+  document.getElementById('status').textContent =
+    'FRAME ' + f + ' \u2022 ROLL ' + r + ' \u2022 ' + (game.message || 'AIM & CLICK');
+}
+
+// Drawing
+function draw() {
+  ctx.fillStyle = VOID;
+  ctx.fillRect(0, 0, W, H);
+
+  drawLane();
+  drawPins();
+  drawBall();
+  drawAim();
+  drawPower();
+}
+
+function drawLane() {
+  // Gutters
+  ctx.fillStyle = '#0d0d14';
+  ctx.fillRect(LANE_LEFT, 0, GUTTER_W, H);
+  ctx.fillRect(LANE_RIGHT - GUTTER_W, 0, GUTTER_W, H);
+
+  // Lane surface
+  ctx.fillStyle = DARK;
+  ctx.fillRect(LANE_LEFT + GUTTER_W, 0, LANE_W - GUTTER_W * 2, H);
+
+  // Lane lines
+  ctx.strokeStyle = DIM;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.3;
+  // Lane borders
+  ctx.beginPath();
+  ctx.moveTo(LANE_LEFT, 0); ctx.lineTo(LANE_LEFT, H);
+  ctx.moveTo(LANE_RIGHT, 0); ctx.lineTo(LANE_RIGHT, H);
+  // Gutter lines
+  ctx.moveTo(LANE_LEFT + GUTTER_W, 0); ctx.lineTo(LANE_LEFT + GUTTER_W, H);
+  ctx.moveTo(LANE_RIGHT - GUTTER_W, 0); ctx.lineTo(LANE_RIGHT - GUTTER_W, H);
+  ctx.stroke();
+
+  // Approach dots
+  ctx.globalAlpha = 0.4;
+  const dotY = 400;
+  for (let i = -2; i <= 2; i++) {
+    ctx.fillStyle = i === 0 ? MAGENTA : DIM;
+    ctx.beginPath();
+    ctx.arc(LANE_CENTER + i * 28, dotY, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Arrows
+  ctx.globalAlpha = 0.3;
+  const arrowY = 300;
+  for (let i = -3; i <= 3; i++) {
+    ctx.fillStyle = i === 0 ? MAGENTA : DIM;
+    const ax = LANE_CENTER + i * 18;
+    ctx.beginPath();
+    ctx.moveTo(ax, arrowY);
+    ctx.lineTo(ax - 4, arrowY + 10);
+    ctx.lineTo(ax + 4, arrowY + 10);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Foul line
+  ctx.strokeStyle = MAGENTA;
+  ctx.globalAlpha = 0.6;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(LANE_LEFT, BALL_START_Y - 30);
+  ctx.lineTo(LANE_RIGHT, BALL_START_Y - 30);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Pin deck area
+  ctx.fillStyle = '#0e0e16';
+  ctx.fillRect(LANE_LEFT + GUTTER_W, PIN_AREA_Y - 10, LANE_W - GUTTER_W * 2, 110);
+}
+
+function drawPins() {
+  game.pins.forEach((pin, i) => {
+    if (pin.standing) {
+      // Standing pin glow
+      ctx.shadowColor = WHITE;
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = WHITE;
+      ctx.beginPath();
+      ctx.arc(pin.x, pin.y, PIN_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner dot
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = MAGENTA;
+      ctx.beginPath();
+      ctx.arc(pin.x, pin.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Fallen pin
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = DIM;
+      ctx.beginPath();
+      ctx.arc(pin.x, pin.y, PIN_RADIUS - 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.shadowBlur = 0;
+  });
+}
+
+function drawBall() {
+  const b = game.ball;
+  if (!b) return;
+
+  // Trail
+  ctx.globalAlpha = 0.15;
+  b.trail.forEach((t, i) => {
+    const a = i / b.trail.length;
+    ctx.fillStyle = CYAN;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, BALL_RADIUS * a * 0.7, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  // Ball
+  ctx.shadowColor = CYAN;
+  ctx.shadowBlur = 15;
+  ctx.fillStyle = CYAN;
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, BALL_RADIUS, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.beginPath();
+  ctx.arc(b.x - 3, b.y - 3, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawAim() {
+  if (game.phase !== 'aim' && game.phase !== 'power') return;
+
+  const bx = game.aimX;
+  const by = BALL_START_Y;
+
+  // Ball preview
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = CYAN;
+  ctx.beginPath();
+  ctx.arc(bx, by, BALL_RADIUS, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Aim line
+  if (mouseX !== undefined) {
+    const dx = mouseX - bx;
+    const dy = mouseY - by;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len > 0 && dy < 0) {
+      const nx = dx / len, ny = dy / len;
+      ctx.strokeStyle = GREEN;
+      ctx.globalAlpha = 0.4;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(bx + nx * 200, by + ny * 200);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+
+      game.throwAngle = Math.atan2(dx, -dy);
+    }
+  }
+}
+
+function drawPower() {
+  if (game.phase !== 'power') return;
+
+  // Power bar on the left
+  const bx = LANE_LEFT - 30;
+  const by = 120;
+  const bh = 300;
+  const bw = 14;
+
+  ctx.strokeStyle = DIM;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bx, by, bw, bh);
+
+  // Fill
+  const fillH = bh * game.powerLevel;
+  const col = game.powerLevel < 0.5 ? GREEN : game.powerLevel < 0.8 ? CYAN : MAGENTA;
+  ctx.fillStyle = col;
+  ctx.shadowColor = col;
+  ctx.shadowBlur = 10;
+  ctx.fillRect(bx + 1, by + bh - fillH, bw - 2, fillH);
+  ctx.shadowBlur = 0;
+
+  // Label
+  ctx.fillStyle = col;
+  ctx.font = '700 10px "JetBrains Mono"';
+  ctx.textAlign = 'center';
+  ctx.fillText('PWR', bx + bw / 2, by - 8);
+  ctx.fillText(Math.round(game.powerLevel * 100) + '%', bx + bw / 2, by + bh + 16);
+}
+
+// Input
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const scaleY = H / rect.height;
+  mouseX = (e.clientX - rect.left) * scaleX;
+  mouseY = (e.clientY - rect.top) * scaleY;
+
+  if (game.phase === 'aim') {
+    // Constrain aim position within lane
+    game.aimX = Math.max(LANE_LEFT + GUTTER_W + BALL_RADIUS, Math.min(LANE_RIGHT - GUTTER_W - BALL_RADIUS, mouseX));
+  }
+});
+
+canvas.addEventListener('click', () => {
+  if (game.phase === 'aim') {
+    game.phase = 'power';
+    game.powerLevel = 0;
+    game.powerDir = 1;
+  } else if (game.phase === 'power') {
+    throwBall();
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'r' || e.key === 'R') {
+    initGame();
+  }
+});
+
+// Game loop
+function loop() {
+  if (game.phase === 'power') {
+    game.powerLevel += game.powerDir * 0.025;
+    if (game.powerLevel >= 1) { game.powerLevel = 1; game.powerDir = -1; }
+    if (game.powerLevel <= 0) { game.powerLevel = 0; game.powerDir = 1; }
+  }
+
+  if (game.phase === 'rolling') {
+    updateBall();
+  }
+
+  if (game.phase === 'settling') {
+    updateSettling();
+  }
+
+  draw();
+  animFrame = requestAnimationFrame(loop);
+}
+
+initGame();
+</script>
+</body>
+</html>

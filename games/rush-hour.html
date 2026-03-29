@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RUSH HOUR / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+    .back:hover { color: var(--accent-cyan); }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+    .subtitle {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      margin-bottom: 1.2rem;
+    }
+    .info-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8rem;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+    }
+    .info-bar span { color: var(--accent-cyan); }
+    .board-wrap {
+      position: relative;
+      display: inline-block;
+      margin: 0 auto 1rem;
+    }
+    canvas {
+      display: block;
+      border: 1px solid var(--border);
+      touch-action: none;
+    }
+    .exit-marker {
+      position: absolute;
+      right: -20px;
+      color: var(--accent-magenta);
+      font-size: 1.2rem;
+      text-shadow: 0 0 8px var(--glow-magenta);
+      pointer-events: none;
+    }
+    .controls {
+      display: flex;
+      gap: 0.6rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    button {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      padding: 0.4rem 0.9rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    button:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+    .diff-btns button.active {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+    }
+    .win-msg {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent-green);
+      text-shadow: 0 0 12px var(--glow-green);
+      margin-bottom: 0.8rem;
+      min-height: 1.4em;
+    }
+    .instructions {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+      margin-top: 0.8rem;
+    }
+    .stats {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      margin-top: 0.6rem;
+      letter-spacing: 0.04em;
+    }
+    .stats span { color: var(--accent-cyan); }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>RUSH HOUR</h1>
+    <p class="subtitle">SLIDE VEHICLES. FREE THE CAR. ESCAPE.</p>
+
+    <div class="controls diff-btns">
+      <button id="d-easy">EASY</button>
+      <button id="d-medium" class="active">MEDIUM</button>
+      <button id="d-hard">HARD</button>
+    </div>
+
+    <div class="info-bar">
+      <div>PUZZLE <span id="puzzle-num">1</span></div>
+      <div>OPTIMAL <span id="optimal">?</span></div>
+      <div>MOVES <span id="moves">0</span></div>
+    </div>
+
+    <div class="board-wrap">
+      <canvas id="board" width="360" height="360"></canvas>
+      <div class="exit-marker" id="exit-marker">&#9654;</div>
+    </div>
+
+    <div class="win-msg" id="win-msg">&nbsp;</div>
+
+    <div class="controls">
+      <button id="btn-undo">UNDO</button>
+      <button id="btn-reset">RESET</button>
+      <button id="btn-new">NEW PUZZLE</button>
+    </div>
+
+    <div class="stats">
+      SOLVED: <span id="stat-solved">0</span> &nbsp;|&nbsp; BEST STREAK: <span id="stat-streak">0</span>
+    </div>
+
+    <div class="instructions">
+      Drag vehicles to slide them along their axis.<br>
+      Get the <span style="color:var(--accent-magenta)">magenta car</span> to the exit &#9654;<br>
+      Keyboard: click a vehicle, then arrow keys.
+    </div>
+  </main>
+
+  <script>
+  (function() {
+    'use strict';
+    const G = 6;
+    const canvas = document.getElementById('board');
+    const ctx = canvas.getContext('2d');
+    const CELL = canvas.width / G;
+    const PAD = 3;
+
+    const VCOLORS = [
+      '#ff2d7b', '#00f0ff', '#39ff14', '#9d4edd',
+      '#ffb000', '#ff6ac1', '#008b8b', '#33ff33',
+      '#ff1744', '#e0e0e8', '#ff8c00', '#87ceeb'
+    ];
+
+    // --- State ---
+    let vehicles = [];
+    let initVehicles = [];
+    let moveCount = 0;
+    let history = [];
+    let won = false;
+    let optimalMoves = 0;
+    let difficulty = 'medium';
+    let puzzleCount = 0;
+    let totalSolved = 0;
+    let streak = 0;
+    let bestStreak = 0;
+    let dragging = null;
+    let dragStartX = 0, dragStartY = 0;
+    let dragOrigRow = 0, dragOrigCol = 0;
+    let selectedVehicle = 0;
+
+    // Load stats
+    try {
+      const s = JSON.parse(localStorage.getItem('rush-hour-stats') || '{}');
+      totalSolved = s.solved || 0;
+      bestStreak = s.bestStreak || 0;
+    } catch(e) {}
+
+    function saveStats() {
+      localStorage.setItem('rush-hour-stats', JSON.stringify({
+        solved: totalSolved, bestStreak
+      }));
+    }
+
+    function updateStatsUI() {
+      document.getElementById('stat-solved').textContent = totalSolved;
+      document.getElementById('stat-streak').textContent = bestStreak;
+    }
+
+    // --- BFS solver ---
+    function stateKey(vs) {
+      return vs.map(v => v.row + ',' + v.col).join('|');
+    }
+
+    function solve(vs) {
+      const init = vs.map(v => ({...v}));
+      const queue = [{vs: init, depth: 0}];
+      const seen = new Set();
+      seen.add(stateKey(init));
+
+      while (queue.length > 0) {
+        const {vs: cur, depth} = queue.shift();
+        // Check win: vehicle 0 (horizontal) col + len >= G
+        if (cur[0].col + cur[0].len >= G) return depth;
+        if (depth > 40) continue; // cap search
+
+        // Build occupancy
+        const grid = Array.from({length: G}, () => Array(G).fill(-1));
+        cur.forEach((v, i) => {
+          for (let s = 0; s < v.len; s++) {
+            const r = v.dir === 'h' ? v.row : v.row + s;
+            const c = v.dir === 'h' ? v.col + s : v.col;
+            if (r < G && c < G) grid[r][c] = i;
+          }
+        });
+
+        // Try moving each vehicle
+        for (let i = 0; i < cur.length; i++) {
+          const v = cur[i];
+          const dirs = v.dir === 'h' ? [[0,-1],[0,1]] : [[-1,0],[1,0]];
+          for (const [dr, dc] of dirs) {
+            // Slide as far as possible
+            let steps = 0;
+            let testV = {...v};
+            while (true) {
+              const nr = testV.row + dr;
+              const nc = testV.col + dc;
+              // Check bounds
+              if (v.dir === 'h') {
+                if (dc < 0 && nc < 0) break;
+                if (dc > 0 && nc + v.len > G) {
+                  // Special: vehicle 0 can exit
+                  if (i === 0 && nc + v.len === G + 1) {
+                    // Check all cells except the one going off-board
+                    let blocked = false;
+                    for (let s = 0; s < v.len - 1; s++) {
+                      const cc = nc + s;
+                      if (cc < G && grid[v.row][cc] !== -1 && grid[v.row][cc] !== i) { blocked = true; break; }
+                    }
+                    if (!blocked) return depth + steps + 1;
+                  }
+                  break;
+                }
+                // Check the cell that would be newly occupied
+                const checkC = dc > 0 ? nc + v.len - 1 : nc;
+                if (checkC < 0 || checkC >= G) break;
+                if (grid[v.row][checkC] !== -1 && grid[v.row][checkC] !== i) break;
+              } else {
+                if (dr < 0 && nr < 0) break;
+                if (dr > 0 && nr + v.len > G) break;
+                const checkR = dr > 0 ? nr + v.len - 1 : nr;
+                if (checkR < 0 || checkR >= G) break;
+                if (grid[checkR][v.col] !== -1 && grid[checkR][v.col] !== i) break;
+              }
+              testV = {row: nr, col: nc, len: v.len, dir: v.dir, ci: v.ci};
+              steps++;
+              // Enqueue this position
+              const next = cur.map((vv, j) => j === i ? {...testV} : {...vv});
+              const key = stateKey(next);
+              if (!seen.has(key)) {
+                seen.add(key);
+                queue.push({vs: next, depth: depth + steps});
+              }
+            }
+          }
+        }
+      }
+      return -1; // unsolvable
+    }
+
+    // --- Puzzle generator ---
+    function generatePuzzle() {
+      const ranges = {
+        easy: [2, 6],
+        medium: [6, 15],
+        hard: [14, 40]
+      };
+      const vehicleCounts = {
+        easy: [3, 6],
+        medium: [6, 9],
+        hard: [8, 12]
+      };
+
+      const [minMoves, maxMoves] = ranges[difficulty];
+      const [minV, maxV] = vehicleCounts[difficulty];
+
+      for (let attempt = 0; attempt < 500; attempt++) {
+        const grid = Array.from({length: G}, () => Array(G).fill(-1));
+        const vs = [];
+
+        // Place player car: horizontal on row 2
+        const pCol = Math.floor(Math.random() * 3); // col 0-2
+        vs.push({row: 2, col: pCol, len: 2, dir: 'h', ci: 0});
+        for (let s = 0; s < 2; s++) grid[2][pCol + s] = 0;
+
+        // Add random vehicles
+        const numV = minV + Math.floor(Math.random() * (maxV - minV + 1));
+        let placed = 1;
+        let failures = 0;
+
+        while (placed < numV && failures < 80) {
+          const dir = Math.random() < 0.5 ? 'h' : 'v';
+          const len = Math.random() < 0.6 ? 2 : 3;
+          const row = Math.floor(Math.random() * (dir === 'v' ? G - len + 1 : G));
+          const col = Math.floor(Math.random() * (dir === 'h' ? G - len + 1 : G));
+
+          // Check all cells free
+          let ok = true;
+          for (let s = 0; s < len; s++) {
+            const r = dir === 'v' ? row + s : row;
+            const c = dir === 'h' ? col + s : col;
+            if (grid[r][c] !== -1) { ok = false; break; }
+          }
+          if (!ok) { failures++; continue; }
+
+          // Don't place horizontal vehicles on row 2 that would sit right of player and block exit trivially
+          // (they make puzzles harder to generate solvable)
+
+          const ci = (placed % (VCOLORS.length - 1)) + 1;
+          vs.push({row, col, len, dir, ci});
+          for (let s = 0; s < len; s++) {
+            const r = dir === 'v' ? row + s : row;
+            const c = dir === 'h' ? col + s : col;
+            grid[r][c] = placed;
+          }
+          placed++;
+          failures = 0;
+        }
+
+        // Check solvable
+        const minSolve = solve(vs);
+        if (minSolve >= minMoves && minSolve <= maxMoves) {
+          return {vehicles: vs, optimal: minSolve};
+        }
+      }
+
+      // Fallback: simple puzzle
+      return {
+        vehicles: [
+          {row: 2, col: 0, len: 2, dir: 'h', ci: 0},
+          {row: 0, col: 2, len: 3, dir: 'v', ci: 1}
+        ],
+        optimal: 4
+      };
+    }
+
+    function newPuzzle() {
+      const result = generatePuzzle();
+      vehicles = result.vehicles;
+      initVehicles = vehicles.map(v => ({...v}));
+      optimalMoves = result.optimal;
+      moveCount = 0;
+      history = [];
+      won = false;
+      puzzleCount++;
+      selectedVehicle = 0;
+      document.getElementById('puzzle-num').textContent = puzzleCount;
+      document.getElementById('optimal').textContent = optimalMoves;
+      document.getElementById('moves').textContent = '0';
+      document.getElementById('win-msg').innerHTML = '&nbsp;';
+      positionExit();
+      draw();
+    }
+
+    function resetPuzzle() {
+      vehicles = initVehicles.map(v => ({...v}));
+      moveCount = 0;
+      history = [];
+      won = false;
+      document.getElementById('moves').textContent = '0';
+      document.getElementById('win-msg').innerHTML = '&nbsp;';
+      draw();
+    }
+
+    function positionExit() {
+      const arrow = document.getElementById('exit-marker');
+      arrow.style.top = (2 * CELL + CELL / 2 - 10) + 'px';
+    }
+
+    // --- Drawing ---
+    function draw() {
+      const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+      const bg = isDark ? '#0a0a0f' : '#f0eff5';
+      const gridLine = isDark ? '#1a1a25' : '#d8d8e4';
+      const selectColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)';
+
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Grid lines
+      ctx.strokeStyle = gridLine;
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i <= G; i++) {
+        ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, canvas.height); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i * CELL); ctx.lineTo(canvas.width, i * CELL); ctx.stroke();
+      }
+
+      // Exit gap on right side at row 2
+      ctx.fillStyle = bg;
+      ctx.fillRect(canvas.width - 1, 2 * CELL + 2, 2, CELL - 4);
+
+      // Exit glow
+      ctx.fillStyle = '#ff2d7b';
+      ctx.globalAlpha = 0.15;
+      ctx.fillRect(canvas.width - 4, 2 * CELL + 1, 4, CELL - 2);
+      ctx.globalAlpha = 1;
+
+      // Vehicles
+      vehicles.forEach((v, idx) => {
+        const color = VCOLORS[v.ci % VCOLORS.length];
+        const x = v.col * CELL + PAD;
+        const y = v.row * CELL + PAD;
+        const w = v.dir === 'h' ? v.len * CELL - PAD * 2 : CELL - PAD * 2;
+        const h = v.dir === 'v' ? v.len * CELL - PAD * 2 : CELL - PAD * 2;
+
+        // Glow
+        ctx.shadowColor = color;
+        ctx.shadowBlur = idx === 0 ? 14 : 6;
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, w, h);
+        ctx.shadowBlur = 0;
+
+        // Highlight strip
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillRect(x + 2, y + 2, w - 4, Math.min(3, h - 4));
+
+        // Cell dividers
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        if (v.dir === 'h') {
+          for (let s = 1; s < v.len; s++)
+            ctx.fillRect(x + s * CELL - PAD, y + 3, 1, h - 6);
+        } else {
+          for (let s = 1; s < v.len; s++)
+            ctx.fillRect(x + 3, y + s * CELL - PAD, w - 6, 1);
+        }
+
+        // Player arrow
+        if (idx === 0) {
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.font = 'bold ' + (CELL * 0.32) + 'px "JetBrains Mono", monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('\u25B6', x + w / 2, y + h / 2 + 1);
+        }
+
+        // Selection indicator
+        if (idx === selectedVehicle && !won) {
+          ctx.strokeStyle = selectColor;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x - 1, y - 1, w + 2, h + 2);
+        }
+      });
+
+      // Win animation
+      if (won) {
+        ctx.fillStyle = 'rgba(57,255,20,0.06)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    // --- Occupancy ---
+    function occupancyGrid() {
+      const grid = Array.from({length: G}, () => Array(G).fill(-1));
+      vehicles.forEach((v, i) => {
+        for (let s = 0; s < v.len; s++) {
+          const r = v.dir === 'v' ? v.row + s : v.row;
+          const c = v.dir === 'h' ? v.col + s : v.col;
+          if (r >= 0 && r < G && c >= 0 && c < G) grid[r][c] = i;
+        }
+      });
+      return grid;
+    }
+
+    function canMoveStep(vIdx, dr, dc) {
+      const v = vehicles[vIdx];
+      if (v.dir === 'h' && dr !== 0) return false;
+      if (v.dir === 'v' && dc !== 0) return false;
+      const grid = occupancyGrid();
+
+      if (v.dir === 'h') {
+        if (dc < 0) {
+          const nc = v.col - 1;
+          if (nc < 0) return false;
+          return grid[v.row][nc] === -1 || grid[v.row][nc] === vIdx;
+        } else {
+          const nc = v.col + v.len;
+          if (nc >= G) return vIdx === 0; // player can exit
+          return grid[v.row][nc] === -1 || grid[v.row][nc] === vIdx;
+        }
+      } else {
+        if (dr < 0) {
+          const nr = v.row - 1;
+          if (nr < 0) return false;
+          return grid[nr][v.col] === -1 || grid[nr][v.col] === vIdx;
+        } else {
+          const nr = v.row + v.len;
+          if (nr >= G) return false;
+          return grid[nr][v.col] === -1 || grid[nr][v.col] === vIdx;
+        }
+      }
+    }
+
+    function doMove(vIdx, dr, dc) {
+      history.push(vehicles.map(v => ({...v})));
+      vehicles[vIdx].row += dr;
+      vehicles[vIdx].col += dc;
+      moveCount++;
+      document.getElementById('moves').textContent = moveCount;
+      checkWin();
+      draw();
+    }
+
+    function checkWin() {
+      const p = vehicles[0];
+      if (p.col + p.len >= G) {
+        won = true;
+        totalSolved++;
+        streak++;
+        if (streak > bestStreak) bestStreak = streak;
+        saveStats();
+        updateStatsUI();
+        const rating = moveCount <= optimalMoves ? 'PERFECT!' :
+                       moveCount <= optimalMoves + 3 ? 'GREAT!' : 'ESCAPED!';
+        document.getElementById('win-msg').textContent = rating + ' (' + moveCount + ' moves)';
+      }
+    }
+
+    function undo() {
+      if (history.length === 0 || won) return;
+      vehicles = history.pop();
+      moveCount = Math.max(0, moveCount - 1);
+      document.getElementById('moves').textContent = moveCount;
+      draw();
+    }
+
+    // --- Input ---
+    function getCanvasPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const t = e.touches ? e.touches[0] : e;
+      return {
+        x: (t.clientX - rect.left) * (canvas.width / rect.width),
+        y: (t.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+
+    function vehicleAt(px, py) {
+      const c = Math.floor(px / CELL);
+      const r = Math.floor(py / CELL);
+      if (r < 0 || r >= G || c < 0 || c >= G) return -1;
+      return occupancyGrid()[r][c];
+    }
+
+    function onDown(e) {
+      if (won) return;
+      e.preventDefault();
+      const pos = getCanvasPos(e);
+      const vi = vehicleAt(pos.x, pos.y);
+      if (vi < 0) return;
+      selectedVehicle = vi;
+      dragging = vi;
+      dragStartX = pos.x;
+      dragStartY = pos.y;
+      dragOrigRow = vehicles[vi].row;
+      dragOrigCol = vehicles[vi].col;
+      draw();
+    }
+
+    function onMove(e) {
+      if (dragging === null || won) return;
+      e.preventDefault();
+      const pos = getCanvasPos(e);
+      const v = vehicles[dragging];
+      const dx = pos.x - dragStartX;
+      const dy = pos.y - dragStartY;
+
+      // Reset to original
+      vehicles[dragging].row = dragOrigRow;
+      vehicles[dragging].col = dragOrigCol;
+
+      if (v.dir === 'h') {
+        const steps = Math.round(dx / CELL);
+        const dir = steps > 0 ? 1 : -1;
+        for (let i = 0; i < Math.abs(steps); i++) {
+          if (canMoveStep(dragging, 0, dir)) {
+            vehicles[dragging].col += dir;
+          } else break;
+        }
+      } else {
+        const steps = Math.round(dy / CELL);
+        const dir = steps > 0 ? 1 : -1;
+        for (let i = 0; i < Math.abs(steps); i++) {
+          if (canMoveStep(dragging, dir, 0)) {
+            vehicles[dragging].row += dir;
+          } else break;
+        }
+      }
+      draw();
+    }
+
+    function onUp() {
+      if (dragging === null) return;
+      const v = vehicles[dragging];
+      const movedR = v.row !== dragOrigRow;
+      const movedC = v.col !== dragOrigCol;
+
+      if (movedR || movedC) {
+        const finalRow = v.row;
+        const finalCol = v.col;
+        // Restore and record history
+        vehicles[dragging].row = dragOrigRow;
+        vehicles[dragging].col = dragOrigCol;
+        history.push(vehicles.map(vv => ({...vv})));
+        vehicles[dragging].row = finalRow;
+        vehicles[dragging].col = finalCol;
+        moveCount++;
+        document.getElementById('moves').textContent = moveCount;
+        checkWin();
+      }
+      dragging = null;
+      draw();
+    }
+
+    canvas.addEventListener('mousedown', onDown);
+    canvas.addEventListener('mousemove', onMove);
+    canvas.addEventListener('mouseup', onUp);
+    canvas.addEventListener('mouseleave', onUp);
+    canvas.addEventListener('touchstart', onDown, {passive: false});
+    canvas.addEventListener('touchmove', onMove, {passive: false});
+    canvas.addEventListener('touchend', onUp);
+
+    // Keyboard
+    document.addEventListener('keydown', function(e) {
+      if (won) {
+        if (e.key === 'Enter' || e.key === ' ') { newPuzzle(); e.preventDefault(); }
+        return;
+      }
+      let dr = 0, dc = 0;
+      if (e.key === 'ArrowUp') dr = -1;
+      else if (e.key === 'ArrowDown') dr = 1;
+      else if (e.key === 'ArrowLeft') dc = -1;
+      else if (e.key === 'ArrowRight') dc = 1;
+      else if (e.key === 'u' || e.key === 'z') { undo(); return; }
+      else if (e.key === 'r') { resetPuzzle(); return; }
+      else if (e.key === 'n') { newPuzzle(); return; }
+      else if (e.key === 'Tab') {
+        e.preventDefault();
+        selectedVehicle = (selectedVehicle + 1) % vehicles.length;
+        draw();
+        return;
+      }
+      else return;
+      e.preventDefault();
+      if (canMoveStep(selectedVehicle, dr, dc)) {
+        doMove(selectedVehicle, dr, dc);
+      }
+    });
+
+    // Buttons
+    document.getElementById('btn-undo').onclick = undo;
+    document.getElementById('btn-reset').onclick = resetPuzzle;
+    document.getElementById('btn-new').onclick = function() { streak = 0; newPuzzle(); };
+
+    // Difficulty buttons
+    ['easy','medium','hard'].forEach(d => {
+      document.getElementById('d-' + d).onclick = function() {
+        difficulty = d;
+        document.querySelectorAll('.diff-btns button').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        streak = 0;
+        newPuzzle();
+      };
+    });
+
+    // Init
+    updateStatsUI();
+    newPuzzle();
+  })();
+  </script>
+</body>
+</html>

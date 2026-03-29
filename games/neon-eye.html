@@ -18,6 +18,7 @@
       margin: 0 auto;
       padding: 2rem 1.5rem 4rem;
       text-align: center;
+      touch-action: manipulation;
     }
 
     .back {
@@ -91,7 +92,7 @@
       justify-content: center;
       align-items: center;
       margin: 0 auto 1.2rem;
-      min-height: 360px;
+      min-height: min(360px, 70vw);
     }
 
     #grid {
@@ -106,6 +107,8 @@
       border: none;
       outline: none;
       padding: 0;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .tile:hover {
@@ -159,17 +162,20 @@
 
     .btn {
       display: inline-block;
-      padding: 0.7rem 2rem;
+      padding: 0.85rem 2.5rem;
       border: 1px solid var(--accent-cyan);
       color: var(--accent-cyan);
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       font-weight: 700;
       letter-spacing: 0.1em;
       background: transparent;
       cursor: pointer;
       transition: all 0.2s;
       text-shadow: 0 0 8px var(--glow-cyan);
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 44px;
     }
 
     .btn:hover {
@@ -214,6 +220,14 @@
       letter-spacing: 0.06em;
       margin-top: 1rem;
       line-height: 1.6;
+    }
+
+    @media (max-width: 480px) {
+      main { padding: 1.2rem 0.8rem 3rem; }
+      h1 { font-size: 1.3rem; }
+      .hud { padding: 0.5rem 0.6rem; font-size: 0.7rem; }
+      .hud-val { font-size: 0.9rem; }
+      .hud-label { font-size: 0.55rem; }
     }
 
     .level-flash {
@@ -431,10 +445,12 @@
 
         oddIndex = Math.floor(Math.random() * total);
 
-        // Calculate tile size to fit in container
-        var containerSize = Math.min(360, window.innerWidth - 60);
-        var gap = 4;
-        var tileSize = Math.floor((containerSize - gap * (size - 1)) / size);
+        // Calculate tile size to fit in container — responsive to viewport
+        var maxGridSize = Math.min(480, window.innerWidth - 40);
+        var gap = size <= 4 ? 4 : 3;
+        var tileSize = Math.floor((maxGridSize - gap * (size - 1)) / size);
+        // Ensure minimum tap target of 36px, but allow smaller on big grids
+        tileSize = Math.max(tileSize, size <= 6 ? 36 : 28);
         var gridPx = tileSize * size + gap * (size - 1);
 
         $grid.style.gridTemplateColumns = 'repeat(' + size + ', ' + tileSize + 'px)';
@@ -522,6 +538,17 @@
         $newBest.style.display = isNewBest ? 'block' : 'none';
         $gameOverScreen.style.display = 'block';
       }
+
+      // Rebuild grid on resize/orientation change to keep tiles responsive
+      var resizeTimer;
+      window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+          if (playing && !transitioning) {
+            buildRound();
+          }
+        }, 200);
+      });
     })();
   </script>
 </body>

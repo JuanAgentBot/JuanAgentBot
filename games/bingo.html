@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BINGO / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Caller display */
+    .caller {
+      margin-bottom: 1.5rem;
+    }
+
+    .caller-ball {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      height: 80px;
+      border: 2px solid var(--accent-magenta);
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      text-shadow: 0 0 12px var(--glow-magenta);
+      margin-bottom: 0.5rem;
+      transition: all 0.3s;
+    }
+
+    .caller-ball.active {
+      box-shadow: 0 0 30px var(--glow-magenta);
+    }
+
+    .caller-ball.waiting {
+      color: var(--text-dim);
+      border-color: var(--border);
+      font-size: 0.8rem;
+    }
+
+    .caller-count {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+    }
+
+    /* Recently called */
+    .recent {
+      display: flex;
+      justify-content: center;
+      gap: 0.4rem;
+      margin-bottom: 1.5rem;
+      min-height: 28px;
+      flex-wrap: wrap;
+    }
+
+    .recent-ball {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 28px;
+      border: 1px solid var(--border);
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    /* Bingo card */
+    .card-wrap {
+      margin-bottom: 1.5rem;
+    }
+
+    .bingo-header {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2px;
+      margin-bottom: 2px;
+    }
+
+    .bingo-header span {
+      font-size: 1.1rem;
+      font-weight: 800;
+      padding: 0.5rem 0;
+      letter-spacing: 0.1em;
+    }
+
+    .bingo-header span:nth-child(1) { color: var(--accent-magenta); text-shadow: 0 0 8px var(--glow-magenta); }
+    .bingo-header span:nth-child(2) { color: var(--accent-cyan); text-shadow: 0 0 8px var(--glow-cyan); }
+    .bingo-header span:nth-child(3) { color: var(--accent-green); text-shadow: 0 0 8px var(--glow-green); }
+    .bingo-header span:nth-child(4) { color: var(--accent-purple); text-shadow: 0 0 8px var(--glow-purple); }
+    .bingo-header span:nth-child(5) { color: #ffb000; text-shadow: 0 0 8px rgba(255,176,0,0.4); }
+
+    .bingo-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2px;
+    }
+
+    .cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      user-select: none;
+    }
+
+    .cell:hover:not(.marked):not(.free) {
+      border-color: var(--accent-cyan);
+    }
+
+    .cell.called:not(.marked) {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      animation: pulse-border 1.5s infinite;
+    }
+
+    @keyframes pulse-border {
+      0%, 100% { box-shadow: none; }
+      50% { box-shadow: 0 0 10px var(--glow-cyan-soft); }
+    }
+
+    .cell.marked {
+      background: var(--accent-magenta);
+      color: var(--bg);
+      border-color: var(--accent-magenta);
+      text-shadow: none;
+    }
+
+    .cell.free {
+      background: var(--accent-green);
+      color: var(--bg);
+      border-color: var(--accent-green);
+      font-size: 0.55rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      cursor: default;
+    }
+
+    .cell.bingo-win {
+      background: var(--accent-cyan);
+      color: var(--bg);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 15px var(--glow-cyan);
+      animation: win-glow 0.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes win-glow {
+      from { box-shadow: 0 0 10px var(--glow-cyan); }
+      to { box-shadow: 0 0 25px var(--glow-cyan); }
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      gap: 0.6rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .btn.active {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    .btn.primary {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+    }
+
+    .btn.primary:hover {
+      box-shadow: 0 0 12px var(--glow-magenta);
+    }
+
+    /* Speed selector */
+    .speed-row {
+      display: flex;
+      gap: 0.4rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      align-items: center;
+    }
+
+    .speed-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      margin-right: 0.4rem;
+    }
+
+    .speed-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      padding: 0.3rem 0.6rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .speed-btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .speed-btn.active {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    /* Win message */
+    .win-msg {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--accent-green);
+      text-shadow: 0 0 20px var(--glow-green);
+      letter-spacing: 0.15em;
+      margin-bottom: 0.5rem;
+      display: none;
+    }
+
+    .win-msg.show {
+      display: block;
+      animation: win-flash 0.5s ease-in-out 3;
+    }
+
+    @keyframes win-flash {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .win-pattern {
+      font-size: 0.65rem;
+      color: var(--accent-cyan);
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .win-pattern.show {
+      display: block;
+    }
+
+    /* Stats */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      margin-top: 1rem;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-val {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--accent-cyan);
+    }
+
+    .stat-label {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      margin-top: 0.2rem;
+    }
+
+    /* Instructions */
+    .instructions {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    kbd {
+      border: 1px solid var(--border);
+      padding: 0.15rem 0.4rem;
+      font-size: 0.55rem;
+      color: var(--text-muted);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>BINGO</h1>
+    <p class="subtitle">MARK YOUR CARD, CHASE THE PATTERN</p>
+
+    <div class="caller">
+      <div class="caller-ball waiting" id="caller-ball">READY</div>
+      <div class="caller-count" id="caller-count">0 / 75 CALLED</div>
+    </div>
+
+    <div class="recent" id="recent"></div>
+
+    <div class="card-wrap">
+      <div class="bingo-header">
+        <span>B</span><span>I</span><span>N</span><span>G</span><span>O</span>
+      </div>
+      <div class="bingo-grid" id="grid"></div>
+    </div>
+
+    <div class="win-msg" id="win-msg">BINGO!</div>
+    <div class="win-pattern" id="win-pattern"></div>
+
+    <div class="controls">
+      <button class="btn primary" id="btn-start">START</button>
+      <button class="btn" id="btn-call">CALL NEXT</button>
+      <button class="btn" id="btn-new">NEW CARD</button>
+    </div>
+
+    <div class="speed-row">
+      <span class="speed-label">SPEED:</span>
+      <button class="speed-btn active" data-speed="3000">SLOW</button>
+      <button class="speed-btn" data-speed="1500">MED</button>
+      <button class="speed-btn" data-speed="700">FAST</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-val" id="stat-wins">0</div>
+        <div class="stat-label">WINS</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-games">0</div>
+        <div class="stat-label">GAMES</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-best">—</div>
+        <div class="stat-label">FASTEST WIN</div>
+      </div>
+    </div>
+
+    <div class="instructions">
+      Numbers are called automatically or manually.<br>
+      Click called numbers on your card to mark them.<br>
+      Complete a row, column, diagonal, or four corners to win.<br>
+      <kbd>SPACE</kbd> call next &nbsp; <kbd>N</kbd> new card &nbsp; <kbd>S</kbd> start/pause
+    </div>
+  </main>
+
+  <script>
+    (function() {
+      // --- State ---
+      var card = [];          // 5x5 grid of numbers (0 = free)
+      var marked = [];        // 5x5 grid of booleans
+      var calledNums = [];    // numbers called so far
+      var allBalls = [];      // shuffled 1-75
+      var ballIndex = 0;
+      var autoTimer = null;
+      var autoSpeed = 3000;
+      var running = false;
+      var won = false;
+      var wins = 0;
+      var games = 0;
+      var bestWin = Infinity;
+
+      // --- DOM ---
+      var grid = document.getElementById('grid');
+      var callerBall = document.getElementById('caller-ball');
+      var callerCount = document.getElementById('caller-count');
+      var recentDiv = document.getElementById('recent');
+      var winMsg = document.getElementById('win-msg');
+      var winPattern = document.getElementById('win-pattern');
+      var btnStart = document.getElementById('btn-start');
+      var btnCall = document.getElementById('btn-call');
+      var btnNew = document.getElementById('btn-new');
+      var statWins = document.getElementById('stat-wins');
+      var statGames = document.getElementById('stat-games');
+      var statBest = document.getElementById('stat-best');
+
+      // --- Helpers ---
+      function shuffle(arr) {
+        for (var i = arr.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+        }
+        return arr;
+      }
+
+      function letterFor(num) {
+        if (num <= 15) return 'B';
+        if (num <= 30) return 'I';
+        if (num <= 45) return 'N';
+        if (num <= 60) return 'G';
+        return 'O';
+      }
+
+      function colColor(col) {
+        var colors = ['var(--accent-magenta)', 'var(--accent-cyan)', 'var(--accent-green)', 'var(--accent-purple)', '#ffb000'];
+        return colors[col];
+      }
+
+      // --- Generate card ---
+      function generateCard() {
+        card = [];
+        marked = [];
+        for (var col = 0; col < 5; col++) {
+          var min = col * 15 + 1;
+          var max = col * 15 + 15;
+          var pool = [];
+          for (var n = min; n <= max; n++) pool.push(n);
+          shuffle(pool);
+          var colNums = pool.slice(0, 5);
+          for (var row = 0; row < 5; row++) {
+            if (!card[row]) { card[row] = []; marked[row] = []; }
+            card[row][col] = colNums[row];
+            marked[row][col] = false;
+          }
+        }
+        // Free center
+        card[2][2] = 0;
+        marked[2][2] = true;
+      }
+
+      // --- Render card ---
+      function renderCard() {
+        grid.innerHTML = '';
+        for (var row = 0; row < 5; row++) {
+          for (var col = 0; col < 5; col++) {
+            var cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.row = row;
+            cell.dataset.col = col;
+
+            if (card[row][col] === 0) {
+              cell.classList.add('free');
+              cell.textContent = 'FREE';
+            } else {
+              cell.textContent = card[row][col];
+
+              if (marked[row][col]) {
+                cell.classList.add('marked');
+              } else if (calledNums.indexOf(card[row][col]) !== -1) {
+                cell.classList.add('called');
+              }
+            }
+
+            cell.addEventListener('click', cellClick);
+            grid.appendChild(cell);
+          }
+        }
+      }
+
+      // --- Cell click ---
+      function cellClick(e) {
+        var row = parseInt(e.target.dataset.row);
+        var col = parseInt(e.target.dataset.col);
+        var num = card[row][col];
+
+        if (num === 0 || marked[row][col] || won) return;
+
+        if (calledNums.indexOf(num) !== -1) {
+          marked[row][col] = true;
+          renderCard();
+          checkBingo();
+        }
+      }
+
+      // --- Init balls ---
+      function initBalls() {
+        allBalls = [];
+        for (var i = 1; i <= 75; i++) allBalls.push(i);
+        shuffle(allBalls);
+        ballIndex = 0;
+        calledNums = [];
+      }
+
+      // --- Call next number ---
+      function callNext() {
+        if (ballIndex >= 75 || won) {
+          stopAuto();
+          return;
+        }
+
+        var num = allBalls[ballIndex++];
+        calledNums.push(num);
+
+        // Update caller ball
+        callerBall.className = 'caller-ball active';
+        callerBall.textContent = letterFor(num) + num;
+        callerBall.style.color = '';
+
+        callerCount.textContent = calledNums.length + ' / 75 CALLED';
+
+        // Update recent
+        renderRecent();
+
+        // Highlight called cells on card
+        renderCard();
+
+        // Auto-mark if number is on card (optional: player must click)
+        // We don't auto-mark - player must click
+      }
+
+      function renderRecent() {
+        recentDiv.innerHTML = '';
+        var start = Math.max(0, calledNums.length - 8);
+        for (var i = calledNums.length - 1; i >= start; i--) {
+          var ball = document.createElement('span');
+          ball.className = 'recent-ball';
+          ball.textContent = letterFor(calledNums[i]) + calledNums[i];
+          recentDiv.appendChild(ball);
+        }
+      }
+
+      // --- Check bingo ---
+      function checkBingo() {
+        var patterns = [];
+
+        // Check rows
+        for (var r = 0; r < 5; r++) {
+          var full = true;
+          for (var c = 0; c < 5; c++) {
+            if (!marked[r][c]) { full = false; break; }
+          }
+          if (full) patterns.push({ name: 'ROW ' + (r + 1), cells: [[r,0],[r,1],[r,2],[r,3],[r,4]] });
+        }
+
+        // Check columns
+        for (var c = 0; c < 5; c++) {
+          var full = true;
+          for (var r = 0; r < 5; r++) {
+            if (!marked[r][c]) { full = false; break; }
+          }
+          if (full) patterns.push({ name: 'COLUMN ' + 'BINGO'[c], cells: [[0,c],[1,c],[2,c],[3,c],[4,c]] });
+        }
+
+        // Check diagonals
+        var d1 = true, d2 = true;
+        for (var i = 0; i < 5; i++) {
+          if (!marked[i][i]) d1 = false;
+          if (!marked[i][4-i]) d2 = false;
+        }
+        if (d1) patterns.push({ name: 'DIAGONAL \\', cells: [[0,0],[1,1],[2,2],[3,3],[4,4]] });
+        if (d2) patterns.push({ name: 'DIAGONAL /', cells: [[0,4],[1,3],[2,2],[3,1],[4,0]] });
+
+        // Four corners
+        if (marked[0][0] && marked[0][4] && marked[4][0] && marked[4][4]) {
+          patterns.push({ name: 'FOUR CORNERS', cells: [[0,0],[0,4],[4,0],[4,4]] });
+        }
+
+        if (patterns.length > 0) {
+          won = true;
+          wins++;
+          games++;
+
+          if (calledNums.length < bestWin) {
+            bestWin = calledNums.length;
+          }
+
+          stopAuto();
+
+          // Highlight winning cells
+          var winCells = {};
+          patterns.forEach(function(p) {
+            p.cells.forEach(function(c) {
+              winCells[c[0] + ',' + c[1]] = true;
+            });
+          });
+
+          var cells = grid.querySelectorAll('.cell');
+          cells.forEach(function(cell) {
+            var key = cell.dataset.row + ',' + cell.dataset.col;
+            if (winCells[key]) {
+              cell.classList.add('bingo-win');
+            }
+          });
+
+          winMsg.classList.add('show');
+          var patternNames = patterns.map(function(p) { return p.name; }).join(' + ');
+          winPattern.textContent = patternNames + ' in ' + calledNums.length + ' calls';
+          winPattern.classList.add('show');
+
+          updateStats();
+        }
+      }
+
+      // --- Auto-call ---
+      function startAuto() {
+        if (autoTimer || won) return;
+        running = true;
+        btnStart.textContent = 'PAUSE';
+        btnStart.classList.add('active');
+        btnStart.classList.remove('primary');
+        autoTimer = setInterval(callNext, autoSpeed);
+      }
+
+      function stopAuto() {
+        running = false;
+        btnStart.textContent = 'START';
+        btnStart.classList.remove('active');
+        btnStart.classList.add('primary');
+        if (autoTimer) {
+          clearInterval(autoTimer);
+          autoTimer = null;
+        }
+      }
+
+      function toggleAuto() {
+        if (won) return;
+        if (running) stopAuto();
+        else startAuto();
+      }
+
+      // --- New game ---
+      function newGame() {
+        if (calledNums.length > 0 && !won) games++;
+        stopAuto();
+        won = false;
+        winMsg.classList.remove('show');
+        winPattern.classList.remove('show');
+        generateCard();
+        initBalls();
+        callerBall.className = 'caller-ball waiting';
+        callerBall.textContent = 'READY';
+        callerCount.textContent = '0 / 75 CALLED';
+        recentDiv.innerHTML = '';
+        renderCard();
+        updateStats();
+      }
+
+      // --- Stats ---
+      function updateStats() {
+        statWins.textContent = wins;
+        statGames.textContent = games;
+        statBest.textContent = bestWin === Infinity ? '\u2014' : bestWin + ' calls';
+      }
+
+      // --- Speed buttons ---
+      var speedBtns = document.querySelectorAll('.speed-btn');
+      speedBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          speedBtns.forEach(function(b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          autoSpeed = parseInt(btn.dataset.speed);
+          if (running) {
+            clearInterval(autoTimer);
+            autoTimer = setInterval(callNext, autoSpeed);
+          }
+        });
+      });
+
+      // --- Button events ---
+      btnStart.addEventListener('click', toggleAuto);
+      btnCall.addEventListener('click', function() {
+        if (!won) callNext();
+      });
+      btnNew.addEventListener('click', newGame);
+
+      // --- Keyboard ---
+      document.addEventListener('keydown', function(e) {
+        if (e.key === ' ' || e.code === 'Space') {
+          e.preventDefault();
+          if (!won) callNext();
+        } else if (e.key === 'n' || e.key === 'N') {
+          newGame();
+        } else if (e.key === 's' || e.key === 'S') {
+          toggleAuto();
+        }
+      });
+
+      // --- Init ---
+      generateCard();
+      initBalls();
+      renderCard();
+      updateStats();
+    })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

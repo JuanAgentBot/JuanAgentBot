@@ -75,6 +75,8 @@
       transition: border-color 0.2s, box-shadow 0.2s;
       position: relative;
       font-size: 0.7rem;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .cell:hover:not(.filled) {
       border-color: var(--accent-cyan);
@@ -237,6 +239,7 @@
       cursor: pointer;
       transition: background 0.2s, box-shadow 0.2s;
       margin-top: 1rem;
+      touch-action: manipulation;
     }
     .btn:hover {
       background: rgba(0, 240, 255, 0.08);
@@ -299,19 +302,50 @@
     .breakdown-row.total .hand-score { color: var(--accent-green); text-shadow: 0 0 8px var(--glow-green); }
 
     /* Mobile responsive */
-    @media (max-width: 700px) {
+    @media (max-width: 600px) {
+      .game-area {
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+      }
+      .side {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 0.3rem 1.2rem;
+        min-width: unset;
+      }
+      .current-card {
+        width: 60px;
+        height: 84px;
+      }
+      .current-card .card-face { font-size: 1.1rem; }
+      .current-card .card-face .rank { font-size: 1.3rem; }
+      .current-card .card-face .suit { font-size: 1rem; }
       .row-labels { display: none; }
-      .grid { grid-template-columns: repeat(5, 48px); grid-template-rows: repeat(5, 66px); }
-      .cell { width: 48px; height: 66px; }
-      .col-labels { grid-template-columns: repeat(5, 48px); }
+      .grid-wrap {
+        width: 100%;
+        max-width: 300px;
+      }
+      .grid {
+        grid-template-columns: repeat(5, 1fr);
+        grid-template-rows: repeat(5, auto);
+        gap: 2px;
+      }
+      .cell {
+        width: auto;
+        height: auto;
+        aspect-ratio: 52 / 72;
+        min-height: 44px;
+      }
+      .col-labels {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 2px;
+      }
       .col-label { font-size: 0.45rem; }
-    }
-    @media (max-width: 400px) {
-      .grid { grid-template-columns: repeat(5, 40px); grid-template-rows: repeat(5, 56px); gap: 2px; }
-      .cell { width: 40px; height: 56px; }
-      .col-labels { grid-template-columns: repeat(5, 40px); gap: 2px; }
-      .card-face .rank { font-size: 0.9rem; }
-      .card-face .suit { font-size: 0.7rem; }
+      .scoring-table { font-size: 0.55rem; }
+      h1 { font-size: 1.3rem; }
     }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>

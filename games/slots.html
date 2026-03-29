@@ -13,6 +13,10 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    * {
+      touch-action: manipulation;
+    }
+
     main {
       max-width: 520px;
       margin: 0 auto;
@@ -97,8 +101,8 @@
     }
 
     .reel-window {
-      width: 100px;
-      height: 220px;
+      width: var(--reel-w, 100px);
+      height: var(--reel-h, 220px);
       border: 1px solid var(--border);
       overflow: hidden;
       position: relative;
@@ -110,7 +114,7 @@
       position: absolute;
       left: 0;
       right: 0;
-      height: 60px;
+      height: var(--cell-h, 60px);
       z-index: 2;
       pointer-events: none;
     }
@@ -133,12 +137,12 @@
     }
 
     .reel-cell {
-      width: 100px;
-      height: 74px;
+      width: var(--reel-w, 100px);
+      height: var(--cell-h, 74px);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2.2rem;
+      font-size: clamp(1.5rem, 5vw, 2.2rem);
     }
 
     .payline-indicator {
@@ -147,7 +151,7 @@
       right: -6px;
       top: 50%;
       transform: translateY(-50%);
-      height: 74px;
+      height: var(--cell-h, 74px);
       border-top: 2px solid var(--accent-magenta);
       border-bottom: 2px solid var(--accent-magenta);
       z-index: 3;
@@ -180,6 +184,8 @@
       color: var(--text-primary);
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.85rem;
+      min-width: 44px;
+      min-height: 44px;
       padding: 0.4rem 0.8rem;
       cursor: pointer;
       transition: border-color 0.2s, color 0.2s;
@@ -207,6 +213,7 @@
       display: block;
       width: 100%;
       padding: 0.9rem;
+      min-height: 48px;
       margin-top: 0.8rem;
       background: transparent;
       border: 2px solid var(--accent-magenta);
@@ -423,7 +430,7 @@
       </div>
     </div>
 
-    <div class="controls-hint">SPACE to spin &middot; &uarr;&darr; to adjust bet</div>
+    <div class="controls-hint">TAP SPIN or press SPACE &middot; &uarr;&darr; to adjust bet</div>
   </main>
 
   <script>
@@ -441,9 +448,38 @@
       const TOTAL_WEIGHT = SYMBOLS.reduce((s, sym) => s + sym.weight, 0);
       const BETS = [5, 10, 25, 50, 100];
       const CELLS_VISIBLE = 3;
-      const CELL_HEIGHT = 74;
       const STRIP_LEN = 40;
       const SPIN_EXTRA = STRIP_LEN - CELLS_VISIBLE;
+
+      // Responsive reel sizing
+      function computeReelSize() {
+        const mainPad = 48; // 1.5rem * 2 approx
+        const machinePad = 32; // 1rem * 2
+        const gaps = 16; // 0.5rem * 2 gaps
+        const avail = Math.min(520, window.innerWidth) - mainPad - machinePad - gaps;
+        const reelW = Math.min(100, Math.floor(avail / 3));
+        const cellH = Math.round(reelW * 0.74);
+        const reelH = cellH * CELLS_VISIBLE;
+        return { reelW, cellH, reelH };
+      }
+
+      let { reelW, cellH, reelH } = computeReelSize();
+
+      function applyReelSize() {
+        const s = computeReelSize();
+        reelW = s.reelW; cellH = s.cellH; reelH = s.reelH;
+        document.documentElement.style.setProperty('--reel-w', reelW + 'px');
+        document.documentElement.style.setProperty('--cell-h', cellH + 'px');
+        document.documentElement.style.setProperty('--reel-h', reelH + 'px');
+      }
+
+      applyReelSize();
+      window.addEventListener('resize', () => {
+        if (!spinning) {
+          applyReelSize();
+          initReels();
+        }
+      });
 
       let credits = 1000;
       let betIndex = 1;
@@ -502,7 +538,7 @@
       }
 
       function setStripPos(el, cellIndex) {
-        const offset = -(cellIndex * CELL_HEIGHT);
+        const offset = -(cellIndex * cellH);
         el.style.transform = `translateY(${offset}px)`;
       }
 

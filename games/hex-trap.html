@@ -16,8 +16,17 @@
     main {
       max-width: 640px;
       margin: 0 auto;
-      padding: 2rem 1.5rem 4rem;
+      padding: 2rem 1rem 4rem;
       text-align: center;
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 480px) {
+      main { padding: 1rem 0.5rem 3rem; }
+      h1 { font-size: 1.3rem; }
+      .subtitle { font-size: 0.65rem; margin-bottom: 1rem; }
+      .hud { gap: 1rem; font-size: 0.7rem; }
+      .message { font-size: 0.95rem; }
     }
 
     .back {
@@ -56,6 +65,8 @@
       margin: 0 auto 1rem;
       border: 1px solid var(--border);
       cursor: pointer;
+      touch-action: manipulation;
+      max-width: 100%;
     }
 
     .hud {
@@ -125,6 +136,8 @@
       cursor: pointer;
       transition: all 0.2s;
       margin: 0 0.3rem;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .btn:hover {
@@ -142,7 +155,12 @@
 
     .diff-btns .btn {
       font-size: 0.65rem;
-      padding: 0.4em 1em;
+      padding: 0.5em 1.2em;
+      min-height: 44px;
+      min-width: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .diff-btns .btn.active {
@@ -238,13 +256,15 @@
       const lastPos = hexToPixel(GRID_SIZE - 1, GRID_SIZE - 1);
       const cw = lastPos.x + HEX_RADIUS + 20;
       const ch = lastPos.y + HEX_RADIUS + 20;
-      const maxW = Math.min(600, window.innerWidth - 40);
-      const scale = maxW / cw;
-      canvas.width = Math.floor(cw * scale);
-      canvas.height = Math.floor(ch * scale);
-      canvas.style.width = canvas.width + 'px';
-      canvas.style.height = canvas.height + 'px';
-      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      const mainEl = document.querySelector('main');
+      const availW = Math.min(600, mainEl.clientWidth - 10, window.innerWidth - 30);
+      const scale = availW / cw;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(cw * scale * dpr);
+      canvas.height = Math.floor(ch * scale * dpr);
+      canvas.style.width = Math.floor(cw * scale) + 'px';
+      canvas.style.height = Math.floor(ch * scale) + 'px';
+      ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
     }
 
     function isEdge(r, c) {
@@ -409,9 +429,14 @@
     }
 
     function pixelToHex(px, py) {
-      const scale = ctx.getTransform().a || 1;
-      const mx = px / scale;
-      const my = py / scale;
+      // px/py are CSS pixel offsets within the canvas element
+      // Convert to logical coordinates by dividing by CSS display scale
+      const rect = canvas.getBoundingClientRect();
+      const lastPos = hexToPixel(GRID_SIZE - 1, GRID_SIZE - 1);
+      const logicalW = lastPos.x + HEX_RADIUS + 20;
+      const cssScale = rect.width / logicalW;
+      const mx = px / cssScale;
+      const my = py / cssScale;
       let closest = null;
       let minDist = Infinity;
       for (let r = 0; r < GRID_SIZE; r++) {
@@ -427,12 +452,12 @@
       return closest;
     }
 
-    canvas.addEventListener('click', (e) => {
+    function handleInput(clientX, clientY) {
       if (gameOver) return;
 
       const rect = canvas.getBoundingClientRect();
-      const px = e.clientX - rect.left;
-      const py = e.clientY - rect.top;
+      const px = clientX - rect.left;
+      const py = clientY - rect.top;
       const cell = pixelToHex(px, py);
       if (!cell) return;
 
@@ -462,6 +487,20 @@
 
       // Dot moves toward edge
       moveDot(path);
+    }
+
+    // Touch events for responsive mobile input
+    let touchHandled = false;
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      touchHandled = true;
+      const touch = e.changedTouches[0];
+      handleInput(touch.clientX, touch.clientY);
+    }, { passive: false });
+
+    canvas.addEventListener('click', (e) => {
+      if (touchHandled) { touchHandled = false; return; }
+      handleInput(e.clientX, e.clientY);
     });
 
     function moveDot(path) {

@@ -13,6 +13,9 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    body {
+      touch-action: manipulation;
+    }
     main {
       max-width: 640px;
       margin: 0 auto;
@@ -49,6 +52,8 @@
       margin: 0 auto;
       border: 1px solid var(--border);
       image-rendering: pixelated;
+      max-width: 100%;
+      height: auto;
     }
     .hud {
       display: flex;
@@ -69,6 +74,60 @@
       letter-spacing: 0.04em;
       line-height: 1.8;
     }
+    .touch-controls {
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 480px;
+      margin: 0.8rem auto 0;
+      padding: 0 0.5rem;
+      touch-action: manipulation;
+    }
+    .touch-dpad {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .touch-btn {
+      width: 56px;
+      height: 56px;
+      border: 2px solid var(--accent-cyan);
+      background: rgba(0, 240, 255, 0.08);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.3rem;
+      font-weight: 700;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      transition: background 0.1s;
+    }
+    .touch-btn:active, .touch-btn.active {
+      background: rgba(0, 240, 255, 0.25);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+    }
+    .touch-btn-fire {
+      width: 72px;
+      height: 72px;
+      border-color: var(--accent-magenta);
+      background: rgba(255, 45, 123, 0.08);
+      color: var(--accent-magenta);
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      border-radius: 50%;
+    }
+    .touch-btn-fire:active, .touch-btn-fire.active {
+      background: rgba(255, 45, 123, 0.25);
+      box-shadow: 0 0 12px rgba(255, 45, 123, 0.4);
+    }
+    @media (pointer: coarse), (max-width: 600px) {
+      .touch-controls { display: flex; }
+      .controls { display: none; }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -85,6 +144,13 @@
     </div>
     <div class="controls">
       ← → or A/D to move &nbsp;|&nbsp; SPACE to shoot &nbsp;|&nbsp; ENTER to start/restart
+    </div>
+    <div class="touch-controls" id="touch-controls">
+      <div class="touch-dpad">
+        <button class="touch-btn" id="btn-left" aria-label="Move left">◀</button>
+        <button class="touch-btn" id="btn-right" aria-label="Move right">▶</button>
+      </div>
+      <button class="touch-btn touch-btn-fire" id="btn-fire" aria-label="Fire">FIRE</button>
     </div>
   </main>
 
@@ -707,6 +773,61 @@
   });
 
   canvas.addEventListener('touchend', () => { touchX = null; });
+
+  // On-screen touch buttons
+  function setupTouchBtn(id, keyCode) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      keys[keyCode] = true;
+      btn.classList.add('active');
+      if (keyCode === 'Space') shoot();
+    });
+    btn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      keys[keyCode] = false;
+      btn.classList.remove('active');
+    });
+    btn.addEventListener('touchcancel', (e) => {
+      keys[keyCode] = false;
+      btn.classList.remove('active');
+    });
+    // Prevent mouse events from doubling on desktop
+    btn.addEventListener('mousedown', (e) => { e.preventDefault(); });
+  }
+  setupTouchBtn('btn-left', 'ArrowLeft');
+  setupTouchBtn('btn-right', 'ArrowRight');
+
+  // Fire button: continuous shooting while held
+  (function() {
+    const btn = document.getElementById('btn-fire');
+    if (!btn) return;
+    let fireInterval = null;
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      btn.classList.add('active');
+      if (state === 'title' || state === 'gameover') {
+        state = 'playing';
+        initGame();
+        return;
+      }
+      shoot();
+      fireInterval = setInterval(() => { shoot(); }, 150);
+    });
+    btn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      btn.classList.remove('active');
+      clearInterval(fireInterval);
+      fireInterval = null;
+    });
+    btn.addEventListener('touchcancel', () => {
+      btn.classList.remove('active');
+      clearInterval(fireInterval);
+      fireInterval = null;
+    });
+    btn.addEventListener('mousedown', (e) => { e.preventDefault(); });
+  })();
 
   // Game loop
   initStars();

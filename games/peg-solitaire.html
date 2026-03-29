@@ -18,6 +18,7 @@
       margin: 0 auto;
       padding: 2rem 1.5rem 4rem;
       text-align: center;
+      touch-action: manipulation;
     }
 
     .back {
@@ -72,6 +73,8 @@
       padding: 12px;
       border: 1px solid var(--border);
       margin-bottom: 1rem;
+      max-width: calc(100vw - 3rem);
+      box-sizing: border-box;
     }
 
     .board {
@@ -81,8 +84,8 @@
     }
 
     .cell {
-      width: 48px;
-      height: 48px;
+      width: var(--cell-size, 48px);
+      height: var(--cell-size, 48px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -105,8 +108,8 @@
 
     .cell.peg::after {
       content: '';
-      width: 32px;
-      height: 32px;
+      width: 67%;
+      height: 67%;
       border-radius: 50%;
       background: var(--accent-cyan);
       box-shadow: 0 0 10px rgba(0, 240, 255, 0.4), inset 0 -3px 6px rgba(0, 0, 0, 0.3);
@@ -150,6 +153,7 @@
       font-size: 0.7rem;
       letter-spacing: 0.06em;
       padding: 0.5rem 1rem;
+      min-height: 44px;
       background: transparent;
       color: var(--text-muted);
       border: 1px solid var(--border);
@@ -202,14 +206,7 @@
     }
 
     @media (max-width: 420px) {
-      .cell {
-        width: 38px;
-        height: 38px;
-      }
-      .cell.peg::after {
-        width: 26px;
-        height: 26px;
-      }
+      main { padding: 1.5rem 1rem 3rem; }
       .board { gap: 3px; }
     }
   </style>
@@ -483,7 +480,14 @@
     }
 
     function render() {
-      boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      // Responsive cell sizing
+      const maxCell = 48;
+      const gap = window.innerWidth <= 420 ? 3 : 4;
+      const pad = window.innerWidth <= 420 ? 56 : 74; // main + board-wrap padding/border
+      const avail = Math.min(520, window.innerWidth) - pad;
+      const cellSize = Math.min(maxCell, Math.floor((avail - (cols - 1) * gap) / cols));
+      boardEl.style.setProperty('--cell-size', cellSize + 'px');
+      boardEl.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
       boardEl.innerHTML = '';
 
       // Find valid targets for selected peg
@@ -521,6 +525,9 @@
       pegCountEl.textContent = countPegs();
       moveCountEl.textContent = moves;
     }
+
+    // Reflow on resize
+    window.addEventListener('resize', () => render());
 
     // Init
     resetBoard();

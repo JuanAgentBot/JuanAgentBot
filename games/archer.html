@@ -22,6 +22,7 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
+      height: 100dvh;
     }
     .top-bar {
       display: flex;
@@ -63,9 +64,11 @@
     #gameCanvas {
       flex: 1;
       width: 100%;
+      max-width: 100%;
       display: block;
       border: 1px solid var(--border);
       cursor: crosshair;
+      touch-action: manipulation;
     }
     .controls {
       font-size: 0.65rem;
@@ -80,6 +83,43 @@
       padding: 0.1em 0.4em;
       font-family: inherit;
       color: var(--text-muted);
+    }
+    .controls-desktop { display: block; }
+    .controls-touch { display: none; }
+    .touch-actions {
+      display: none;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 0.4rem 0;
+    }
+    .touch-actions button {
+      background: none;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.5rem 1.2rem;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      touch-action: manipulation;
+      min-width: 44px;
+      min-height: 44px;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .touch-actions button:active {
+      background: rgba(0, 240, 255, 0.15);
+      box-shadow: 0 0 12px var(--glow-cyan);
+    }
+    @media (pointer: coarse), (max-width: 600px) {
+      .controls-desktop { display: none; }
+      .controls-touch { display: block; }
+      .touch-actions { display: flex; }
+      h1 { font-size: 1rem; }
+      .hud { gap: 1rem; font-size: 0.7rem; }
+      .top-bar { margin-bottom: 0.25rem; }
+      .msg { padding: 1.5rem 1.5rem; }
+      .msg h2 { font-size: 1.1rem; }
     }
     .msg {
       position: fixed;
@@ -148,7 +188,11 @@
     </div>
     <canvas id="gameCanvas"></canvas>
     <div class="controls">
-      <kbd>CLICK &amp; HOLD</kbd> to draw bow &middot; <kbd>AIM</kbd> with mouse &middot; <kbd>RELEASE</kbd> to shoot &middot; <kbd>R</kbd> new round
+      <span class="controls-desktop"><kbd>CLICK &amp; HOLD</kbd> to draw bow &middot; <kbd>AIM</kbd> with mouse &middot; <kbd>RELEASE</kbd> to shoot &middot; <kbd>R</kbd> new round</span>
+      <span class="controls-touch">HOLD to draw &middot; AIM with finger &middot; RELEASE to shoot</span>
+    </div>
+    <div class="touch-actions" id="touchActions">
+      <button onclick="startGame()" aria-label="New Round">&#x21bb; NEW ROUND</button>
     </div>
     <div class="msg" id="endMsg">
       <h2>ROUND COMPLETE</h2>

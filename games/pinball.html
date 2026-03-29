@@ -18,6 +18,7 @@
       margin: 0 auto;
       padding: 2rem 1.5rem 4rem;
       text-align: center;
+      touch-action: manipulation;
     }
 
     .back {
@@ -54,6 +55,9 @@
       margin: 0 auto 1rem;
       border: 1px solid var(--border);
       cursor: default;
+      max-width: 100%;
+      height: auto;
+      touch-action: manipulation;
     }
 
     .hud {
@@ -112,6 +116,7 @@
       cursor: pointer;
       -webkit-user-select: none;
       user-select: none;
+      touch-action: manipulation;
       text-shadow: 0 0 8px rgba(0,240,255,0.4);
     }
     .touch-btn:active {
@@ -241,7 +246,7 @@
 
     // Input
     let keys = {};
-    let touchLeft = false, touchRight = false, touchLaunch = false;
+    const touchState = { left: false, right: false, launch: false };
 
     document.addEventListener('keydown', e => {
       keys[e.key] = true;
@@ -254,19 +259,21 @@
     const btnR = document.getElementById('btn-right');
     const btnLaunch = document.getElementById('btn-launch');
 
-    function addTouch(el, flag) {
-      el.addEventListener('touchstart', e => { e.preventDefault(); window[flag] = true; });
-      el.addEventListener('touchend', e => { e.preventDefault(); window[flag] = false; });
-      el.addEventListener('mousedown', e => { window[flag] = true; });
-      el.addEventListener('mouseup', e => { window[flag] = false; });
+    function addTouch(el, key) {
+      el.addEventListener('touchstart', e => { e.preventDefault(); touchState[key] = true; }, { passive: false });
+      el.addEventListener('touchend', e => { e.preventDefault(); touchState[key] = false; }, { passive: false });
+      el.addEventListener('touchcancel', e => { touchState[key] = false; });
+      el.addEventListener('mousedown', e => { touchState[key] = true; });
+      el.addEventListener('mouseup', e => { touchState[key] = false; });
     }
-    addTouch(btnL, 'touchLeft');
-    addTouch(btnR, 'touchRight');
-    addTouch(btnLaunch, 'touchLaunch');
+    addTouch(btnL, 'left');
+    addTouch(btnR, 'right');
+    addTouch(btnLaunch, 'launch');
 
-    function leftActive() { return keys['z'] || keys['Z'] || keys['ArrowLeft'] || touchLeft; }
-    function rightActive() { return keys['m'] || keys['M'] || keys['ArrowRight'] || touchRight; }
-    function launchActive() { return keys[' '] || touchLaunch; }
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    function leftActive() { return keys['z'] || keys['Z'] || keys['ArrowLeft'] || touchState.left; }
+    function rightActive() { return keys['m'] || keys['M'] || keys['ArrowRight'] || touchState.right; }
+    function launchActive() { return keys[' '] || touchState.launch; }
 
     function resetBall() {
       ball.x = LANE_X + LANE_W / 2;
@@ -286,7 +293,7 @@
       state = 'ready';
       launchPower = 0;
       updateHUD();
-      setMessage('HOLD SPACE TO LAUNCH');
+      setMessage(isTouchDevice ? 'HOLD LAUNCH TO FIRE' : 'HOLD SPACE TO LAUNCH');
     }
 
     function updateHUD() {
@@ -524,7 +531,7 @@
             setMessage('GAME OVER — SCORE: ' + score.toLocaleString());
           }
           setTimeout(() => {
-            setMessage('GAME OVER — PRESS SPACE TO RESTART');
+            setMessage(isTouchDevice ? 'GAME OVER — TAP LAUNCH TO RESTART' : 'GAME OVER — PRESS SPACE TO RESTART');
             state = 'gameover';
           }, 2000);
         } else {
@@ -537,7 +544,7 @@
           setTimeout(() => {
             resetBall();
             state = 'ready';
-            setMessage('HOLD SPACE TO LAUNCH');
+            setMessage(isTouchDevice ? 'HOLD LAUNCH TO FIRE' : 'HOLD SPACE TO LAUNCH');
           }, 1200);
         }
       }

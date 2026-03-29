@@ -20,6 +20,10 @@
       font-family: 'JetBrains Mono', monospace;
       overflow: hidden;
       height: 100vh;
+      touch-action: manipulation;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     .top-bar {
       position: fixed;
@@ -46,6 +50,11 @@
       letter-spacing: 0.1em;
       text-shadow: 0 0 10px rgba(255,45,123,0.5);
     }
+    @media (max-width: 480px) {
+      .top-bar { padding: 0.4rem 0.6rem; }
+      .top-bar a { font-size: 0.6rem; }
+      .game-title { font-size: 0.7rem; }
+    }
     #hud {
       position: fixed;
       top: 2.2rem; left: 0; right: 0;
@@ -58,10 +67,14 @@
       z-index: 100;
     }
     #hud span { color: var(--accent-cyan, #00f0ff); }
+    @media (max-width: 480px) {
+      #hud { gap: 0.8rem; font-size: 0.6rem; top: 2rem; }
+    }
     canvas {
       display: block;
       width: 100vw;
       height: 100vh;
+      touch-action: manipulation;
     }
     #overlay {
       position: fixed;
@@ -105,6 +118,12 @@
       text-align: center;
       line-height: 1.8;
     }
+    @media (max-width: 480px) {
+      #overlay h2 { font-size: 1.2rem; }
+      #overlay .info { font-size: 0.65rem; }
+      #overlay .prompt { font-size: 0.7rem; }
+      #overlay .controls { font-size: 0.58rem; margin-top: 1.2rem; }
+    }
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.4; }
@@ -142,6 +161,11 @@
       font-size: 0.8rem;
       letter-spacing: 0.08em;
       animation: pulse 1.2s ease-in-out infinite;
+    }
+    @media (max-width: 480px) {
+      #death-overlay h2 { font-size: 1.1rem; }
+      #death-overlay .info { font-size: 0.65rem; }
+      #death-overlay .prompt { font-size: 0.7rem; }
     }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
@@ -223,7 +247,7 @@
       H = window.innerHeight;
       canvas.width = W;
       canvas.height = H;
-      corridorH = Math.min(H - 120, 500);
+      corridorH = Math.min(H - 100, W < 480 ? H - 80 : 500);
       corridorBottom = CORRIDOR_TOP + corridorH;
     }
 

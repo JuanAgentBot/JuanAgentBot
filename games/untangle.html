@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Untangle / ZERO</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg, #0a0a0f);
+      color: var(--text-bright, #e0e0e8);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid var(--border, #7a7a90);
+    }
+
+    .back-link {
+      color: var(--text-dim, #7a7a90);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      transition: color 0.3s;
+    }
+    .back-link:hover { color: var(--accent-cyan, #00f0ff); }
+
+    .game-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--accent-magenta, #ff2d7b);
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 10px rgba(255, 45, 123, 0.5);
+    }
+
+    .hud {
+      display: flex;
+      gap: 1.5rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+    }
+
+    .hud-label { color: var(--text-dim, #7a7a90); }
+    .hud-val { color: var(--accent-cyan, #00f0ff); text-shadow: 0 0 8px rgba(0, 240, 255, 0.4); }
+    .hud-cross { color: var(--accent-magenta, #ff2d7b); text-shadow: 0 0 8px rgba(255, 45, 123, 0.4); }
+    .hud-green { color: var(--accent-green, #39ff14); text-shadow: 0 0 8px rgba(57, 255, 20, 0.4); }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: calc(100vh - 48px - 52px);
+      cursor: grab;
+    }
+    canvas.dragging { cursor: grabbing; }
+
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      padding: 0.75rem 1.5rem;
+      border-top: 1px solid var(--border, #7a7a90);
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border, #7a7a90);
+      color: var(--text-bright, #e0e0e8);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      padding: 0.4rem 1rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+    .btn:hover {
+      border-color: var(--accent-cyan, #00f0ff);
+      color: var(--accent-cyan, #00f0ff);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+    }
+
+    .controls-hint {
+      font-size: 0.65rem;
+      color: var(--text-dim, #7a7a90);
+      letter-spacing: 0.06em;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 10, 15, 0.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .overlay.hidden { display: none; }
+
+    .modal {
+      border: 1px solid var(--accent-cyan, #00f0ff);
+      padding: 2.5rem;
+      max-width: 360px;
+      text-align: center;
+      background: var(--bg, #0a0a0f);
+      box-shadow: 0 0 40px rgba(0, 240, 255, 0.15);
+    }
+
+    .modal h2 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--accent-green, #39ff14);
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 15px rgba(57, 255, 20, 0.5);
+    }
+
+    .modal p {
+      font-size: 0.8rem;
+      color: var(--text-muted, #7a7a90);
+      margin-bottom: 0.5rem;
+      line-height: 1.5;
+    }
+
+    .modal .stat-val {
+      color: var(--accent-cyan, #00f0ff);
+    }
+
+    .modal .btn {
+      margin-top: 1.5rem;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="./" class="back-link">&lt; GAME LAB</a>
+    <div class="game-title">UNTANGLE</div>
+    <div class="hud">
+      <span><span class="hud-label">LVL </span><span class="hud-val" id="hud-level">1</span></span>
+      <span><span class="hud-label">CROSS </span><span class="hud-cross" id="hud-cross">0</span></span>
+      <span><span class="hud-label">MOVES </span><span class="hud-val" id="hud-moves">0</span></span>
+    </div>
+  </div>
+
+  <canvas id="c"></canvas>
+
+  <div class="controls-bar">
+    <button class="btn" id="btn-reset">RESET LEVEL</button>
+    <button class="btn" id="btn-shuffle">SHUFFLE</button>
+    <span class="controls-hint">DRAG NODES TO UNTANGLE ALL EDGES</span>
+  </div>
+
+  <div class="overlay hidden" id="win-overlay">
+    <div class="modal">
+      <h2>UNTANGLED</h2>
+      <p>Level <span class="stat-val" id="win-level">1</span> solved in <span class="stat-val" id="win-moves">0</span> moves</p>
+      <p>Best: <span class="stat-val" id="win-best">-</span> moves</p>
+      <button class="btn" id="btn-next">NEXT LEVEL</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+
+    const MAGENTA = '#ff2d7b';
+    const CYAN = '#00f0ff';
+    const GREEN = '#39ff14';
+    const PURPLE = '#9d4edd';
+    const WHITE = '#e0e0e8';
+    const DIM = '#7a7a90';
+    const VOID = '#0a0a0f';
+
+    const NODE_RADIUS = 14;
+    const HIT_RADIUS = 22;
+
+    let nodes = [];
+    let edges = [];
+    let crossings = 0;
+    let moves = 0;
+    let level = 1;
+    let dragging = null;
+    let dragOffX = 0, dragOffY = 0;
+    let solved = false;
+    let bestScores = {};
+    let W, H, dpr;
+
+    // Load best scores
+    try { bestScores = JSON.parse(localStorage.getItem('untangle-best') || '{}'); } catch(e) {}
+
+    function saveBest() {
+      localStorage.setItem('untangle-best', JSON.stringify(bestScores));
+    }
+
+    function resize() {
+      dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      W = rect.width;
+      H = rect.height;
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    // Generate a planar graph that can be untangled
+    function generateLevel(lvl) {
+      // Node count scales with level
+      const n = Math.min(5 + lvl * 2, 40);
+      const pts = [];
+      const margin = 60;
+      const cx = W / 2;
+      const cy = H / 2;
+      const maxR = Math.min(W, H) / 2 - margin;
+
+      // Place nodes in a circle (the solution layout)
+      for (let i = 0; i < n; i++) {
+        const angle = (2 * Math.PI * i) / n - Math.PI / 2;
+        pts.push({
+          x: cx + maxR * Math.cos(angle),
+          y: cy + maxR * Math.sin(angle),
+          solX: cx + maxR * Math.cos(angle),
+          solY: cy + maxR * Math.sin(angle),
+          id: i
+        });
+      }
+
+      // Build edges ensuring planarity
+      // Start with a cycle, then add non-crossing chords
+      const edgeList = [];
+      const edgeSet = new Set();
+
+      function edgeKey(a, b) { return Math.min(a,b) + ',' + Math.max(a,b); }
+
+      // Cycle
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        edgeList.push([i, j]);
+        edgeSet.add(edgeKey(i, j));
+      }
+
+      // Add some chords (skip connections)
+      // Target edge count: roughly 2*n for medium density
+      const targetEdges = Math.min(n + Math.floor(n * 0.8), n * (n-1) / 2);
+      let attempts = 0;
+      while (edgeList.length < targetEdges && attempts < 500) {
+        attempts++;
+        const a = Math.floor(Math.random() * n);
+        const b = Math.floor(Math.random() * n);
+        if (a === b) continue;
+        const key = edgeKey(a, b);
+        if (edgeSet.has(key)) continue;
+
+        // Check if this edge would cross any existing edge in the circle layout
+        let crosses = false;
+        for (const [ea, eb] of edgeList) {
+          if (ea === a || ea === b || eb === a || eb === b) continue;
+          if (segmentsIntersect(
+            pts[a].solX, pts[a].solY, pts[b].solX, pts[b].solY,
+            pts[ea].solX, pts[ea].solY, pts[eb].solX, pts[eb].solY
+          )) {
+            crosses = true;
+            break;
+          }
+        }
+        if (!crosses) {
+          edgeList.push([a, b]);
+          edgeSet.add(key);
+        }
+      }
+
+      // Now scramble positions
+      for (const p of pts) {
+        p.x = margin + Math.random() * (W - margin * 2);
+        p.y = margin + Math.random() * (H - margin * 2);
+      }
+
+      return { nodes: pts, edges: edgeList };
+    }
+
+    // Segment intersection check (proper crossings only, not touching)
+    function segmentsIntersect(x1,y1,x2,y2,x3,y3,x4,y4) {
+      const d1 = cross2d(x3,y3,x4,y4,x1,y1);
+      const d2 = cross2d(x3,y3,x4,y4,x2,y2);
+      const d3 = cross2d(x1,y1,x2,y2,x3,y3);
+      const d4 = cross2d(x1,y1,x2,y2,x4,y4);
+
+      if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+          ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+        return true;
+      }
+      return false;
+    }
+
+    function cross2d(ax,ay,bx,by,cx,cy) {
+      return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+    }
+
+    function countCrossings() {
+      let count = 0;
+      for (let i = 0; i < edges.length; i++) {
+        for (let j = i + 1; j < edges.length; j++) {
+          const [a, b] = edges[i];
+          const [c, d] = edges[j];
+          if (a === c || a === d || b === c || b === d) continue;
+          if (segmentsIntersect(
+            nodes[a].x, nodes[a].y, nodes[b].x, nodes[b].y,
+            nodes[c].x, nodes[c].y, nodes[d].x, nodes[d].y
+          )) {
+            count++;
+          }
+        }
+      }
+      return count;
+    }
+
+    // Get crossing edges set for coloring
+    function getCrossingEdges() {
+      const crossSet = new Set();
+      for (let i = 0; i < edges.length; i++) {
+        for (let j = i + 1; j < edges.length; j++) {
+          const [a, b] = edges[i];
+          const [c, d] = edges[j];
+          if (a === c || a === d || b === c || b === d) continue;
+          if (segmentsIntersect(
+            nodes[a].x, nodes[a].y, nodes[b].x, nodes[b].y,
+            nodes[c].x, nodes[c].y, nodes[d].x, nodes[d].y
+          )) {
+            crossSet.add(i);
+            crossSet.add(j);
+          }
+        }
+      }
+      return crossSet;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+
+      const crossSet = getCrossingEdges();
+
+      // Draw edges
+      for (let i = 0; i < edges.length; i++) {
+        const [a, b] = edges[i];
+        const isCrossing = crossSet.has(i);
+
+        ctx.beginPath();
+        ctx.moveTo(nodes[a].x, nodes[a].y);
+        ctx.lineTo(nodes[b].x, nodes[b].y);
+
+        if (solved) {
+          ctx.strokeStyle = GREEN;
+          ctx.lineWidth = 2;
+          ctx.shadowColor = GREEN;
+          ctx.shadowBlur = 8;
+        } else if (isCrossing) {
+          ctx.strokeStyle = MAGENTA;
+          ctx.lineWidth = 1.5;
+          ctx.shadowColor = MAGENTA;
+          ctx.shadowBlur = 6;
+        } else {
+          ctx.strokeStyle = CYAN;
+          ctx.lineWidth = 1.5;
+          ctx.shadowColor = CYAN;
+          ctx.shadowBlur = 6;
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // Draw nodes
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const isActive = dragging === i;
+
+        // Node connections that cross
+        let hasConflict = false;
+        for (let ei = 0; ei < edges.length; ei++) {
+          if ((edges[ei][0] === i || edges[ei][1] === i) && crossSet.has(ei)) {
+            hasConflict = true;
+            break;
+          }
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, NODE_RADIUS, 0, Math.PI * 2);
+
+        if (solved) {
+          ctx.fillStyle = GREEN;
+          ctx.shadowColor = GREEN;
+          ctx.shadowBlur = 12;
+        } else if (isActive) {
+          ctx.fillStyle = WHITE;
+          ctx.shadowColor = WHITE;
+          ctx.shadowBlur = 15;
+        } else if (hasConflict) {
+          ctx.fillStyle = MAGENTA;
+          ctx.shadowColor = MAGENTA;
+          ctx.shadowBlur = 10;
+        } else {
+          ctx.fillStyle = CYAN;
+          ctx.shadowColor = CYAN;
+          ctx.shadowBlur = 10;
+        }
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Inner dot
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, NODE_RADIUS - 4, 0, Math.PI * 2);
+        ctx.fillStyle = VOID;
+        ctx.fill();
+      }
+    }
+
+    function updateHUD() {
+      document.getElementById('hud-level').textContent = level;
+      document.getElementById('hud-cross').textContent = crossings;
+      document.getElementById('hud-moves').textContent = moves;
+    }
+
+    function checkWin() {
+      if (crossings === 0 && !solved) {
+        solved = true;
+        // Record best
+        const key = 'L' + level;
+        if (!bestScores[key] || moves < bestScores[key]) {
+          bestScores[key] = moves;
+          saveBest();
+        }
+
+        draw();
+
+        setTimeout(() => {
+          document.getElementById('win-level').textContent = level;
+          document.getElementById('win-moves').textContent = moves;
+          document.getElementById('win-best').textContent = bestScores[key] || '-';
+          document.getElementById('win-overlay').classList.remove('hidden');
+        }, 400);
+      }
+    }
+
+    function startLevel(lvl) {
+      level = lvl;
+      solved = false;
+      moves = 0;
+      dragging = null;
+      document.getElementById('win-overlay').classList.add('hidden');
+
+      const data = generateLevel(lvl);
+      nodes = data.nodes;
+      edges = data.edges;
+
+      // Make sure it actually has crossings (otherwise scramble again)
+      let safety = 0;
+      while (countCrossings() === 0 && safety < 20) {
+        safety++;
+        const margin = 60;
+        for (const p of nodes) {
+          p.x = margin + Math.random() * (W - margin * 2);
+          p.y = margin + Math.random() * (H - margin * 2);
+        }
+      }
+
+      crossings = countCrossings();
+      updateHUD();
+      draw();
+    }
+
+    function shufflePositions() {
+      if (solved) return;
+      const margin = 60;
+      for (const p of nodes) {
+        p.x = margin + Math.random() * (W - margin * 2);
+        p.y = margin + Math.random() * (H - margin * 2);
+      }
+      crossings = countCrossings();
+      updateHUD();
+      draw();
+    }
+
+    // Pointer events
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches ? e.touches[0] : e;
+      return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top
+      };
+    }
+
+    function findNode(x, y) {
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        const dx = nodes[i].x - x;
+        const dy = nodes[i].y - y;
+        if (dx * dx + dy * dy <= HIT_RADIUS * HIT_RADIUS) return i;
+      }
+      return null;
+    }
+
+    function onDown(e) {
+      if (solved) return;
+      e.preventDefault();
+      const pos = getPos(e);
+      const idx = findNode(pos.x, pos.y);
+      if (idx !== null) {
+        dragging = idx;
+        dragOffX = nodes[idx].x - pos.x;
+        dragOffY = nodes[idx].y - pos.y;
+        canvas.classList.add('dragging');
+      }
+    }
+
+    function onMove(e) {
+      if (dragging === null) return;
+      e.preventDefault();
+      const pos = getPos(e);
+      nodes[dragging].x = Math.max(NODE_RADIUS, Math.min(W - NODE_RADIUS, pos.x + dragOffX));
+      nodes[dragging].y = Math.max(NODE_RADIUS, Math.min(H - NODE_RADIUS, pos.y + dragOffY));
+      crossings = countCrossings();
+      updateHUD();
+      draw();
+    }
+
+    function onUp(e) {
+      if (dragging !== null) {
+        moves++;
+        updateHUD();
+        dragging = null;
+        canvas.classList.remove('dragging');
+        crossings = countCrossings();
+        updateHUD();
+        draw();
+        checkWin();
+      }
+    }
+
+    canvas.addEventListener('mousedown', onDown);
+    canvas.addEventListener('mousemove', onMove);
+    canvas.addEventListener('mouseup', onUp);
+    canvas.addEventListener('mouseleave', onUp);
+    canvas.addEventListener('touchstart', onDown, { passive: false });
+    canvas.addEventListener('touchmove', onMove, { passive: false });
+    canvas.addEventListener('touchend', onUp);
+
+    document.getElementById('btn-reset').addEventListener('click', () => startLevel(level));
+    document.getElementById('btn-shuffle').addEventListener('click', shufflePositions);
+    document.getElementById('btn-next').addEventListener('click', () => startLevel(level + 1));
+
+    window.addEventListener('resize', () => { resize(); draw(); });
+
+    // Init
+    resize();
+    startLevel(1);
+  </script>
+</body>
+</html>

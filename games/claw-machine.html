@@ -55,8 +55,10 @@
       display: block;
       margin: 0 auto 1rem;
       border: 1px solid var(--border);
-      max-width: 100%;
+      width: min(480px, 100%);
+      height: auto;
       cursor: crosshair;
+      touch-action: manipulation;
     }
 
     .hud {
@@ -169,6 +171,83 @@
     .prize-pts {
       color: var(--accent-green);
     }
+
+    /* Touch controls */
+    .touch-controls {
+      display: none;
+      margin: 0.5rem auto 1rem;
+      max-width: 480px;
+      gap: 0.5rem;
+    }
+
+    .touch-row {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .touch-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 56px;
+      min-height: 50px;
+      background: transparent;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background 0.15s, color 0.15s;
+      padding: 0.3rem 1rem;
+    }
+
+    .touch-btn:active, .touch-btn.active {
+      background: var(--accent-cyan);
+      color: var(--bg);
+    }
+
+    .touch-btn.drop-btn {
+      flex: 1;
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+      font-size: 0.85rem;
+      letter-spacing: 0.1em;
+    }
+
+    .touch-btn.drop-btn:active, .touch-btn.drop-btn.active {
+      background: var(--accent-magenta);
+      color: var(--bg);
+    }
+
+    .touch-btn.restart-btn {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      font-size: 0.7rem;
+    }
+
+    .touch-btn.restart-btn:active {
+      background: var(--accent-green);
+      color: var(--bg);
+    }
+
+    @media (max-width: 600px) {
+      main { padding: 1rem 0.75rem 2rem; }
+      h1 { font-size: 1.3rem; }
+      .hud { gap: 1rem; font-size: 0.7rem; }
+      .controls { display: none; }
+      .touch-controls { display: flex; flex-direction: column; }
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      .controls { display: none; }
+      .touch-controls { display: flex; flex-direction: column; }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -192,6 +271,17 @@
       <kbd>&larr;</kbd> <kbd>&rarr;</kbd> MOVE CLAW &nbsp;|&nbsp;
       <kbd>SPACE</kbd> DROP &nbsp;|&nbsp;
       <kbd>R</kbd> RESTART
+    </div>
+
+    <div class="touch-controls" id="touchControls">
+      <div class="touch-row">
+        <button class="touch-btn" id="btnLeft" aria-label="Move left">◀</button>
+        <button class="touch-btn drop-btn" id="btnDrop">DROP</button>
+        <button class="touch-btn" id="btnRight" aria-label="Move right">▶</button>
+      </div>
+      <div class="touch-row">
+        <button class="touch-btn restart-btn" id="btnRestart" style="width:100%">↻ RESTART</button>
+      </div>
     </div>
 
     <div class="prize-list">
@@ -743,21 +833,14 @@
     });
 
     // Touch/click support for mobile
-    let touchStartX = null;
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = W / rect.width;
-      touchStartX = (e.touches[0].clientX - rect.left) * scaleX;
-
-      if (state === 'idle' && tries > 0) {
-        // Tap to drop
-        state = 'dropping';
-        clawOpen = 0.8;
-        tries--;
-        updateHUD();
-        msgEl.textContent = 'DROPPING...';
-        msgEl.className = 'msg';
+      // On canvas touch: position the claw (don't auto-drop)
+      if (state === 'idle') {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = W / rect.width;
+        const tx = (e.touches[0].clientX - rect.left) * scaleX;
+        clawX = Math.max(RAIL_LEFT + 20, Math.min(RAIL_RIGHT - 20, tx));
       }
     });
 
@@ -783,6 +866,58 @@
           (e.clientX - rect.left) * scaleX));
       }
     });
+
+    // On-screen touch button controls
+    function doDrop() {
+      if (state === 'idle' && tries > 0) {
+        state = 'dropping';
+        clawOpen = 0.8;
+        tries--;
+        updateHUD();
+        msgEl.textContent = 'DROPPING...';
+        msgEl.className = 'msg';
+      }
+    }
+
+    let moveInterval = null;
+    function startMove(dir) {
+      stopMove();
+      const step = () => {
+        if (state === 'idle') {
+          clawX = Math.max(RAIL_LEFT + 20, Math.min(RAIL_RIGHT - 20, clawX + dir * 4));
+        }
+      };
+      step();
+      moveInterval = setInterval(step, 30);
+    }
+    function stopMove() {
+      if (moveInterval) { clearInterval(moveInterval); moveInterval = null; }
+    }
+
+    const btnLeft = document.getElementById('btnLeft');
+    const btnRight = document.getElementById('btnRight');
+    const btnDrop = document.getElementById('btnDrop');
+    const btnRestart = document.getElementById('btnRestart');
+
+    btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); startMove(-1); btnLeft.classList.add('active'); });
+    btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); stopMove(); btnLeft.classList.remove('active'); });
+    btnLeft.addEventListener('touchcancel', () => { stopMove(); btnLeft.classList.remove('active'); });
+    btnLeft.addEventListener('mousedown', (e) => { e.preventDefault(); startMove(-1); });
+    btnLeft.addEventListener('mouseup', () => stopMove());
+    btnLeft.addEventListener('mouseleave', () => stopMove());
+
+    btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); startMove(1); btnRight.classList.add('active'); });
+    btnRight.addEventListener('touchend', (e) => { e.preventDefault(); stopMove(); btnRight.classList.remove('active'); });
+    btnRight.addEventListener('touchcancel', () => { stopMove(); btnRight.classList.remove('active'); });
+    btnRight.addEventListener('mousedown', (e) => { e.preventDefault(); startMove(1); });
+    btnRight.addEventListener('mouseup', () => stopMove());
+    btnRight.addEventListener('mouseleave', () => stopMove());
+
+    btnDrop.addEventListener('touchstart', (e) => { e.preventDefault(); doDrop(); });
+    btnDrop.addEventListener('click', () => doDrop());
+
+    btnRestart.addEventListener('touchstart', (e) => { e.preventDefault(); reset(); });
+    btnRestart.addEventListener('click', () => reset());
 
     // Start
     reset();

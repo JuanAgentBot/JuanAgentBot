@@ -18,6 +18,7 @@
       margin: 0 auto;
       padding: 2rem 1.5rem 4rem;
       text-align: center;
+      touch-action: manipulation;
     }
 
     .back {
@@ -119,6 +120,8 @@
       display: block;
       margin: 0 auto;
       cursor: pointer;
+      touch-action: manipulation;
+      max-width: 100%;
     }
 
     #board-canvas {
@@ -151,6 +154,17 @@
       border: 1px solid var(--border);
       padding: 0.1em 0.4em;
       font-size: 0.6rem;
+    }
+
+    @media (max-width: 600px) {
+      main { padding: 1rem 0.75rem 3rem; }
+      h1 { font-size: 1.2rem; }
+      .controls { gap: 0.5rem; }
+      button { padding: 0.5rem 0.9rem; font-size: 0.7rem; min-height: 44px; }
+      .status-bar { gap: 1rem; font-size: 0.7rem; }
+      #game-area { gap: 1rem; }
+      .instructions kbd { display: none; }
+      .instructions br { display: none; }
     }
 
     .best-time {
@@ -309,10 +323,13 @@
       }
 
       function calcTileSize() {
-        const maxWidth = Math.min(window.innerWidth - 60, 720);
-        const boardWidth = maxWidth * 0.5;
+        const vw = window.innerWidth;
+        const stacked = vw < 600;
+        const maxWidth = Math.min(vw - (stacked ? 32 : 60), 720);
+        // When stacked (mobile), board and tray sit vertically so each gets full width
+        const boardWidth = stacked ? maxWidth : maxWidth * 0.5;
         TILE_SIZE = Math.floor((boardWidth - (gridSize + 1) * 4) / gridSize);
-        TILE_SIZE = Math.max(40, Math.min(TILE_SIZE, 90));
+        TILE_SIZE = Math.max(44, Math.min(TILE_SIZE, 90));
         TILE_GAP = 4;
       }
 
@@ -718,8 +735,18 @@
         draw();
       }
 
+      function touchToClick(handler) {
+        return function(e) {
+          e.preventDefault();
+          var touch = e.changedTouches[0];
+          handler({ clientX: touch.clientX, clientY: touch.clientY });
+        };
+      }
+
       boardCanvas.addEventListener('click', handleBoardClick);
       trayCanvas.addEventListener('click', handleTrayClick);
+      boardCanvas.addEventListener('touchend', touchToClick(handleBoardClick));
+      trayCanvas.addEventListener('touchend', touchToClick(handleTrayClick));
 
       function setSize(n) {
         gridSize = n;

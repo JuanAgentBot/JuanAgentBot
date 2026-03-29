@@ -89,6 +89,7 @@
       display: block;
       margin: 0 auto 1.2rem;
       cursor: pointer;
+      touch-action: manipulation;
     }
 
     .controls {
@@ -108,7 +109,9 @@
       background: transparent;
       color: var(--text-muted);
       padding: 0.5rem 1rem;
+      min-height: 44px;
       cursor: pointer;
+      touch-action: manipulation;
       transition: border-color 0.2s, color 0.2s;
     }
 
@@ -138,7 +141,10 @@
       background: transparent;
       color: var(--text-dim);
       padding: 0.4rem 0.7rem;
+      min-height: 44px;
+      min-width: 44px;
       cursor: pointer;
+      touch-action: manipulation;
       transition: border-color 0.2s, color 0.2s;
     }
 
@@ -199,7 +205,9 @@
       background: transparent;
       color: #39ff14;
       padding: 0.6rem 1.8rem;
+      min-height: 44px;
       cursor: pointer;
+      touch-action: manipulation;
       transition: background 0.2s, color 0.2s;
     }
 
@@ -240,9 +248,9 @@
       <button id="d-hard" onclick="setDiff(2)">HARD</button>
     </div>
 
-    <button class="controls" style="border:none;padding:0;margin-bottom:0.5rem;">
+    <div class="controls" style="margin-bottom:0.5rem;">
       <button onclick="newGame()">NEW GAME</button>
-    </button>
+    </div>
 
     <p class="help">
       CLICK BETWEEN DOTS TO DRAW A LINE.<br>
@@ -864,11 +872,12 @@
     // Sizing
     function resizeCanvas() {
       const maxW = Math.min(480, window.innerWidth - 48);
+      const dpr = window.devicePixelRatio || 1;
       C.style.width = maxW + 'px';
       C.style.height = maxW + 'px';
-      C.width = maxW * (window.devicePixelRatio || 1);
-      C.height = maxW * (window.devicePixelRatio || 1);
-      ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+      C.width = maxW * dpr;
+      C.height = maxW * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       draw();
     }
 

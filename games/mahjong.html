@@ -244,6 +244,57 @@
     .instructions kbd {
       color: var(--accent-cyan);
     }
+
+    /* Mobile touch & responsive */
+    *, *::before, *::after {
+      touch-action: manipulation;
+    }
+
+    @media (max-width: 600px) {
+      main {
+        padding: 1rem 0.5rem 2rem;
+      }
+
+      h1 {
+        font-size: 1.3rem;
+      }
+
+      .controls {
+        gap: 0.4rem;
+      }
+
+      .controls button {
+        font-size: 0.72rem;
+        padding: 0.55rem 0.9rem;
+        min-height: 44px;
+        min-width: 44px;
+      }
+
+      .info-bar {
+        gap: 1rem;
+        font-size: 0.7rem;
+      }
+
+      .instructions {
+        font-size: 0.62rem;
+        padding: 0 0.5rem;
+      }
+
+      .msg-overlay h2 {
+        font-size: 1.3rem;
+      }
+
+      .msg-overlay p {
+        font-size: 0.75rem;
+        padding: 0 1rem;
+      }
+
+      .msg-overlay button {
+        font-size: 0.75rem;
+        padding: 0.6rem 1.8rem;
+        min-height: 44px;
+      }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>

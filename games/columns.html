@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COLUMNS / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    #game-canvas {
+      display: block;
+      margin: 0 auto 1rem;
+      border: 1px solid var(--border);
+    }
+
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      max-width: 400px;
+      margin: 0 auto 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .hud-score {
+      color: var(--accent-green);
+      text-shadow: 0 0 10px var(--glow-green);
+    }
+
+    .hud-level {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 10px var(--glow-cyan);
+    }
+
+    .hud-high {
+      color: var(--accent-purple);
+      text-shadow: 0 0 10px var(--glow-purple);
+    }
+
+    .next-label {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.3rem;
+    }
+
+    #next-canvas {
+      display: block;
+      margin: 0 auto 1rem;
+      border: 1px solid var(--border);
+    }
+
+    .controls {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      margin-top: 0.5rem;
+      line-height: 1.8;
+    }
+
+    .controls kbd {
+      display: inline-block;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      padding: 0.1em 0.45em;
+      font-family: inherit;
+      font-size: 0.9em;
+      color: var(--accent-cyan);
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 10, 15, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .overlay-box {
+      border: 1px solid var(--accent-magenta);
+      padding: 2.5rem;
+      text-align: center;
+      background: var(--bg);
+      max-width: 320px;
+      box-shadow: 0 0 40px rgba(255, 45, 123, 0.15);
+    }
+
+    .overlay-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.8rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .overlay-text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 1.2rem;
+      line-height: 1.6;
+    }
+
+    .overlay-score {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent-green);
+      text-shadow: 0 0 10px var(--glow-green);
+      margin-bottom: 1rem;
+    }
+
+    .btn {
+      display: inline-block;
+      background: transparent;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      padding: 0.6em 1.8em;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--accent-cyan);
+      color: var(--bg);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>COLUMNS</h1>
+    <p class="subtitle">MATCH GEMS IN LINES OF THREE</p>
+
+    <div class="hud">
+      <span class="hud-score" id="score-display">SCORE: 0</span>
+      <span class="hud-level" id="level-display">LEVEL: 1</span>
+      <span class="hud-high" id="high-display">BEST: 0</span>
+    </div>
+
+    <canvas id="game-canvas" width="240" height="480"></canvas>
+
+    <p class="next-label">NEXT</p>
+    <canvas id="next-canvas" width="40" height="120"></canvas>
+
+    <div class="controls">
+      <kbd>&larr;</kbd> <kbd>&rarr;</kbd> move
+      &nbsp;&middot;&nbsp;
+      <kbd>&uarr;</kbd> cycle gems
+      &nbsp;&middot;&nbsp;
+      <kbd>&darr;</kbd> soft drop
+      &nbsp;&middot;&nbsp;
+      <kbd>SPACE</kbd> hard drop
+    </div>
+
+    <div class="overlay" id="start-overlay">
+      <div class="overlay-box">
+        <div class="overlay-title">COLUMNS</div>
+        <div class="overlay-text">
+          Columns of 3 gems fall into the pit.<br>
+          Match 3 or more of the same color<br>
+          in a row, column, or diagonal to clear them.<br>
+          Cycle the gem order to place them right.
+        </div>
+        <button class="btn" id="start-btn">START</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="over-overlay">
+      <div class="overlay-box">
+        <div class="overlay-title">GAME OVER</div>
+        <div class="overlay-score" id="final-score"></div>
+        <div class="overlay-text" id="final-text"></div>
+        <button class="btn" id="restart-btn">PLAY AGAIN</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="pause-overlay">
+      <div class="overlay-box">
+        <div class="overlay-title">PAUSED</div>
+        <div class="overlay-text">Press <kbd>P</kbd> or <kbd>ESC</kbd> to resume</div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // --- Constants ---
+    var COLS = 6;
+    var ROWS = 12;
+    var CELL = 40;
+    var PIECE_LEN = 3;
+
+    var COLORS = [
+      { fill: '#ff2d7b', glow: 'rgba(255,45,123,0.5)', name: 'magenta' },
+      { fill: '#00f0ff', glow: 'rgba(0,240,255,0.5)', name: 'cyan' },
+      { fill: '#39ff14', glow: 'rgba(57,255,20,0.5)', name: 'green' },
+      { fill: '#9d4edd', glow: 'rgba(157,78,221,0.5)', name: 'purple' },
+      { fill: '#ffb000', glow: 'rgba(255,176,0,0.5)', name: 'amber' }
+    ];
+
+    var BASE_SPEED = 800;
+    var SPEED_DECREASE = 60;
+    var MIN_SPEED = 100;
+    var LINES_PER_LEVEL = 10;
+    var SOFT_DROP_SPEED = 60;
+
+    // --- State ---
+    var canvas = document.getElementById('game-canvas');
+    var ctx = canvas.getContext('2d');
+    var nextCanvas = document.getElementById('next-canvas');
+    var nextCtx = nextCanvas.getContext('2d');
+
+    var grid = [];
+    var piece = null;
+    var nextPiece = null;
+    var score = 0;
+    var highScore = parseInt(localStorage.getItem('columns-high') || '0', 10);
+    var level = 1;
+    var linesCleared = 0;
+    var gameOver = false;
+    var paused = false;
+    var dropTimer = 0;
+    var lastTime = 0;
+    var softDrop = false;
+    var animating = false;
+    var clearingCells = [];
+    var clearFlash = 0;
+    var animFrame = 0;
+
+    // --- DOM ---
+    var scoreEl = document.getElementById('score-display');
+    var levelEl = document.getElementById('level-display');
+    var highEl = document.getElementById('high-display');
+    var startOverlay = document.getElementById('start-overlay');
+    var overOverlay = document.getElementById('over-overlay');
+    var pauseOverlay = document.getElementById('pause-overlay');
+    var startBtn = document.getElementById('start-btn');
+    var restartBtn = document.getElementById('restart-btn');
+    var finalScore = document.getElementById('final-score');
+    var finalText = document.getElementById('final-text');
+
+    // --- Helpers ---
+    function randInt(n) { return Math.floor(Math.random() * n); }
+    function randColor() { return randInt(COLORS.length); }
+
+    function initGrid() {
+      grid = [];
+      for (var r = 0; r < ROWS; r++) {
+        grid[r] = [];
+        for (var c = 0; c < COLS; c++) {
+          grid[r][c] = -1;
+        }
+      }
+    }
+
+    function makePiece() {
+      return {
+        col: Math.floor(COLS / 2),
+        row: -2,
+        gems: [randColor(), randColor(), randColor()]
+      };
+    }
+
+    function getDropSpeed() {
+      var s = BASE_SPEED - (level - 1) * SPEED_DECREASE;
+      return Math.max(s, MIN_SPEED);
+    }
+
+    // --- Piece movement ---
+    function canMove(col, row) {
+      for (var i = 0; i < PIECE_LEN; i++) {
+        var r = row + i;
+        var c = col;
+        if (c < 0 || c >= COLS) return false;
+        if (r >= ROWS) return false;
+        if (r >= 0 && grid[r][c] !== -1) return false;
+      }
+      return true;
+    }
+
+    function lockPiece() {
+      for (var i = 0; i < PIECE_LEN; i++) {
+        var r = piece.row + i;
+        if (r >= 0 && r < ROWS) {
+          grid[r][piece.col] = piece.gems[i];
+        }
+      }
+      // Check if any gem landed above the board
+      if (piece.row < 0) {
+        endGame();
+        return;
+      }
+      piece = null;
+      checkMatches();
+    }
+
+    function moveLeft() {
+      if (!piece || animating) return;
+      if (canMove(piece.col - 1, piece.row)) piece.col--;
+    }
+
+    function moveRight() {
+      if (!piece || animating) return;
+      if (canMove(piece.col + 1, piece.row)) piece.col++;
+    }
+
+    function cycleGems() {
+      if (!piece || animating) return;
+      var g = piece.gems;
+      piece.gems = [g[2], g[0], g[1]];
+    }
+
+    function hardDrop() {
+      if (!piece || animating) return;
+      while (canMove(piece.col, piece.row + 1)) {
+        piece.row++;
+        score += 1;
+      }
+      lockPiece();
+    }
+
+    function dropOne() {
+      if (!piece || animating) return;
+      if (canMove(piece.col, piece.row + 1)) {
+        piece.row++;
+        if (softDrop) score += 1;
+      } else {
+        lockPiece();
+      }
+    }
+
+    // --- Match detection ---
+    function checkMatches() {
+      var matched = findMatches();
+      if (matched.length > 0) {
+        animating = true;
+        clearingCells = matched;
+        clearFlash = 0;
+        animFrame = requestAnimationFrame(animateClear);
+      } else {
+        spawnNext();
+      }
+    }
+
+    function findMatches() {
+      var matched = {};
+      var dirs = [
+        [0, 1],   // horizontal
+        [1, 0],   // vertical
+        [1, 1],   // diagonal down-right
+        [1, -1]   // diagonal down-left
+      ];
+
+      for (var r = 0; r < ROWS; r++) {
+        for (var c = 0; c < COLS; c++) {
+          if (grid[r][c] === -1) continue;
+          var color = grid[r][c];
+
+          for (var d = 0; d < dirs.length; d++) {
+            var dr = dirs[d][0];
+            var dc = dirs[d][1];
+            var chain = [[r, c]];
+
+            var nr = r + dr;
+            var nc = c + dc;
+            while (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && grid[nr][nc] === color) {
+              chain.push([nr, nc]);
+              nr += dr;
+              nc += dc;
+            }
+
+            if (chain.length >= 3) {
+              for (var i = 0; i < chain.length; i++) {
+                var key = chain[i][0] + ',' + chain[i][1];
+                matched[key] = chain[i];
+              }
+            }
+          }
+        }
+      }
+
+      var result = [];
+      for (var k in matched) {
+        result.push(matched[k]);
+      }
+      return result;
+    }
+
+    function animateClear() {
+      clearFlash++;
+      draw();
+
+      if (clearFlash < 20) {
+        animFrame = requestAnimationFrame(animateClear);
+      } else {
+        // Remove matched cells
+        var count = clearingCells.length;
+        for (var i = 0; i < clearingCells.length; i++) {
+          var r = clearingCells[i][0];
+          var c = clearingCells[i][1];
+          grid[r][c] = -1;
+        }
+
+        // Score: base 10 per gem, more for larger groups
+        var bonus = count > 3 ? (count - 3) * 5 : 0;
+        score += count * 10 + bonus;
+        linesCleared += Math.floor(count / 3);
+
+        // Level up
+        var newLevel = Math.floor(linesCleared / LINES_PER_LEVEL) + 1;
+        if (newLevel > level) {
+          level = newLevel;
+        }
+
+        clearingCells = [];
+        animating = false;
+
+        // Gravity: drop floating gems
+        applyGravity();
+
+        // Check for chain reactions
+        var moreMatches = findMatches();
+        if (moreMatches.length > 0) {
+          animating = true;
+          clearingCells = moreMatches;
+          clearFlash = 0;
+          animFrame = requestAnimationFrame(animateClear);
+        } else {
+          spawnNext();
+        }
+      }
+    }
+
+    function applyGravity() {
+      for (var c = 0; c < COLS; c++) {
+        var write = ROWS - 1;
+        for (var r = ROWS - 1; r >= 0; r--) {
+          if (grid[r][c] !== -1) {
+            grid[write][c] = grid[r][c];
+            if (write !== r) grid[r][c] = -1;
+            write--;
+          }
+        }
+        while (write >= 0) {
+          grid[write][c] = -1;
+          write--;
+        }
+      }
+    }
+
+    function spawnNext() {
+      piece = nextPiece;
+      nextPiece = makePiece();
+      dropTimer = 0;
+
+      // Check if piece can be placed
+      if (!canMove(piece.col, piece.row)) {
+        endGame();
+      }
+    }
+
+    // --- Draw ---
+    function drawGem(context, x, y, size, colorIdx, flash) {
+      if (colorIdx < 0) return;
+      var col = COLORS[colorIdx];
+      var pad = 2;
+      var gemSize = size - pad * 2;
+
+      if (flash) {
+        // Flashing effect during clear
+        var alpha = (clearFlash % 4 < 2) ? 1 : 0.2;
+        context.globalAlpha = alpha;
+      }
+
+      // Glow
+      context.shadowColor = col.glow;
+      context.shadowBlur = 8;
+
+      // Gem body
+      context.fillStyle = col.fill;
+      context.fillRect(x + pad, y + pad, gemSize, gemSize);
+
+      // Inner highlight
+      context.shadowBlur = 0;
+      context.fillStyle = 'rgba(255,255,255,0.15)';
+      context.fillRect(x + pad + 2, y + pad + 2, gemSize - 4, gemSize / 3);
+
+      // Inner diamond shape
+      context.fillStyle = 'rgba(255,255,255,0.1)';
+      var cx = x + size / 2;
+      var cy = y + size / 2;
+      var s = gemSize * 0.3;
+      context.beginPath();
+      context.moveTo(cx, cy - s);
+      context.lineTo(cx + s, cy);
+      context.lineTo(cx, cy + s);
+      context.lineTo(cx - s, cy);
+      context.closePath();
+      context.fill();
+
+      context.globalAlpha = 1;
+      context.shadowBlur = 0;
+    }
+
+    function draw() {
+      // Clear
+      ctx.fillStyle = '#0a0a0f';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Grid lines
+      ctx.strokeStyle = 'rgba(122,122,144,0.15)';
+      ctx.lineWidth = 0.5;
+      for (var r = 0; r <= ROWS; r++) {
+        ctx.beginPath();
+        ctx.moveTo(0, r * CELL);
+        ctx.lineTo(COLS * CELL, r * CELL);
+        ctx.stroke();
+      }
+      for (var c = 0; c <= COLS; c++) {
+        ctx.beginPath();
+        ctx.moveTo(c * CELL, 0);
+        ctx.lineTo(c * CELL, ROWS * CELL);
+        ctx.stroke();
+      }
+
+      // Build set of clearing cells for flash check
+      var clearSet = {};
+      for (var i = 0; i < clearingCells.length; i++) {
+        clearSet[clearingCells[i][0] + ',' + clearingCells[i][1]] = true;
+      }
+
+      // Draw grid gems
+      for (var r = 0; r < ROWS; r++) {
+        for (var c = 0; c < COLS; c++) {
+          if (grid[r][c] !== -1) {
+            var isClearing = clearSet[r + ',' + c] || false;
+            drawGem(ctx, c * CELL, r * CELL, CELL, grid[r][c], isClearing);
+          }
+        }
+      }
+
+      // Draw falling piece
+      if (piece && !gameOver) {
+        for (var i = 0; i < PIECE_LEN; i++) {
+          var pr = piece.row + i;
+          if (pr >= 0) {
+            drawGem(ctx, piece.col * CELL, pr * CELL, CELL, piece.gems[i], false);
+          }
+        }
+
+        // Ghost piece
+        var ghostRow = piece.row;
+        while (canMove(piece.col, ghostRow + 1)) ghostRow++;
+        if (ghostRow !== piece.row) {
+          ctx.globalAlpha = 0.2;
+          for (var i = 0; i < PIECE_LEN; i++) {
+            var gr = ghostRow + i;
+            if (gr >= 0 && gr < ROWS) {
+              drawGem(ctx, piece.col * CELL, gr * CELL, CELL, piece.gems[i], false);
+            }
+          }
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      // Draw next piece
+      nextCtx.fillStyle = '#0a0a0f';
+      nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+      if (nextPiece) {
+        for (var i = 0; i < PIECE_LEN; i++) {
+          drawGem(nextCtx, 0, i * CELL, CELL, nextPiece.gems[i], false);
+        }
+      }
+
+      // HUD
+      scoreEl.textContent = 'SCORE: ' + score;
+      levelEl.textContent = 'LEVEL: ' + level;
+      highEl.textContent = 'BEST: ' + highScore;
+    }
+
+    // --- Game loop ---
+    function gameLoop(timestamp) {
+      if (gameOver) return;
+      if (paused) {
+        lastTime = timestamp;
+        requestAnimationFrame(gameLoop);
+        return;
+      }
+
+      var dt = timestamp - lastTime;
+      lastTime = timestamp;
+
+      if (!animating && piece) {
+        dropTimer += dt;
+        var speed = softDrop ? SOFT_DROP_SPEED : getDropSpeed();
+        if (dropTimer >= speed) {
+          dropTimer = 0;
+          dropOne();
+        }
+      }
+
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // --- Game control ---
+    function startGame() {
+      initGrid();
+      score = 0;
+      level = 1;
+      linesCleared = 0;
+      gameOver = false;
+      paused = false;
+      softDrop = false;
+      animating = false;
+      clearingCells = [];
+      dropTimer = 0;
+
+      nextPiece = makePiece();
+      piece = makePiece();
+      piece.row = -2;
+
+      startOverlay.classList.add('hidden');
+      overOverlay.classList.add('hidden');
+      pauseOverlay.classList.add('hidden');
+
+      lastTime = performance.now();
+      requestAnimationFrame(gameLoop);
+      draw();
+    }
+
+    function endGame() {
+      gameOver = true;
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('columns-high', String(highScore));
+      }
+      finalScore.textContent = 'SCORE: ' + score;
+      finalText.textContent = score > highScore - 1 ? 'NEW HIGH SCORE!' : 'LINES CLEARED: ' + linesCleared;
+      overOverlay.classList.remove('hidden');
+    }
+
+    function togglePause() {
+      if (gameOver) return;
+      paused = !paused;
+      pauseOverlay.classList.toggle('hidden', !paused);
+    }
+
+    // --- Input ---
+    document.addEventListener('keydown', function(e) {
+      if (gameOver) return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+        case 'a':
+          e.preventDefault();
+          moveLeft();
+          break;
+        case 'ArrowRight':
+        case 'd':
+          e.preventDefault();
+          moveRight();
+          break;
+        case 'ArrowUp':
+        case 'w':
+          e.preventDefault();
+          cycleGems();
+          break;
+        case 'ArrowDown':
+        case 's':
+          e.preventDefault();
+          softDrop = true;
+          break;
+        case ' ':
+          e.preventDefault();
+          hardDrop();
+          break;
+        case 'p':
+        case 'P':
+        case 'Escape':
+          e.preventDefault();
+          togglePause();
+          break;
+      }
+    });
+
+    document.addEventListener('keyup', function(e) {
+      if (e.key === 'ArrowDown' || e.key === 's') {
+        softDrop = false;
+      }
+    });
+
+    // Touch controls
+    (function() {
+      var touchStartX = 0;
+      var touchStartY = 0;
+      var touchStartTime = 0;
+
+      canvas.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        var t = e.touches[0];
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        touchStartTime = Date.now();
+      }, { passive: false });
+
+      canvas.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        var t = e.changedTouches[0];
+        var dx = t.clientX - touchStartX;
+        var dy = t.clientY - touchStartY;
+        var dt = Date.now() - touchStartTime;
+
+        if (Math.abs(dx) < 20 && Math.abs(dy) < 20 && dt < 300) {
+          // Tap: cycle gems
+          cycleGems();
+        } else if (Math.abs(dx) > Math.abs(dy)) {
+          // Horizontal swipe
+          if (dx > 20) moveRight();
+          else if (dx < -20) moveLeft();
+        } else {
+          // Vertical swipe
+          if (dy > 40) hardDrop();
+        }
+        softDrop = false;
+      }, { passive: false });
+    })();
+
+    // --- Init ---
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', startGame);
+
+    highEl.textContent = 'BEST: ' + highScore;
+    draw();
+  })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

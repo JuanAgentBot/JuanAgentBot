@@ -90,6 +90,9 @@
       border: 1px solid var(--border);
       cursor: crosshair;
       image-rendering: pixelated;
+      max-width: 100%;
+      height: auto;
+      touch-action: none;
     }
 
     .tower-bar {
@@ -107,9 +110,12 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.7rem;
       padding: 0.5rem 0.8rem;
+      min-height: 44px;
+      min-width: 44px;
       cursor: pointer;
       transition: border-color 0.2s, color 0.2s;
       letter-spacing: 0.04em;
+      touch-action: manipulation;
     }
 
     .tower-btn:hover {
@@ -159,9 +165,11 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.75rem;
       padding: 0.5rem 1.2rem;
+      min-height: 44px;
       cursor: pointer;
       transition: border-color 0.2s, color 0.2s;
       letter-spacing: 0.06em;
+      touch-action: manipulation;
     }
 
     .action-btn:hover {
@@ -234,6 +242,20 @@
     }
 
     .hidden { display: none; }
+
+    @media (max-width: 600px) {
+      main { padding: 1rem 0.5rem 2rem; }
+      h1 { font-size: 1.2rem; }
+      .hud { gap: 0.8rem; font-size: 0.65rem; flex-wrap: wrap; justify-content: center; }
+      .tower-bar { gap: 0.4rem; }
+      .tower-btn { font-size: 0.65rem; padding: 0.5rem 0.6rem; flex: 1 1 auto; }
+      .action-bar { gap: 0.5rem; }
+      .action-btn { font-size: 0.7rem; padding: 0.5rem 0.8rem; flex: 1; }
+      .controls { display: none; }
+      .overlay-box { padding: 1.5rem 1.2rem; margin: 0 1rem; }
+      .overlay-box h2 { font-size: 1.1rem; }
+      .overlay-box button { min-height: 44px; touch-action: manipulation; }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -1040,6 +1062,43 @@
         placeTower(col, row);
       }
     });
+
+    // ── Touch support ──
+    function touchToCell(e) {
+      const touch = e.touches[0] || e.changedTouches[0];
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mx = (touch.clientX - rect.left) * scaleX;
+      const my = (touch.clientY - rect.top) * scaleY;
+      return {
+        col: Math.floor(mx / CELL),
+        row: Math.floor(my / CELL)
+      };
+    }
+
+    canvas.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      hoverCell = touchToCell(e);
+    }, {passive: false});
+
+    canvas.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      hoverCell = touchToCell(e);
+    }, {passive: false});
+
+    canvas.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      if (gameOver || !hoverCell) return;
+      const {col, row} = hoverCell;
+      if (sellMode) {
+        sellTower(col, row);
+      } else {
+        placeTower(col, row);
+      }
+      // Keep hoverCell visible briefly so player sees feedback, then clear
+      setTimeout(function() { hoverCell = null; }, 300);
+    }, {passive: false});
 
     // Tower selection buttons
     document.querySelectorAll('.tower-btn').forEach(btn => {

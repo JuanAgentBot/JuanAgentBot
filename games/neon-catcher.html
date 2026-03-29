@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON CATCHER / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+    .back:hover { color: var(--accent-cyan); }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.4rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+    .info {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 1.5rem;
+    }
+    #hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+    }
+    #hud .score { color: var(--accent-cyan); }
+    #hud .level { color: var(--accent-green); }
+    #hud .lives { color: var(--accent-magenta); }
+    #hud .combo { color: var(--accent-purple); }
+    canvas {
+      display: block;
+      width: 100%;
+      border: 1px solid var(--border);
+      cursor: none;
+    }
+    .controls {
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      letter-spacing: 0.06em;
+      margin-top: 0.8rem;
+      line-height: 1.6;
+    }
+    #start-screen, #game-over-screen {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 15, 0.85);
+      z-index: 10;
+    }
+    #start-screen h2, #game-over-screen h2 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+    #game-over-screen .final-score {
+      font-size: 1.1rem;
+      color: var(--accent-cyan);
+      margin-bottom: 0.3rem;
+    }
+    #game-over-screen .final-level {
+      font-size: 0.8rem;
+      color: var(--accent-green);
+      margin-bottom: 1rem;
+    }
+    .btn {
+      background: none;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      padding: 0.6rem 1.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: var(--accent-cyan);
+      color: var(--bg-primary);
+      box-shadow: 0 0 20px var(--glow-cyan-soft);
+    }
+    .canvas-wrap {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+    #best {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      margin-top: 0.5rem;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>NEON CATCHER</h1>
+    <p class="info">CATCH GEMS, DODGE BOMBS, CHASE THE HIGH SCORE</p>
+    <div id="hud">
+      <span class="score">SCORE: <span id="score-val">0</span></span>
+      <span class="combo" id="combo-display"></span>
+      <span class="level">LVL <span id="level-val">1</span></span>
+      <span class="lives" id="lives-val"></span>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="game" width="480" height="600"></canvas>
+      <div id="start-screen">
+        <h2>NEON CATCHER</h2>
+        <button class="btn" id="start-btn">START</button>
+      </div>
+      <div id="game-over-screen" style="display:none;">
+        <h2>GAME OVER</h2>
+        <div class="final-score" id="final-score"></div>
+        <div class="final-level" id="final-level"></div>
+        <button class="btn" id="restart-btn">PLAY AGAIN</button>
+      </div>
+    </div>
+    <p class="controls">MOUSE / TOUCH TO MOVE BASKET &bull; CATCH GEMS &bull; AVOID SKULLS</p>
+    <p id="best"></p>
+  </main>
+  <script src="../theme-toggle.js"></script>
+  <script>
+(function() {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = 480, H = 600;
+
+  // Colors
+  const MAGENTA = '#ff2d7b';
+  const CYAN = '#00f0ff';
+  const GREEN = '#39ff14';
+  const PURPLE = '#9d4edd';
+  const WHITE = '#e0e0e8';
+  const DIM = '#7a7a90';
+  const VOID = '#0a0a0f';
+  const AMBER = '#ffb000';
+  const CRIMSON = '#ff1744';
+
+  // Gem types
+  const GEM_TYPES = [
+    { color: MAGENTA, glow: 'rgba(255,45,123,0.4)', points: 10, shape: 'diamond' },
+    { color: CYAN, glow: 'rgba(0,240,255,0.4)', points: 15, shape: 'circle' },
+    { color: GREEN, glow: 'rgba(57,255,20,0.4)', points: 20, shape: 'hexagon' },
+    { color: PURPLE, glow: 'rgba(157,78,221,0.4)', points: 30, shape: 'star' },
+  ];
+
+  // State
+  let state = 'start'; // start, playing, over
+  let score = 0;
+  let level = 1;
+  let lives = 3;
+  let combo = 0;
+  let maxCombo = 0;
+  let basket = { x: W / 2, w: 70, h: 16 };
+  let items = [];
+  let particles = [];
+  let floatingTexts = [];
+  let shieldTimer = 0;
+  let magnetTimer = 0;
+  let spawnTimer = 0;
+  let spawnInterval = 50;
+  let totalCaught = 0;
+  let best = parseInt(localStorage.getItem('neon-catcher-best') || '0');
+  let mouseX = W / 2;
+  let lastTime = 0;
+  let screenShake = 0;
+
+  function updateBestDisplay() {
+    document.getElementById('best').textContent = best > 0 ? 'BEST: ' + best : '';
+  }
+  updateBestDisplay();
+
+  // Item types: gem, bomb, shield, magnet
+  function createItem() {
+    let type;
+    let r = Math.random();
+    if (r < 0.12 + level * 0.008) {
+      type = 'bomb';
+    } else if (r < 0.15 + level * 0.005) {
+      type = Math.random() < 0.5 ? 'shield' : 'magnet';
+    } else {
+      type = 'gem';
+    }
+
+    let size = type === 'bomb' ? 18 : type === 'gem' ? 14 : 16;
+    let speed = 1.5 + level * 0.3 + Math.random() * 1.2;
+    let gem = type === 'gem' ? GEM_TYPES[Math.floor(Math.random() * GEM_TYPES.length)] : null;
+
+    // Higher-value gems at higher levels
+    if (gem && level >= 3 && Math.random() < 0.3) {
+      gem = GEM_TYPES[2 + Math.floor(Math.random() * 2)];
+    }
+
+    items.push({
+      x: size + Math.random() * (W - size * 2),
+      y: -size,
+      size: size,
+      speed: speed,
+      type: type,
+      gem: gem,
+      wobble: Math.random() * Math.PI * 2,
+      wobbleSpeed: 1 + Math.random() * 2,
+      rotation: 0,
+    });
+  }
+
+  function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      let angle = Math.random() * Math.PI * 2;
+      let speed = 1 + Math.random() * 3;
+      particles.push({
+        x: x, y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1,
+        life: 1,
+        decay: 0.02 + Math.random() * 0.03,
+        color: color,
+        size: 2 + Math.random() * 3,
+      });
+    }
+  }
+
+  function addFloatingText(x, y, text, color) {
+    floatingTexts.push({ x, y, text, color, life: 1, vy: -1.5 });
+  }
+
+  // Drawing helpers
+  function drawDiamond(x, y, s, color, glow) {
+    ctx.save();
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, y - s);
+    ctx.lineTo(x + s * 0.7, y);
+    ctx.lineTo(x, y + s);
+    ctx.lineTo(x - s * 0.7, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // shine
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath();
+    ctx.moveTo(x, y - s);
+    ctx.lineTo(x + s * 0.3, y - s * 0.2);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x - s * 0.15, y - s * 0.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawCircleGem(x, y, s, color, glow) {
+    ctx.save();
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // shine
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath();
+    ctx.arc(x - s * 0.3, y - s * 0.3, s * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawHexagon(x, y, s, color, glow) {
+    ctx.save();
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      let a = Math.PI / 3 * i - Math.PI / 2;
+      let px = x + Math.cos(a) * s;
+      let py = y + Math.sin(a) * s;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.beginPath();
+    ctx.moveTo(x, y - s);
+    ctx.lineTo(x + Math.cos(Math.PI / 6) * s * 0.5, y - s * 0.5);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x - Math.cos(Math.PI / 6) * s * 0.3, y - s * 0.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawStar(x, y, s, color, glow) {
+    ctx.save();
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      let aOuter = Math.PI * 2 / 5 * i - Math.PI / 2;
+      let aInner = aOuter + Math.PI / 5;
+      ctx.lineTo(x + Math.cos(aOuter) * s, y + Math.sin(aOuter) * s);
+      ctx.lineTo(x + Math.cos(aInner) * s * 0.45, y + Math.sin(aInner) * s * 0.45);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawBomb(x, y, s, rotation) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+    // skull body
+    ctx.shadowColor = 'rgba(255,23,68,0.5)';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = CRIMSON;
+    ctx.beginPath();
+    ctx.arc(0, -2, s * 0.85, Math.PI, 0);
+    ctx.lineTo(s * 0.65, s * 0.3);
+    ctx.quadraticCurveTo(s * 0.4, s * 0.8, 0, s * 0.6);
+    ctx.quadraticCurveTo(-s * 0.4, s * 0.8, -s * 0.65, s * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // eyes
+    ctx.fillStyle = VOID;
+    ctx.beginPath();
+    ctx.arc(-s * 0.3, -s * 0.15, s * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(s * 0.3, -s * 0.15, s * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    // mouth
+    ctx.strokeStyle = VOID;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.35, s * 0.3);
+    for (let i = 0; i < 4; i++) {
+      let lx = -s * 0.35 + (s * 0.7 / 4) * (i + 0.5);
+      let ly = s * 0.3 + (i % 2 === 0 ? s * 0.15 : -s * 0.05);
+      ctx.lineTo(lx, ly);
+    }
+    ctx.lineTo(s * 0.35, s * 0.3);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawShieldPowerup(x, y, s) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,240,255,0.5)';
+    ctx.shadowBlur = 14;
+    ctx.strokeStyle = CYAN;
+    ctx.lineWidth = 2.5;
+    // shield shape
+    ctx.beginPath();
+    ctx.moveTo(x, y - s);
+    ctx.lineTo(x + s, y - s * 0.3);
+    ctx.lineTo(x + s * 0.8, y + s * 0.5);
+    ctx.lineTo(x, y + s);
+    ctx.lineTo(x - s * 0.8, y + s * 0.5);
+    ctx.lineTo(x - s, y - s * 0.3);
+    ctx.closePath();
+    ctx.stroke();
+    // S letter
+    ctx.fillStyle = CYAN;
+    ctx.font = 'bold ' + (s * 0.9) + 'px "JetBrains Mono"';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('S', x, y);
+    ctx.restore();
+  }
+
+  function drawMagnetPowerup(x, y, s) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,176,0,0.5)';
+    ctx.shadowBlur = 14;
+    ctx.strokeStyle = AMBER;
+    ctx.lineWidth = 2.5;
+    // U shape for magnet
+    ctx.beginPath();
+    ctx.arc(x, y + s * 0.1, s * 0.65, 0, Math.PI);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x - s * 0.65, y + s * 0.1);
+    ctx.lineTo(x - s * 0.65, y - s * 0.7);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + s * 0.65, y + s * 0.1);
+    ctx.lineTo(x + s * 0.65, y - s * 0.7);
+    ctx.stroke();
+    // tips
+    ctx.fillStyle = CRIMSON;
+    ctx.fillRect(x - s * 0.85, y - s * 0.9, s * 0.4, s * 0.35);
+    ctx.fillStyle = CYAN;
+    ctx.fillRect(x + s * 0.45, y - s * 0.9, s * 0.4, s * 0.35);
+    ctx.restore();
+  }
+
+  function drawBasket(x, y, w, h) {
+    ctx.save();
+    // Shield glow
+    if (shieldTimer > 0) {
+      ctx.shadowColor = 'rgba(0,240,255,0.6)';
+      ctx.shadowBlur = 20;
+    }
+    // Magnet glow
+    if (magnetTimer > 0) {
+      ctx.shadowColor = 'rgba(255,176,0,0.5)';
+      ctx.shadowBlur = 18;
+    }
+    // basket body
+    ctx.fillStyle = shieldTimer > 0 ? CYAN : WHITE;
+    ctx.beginPath();
+    ctx.moveTo(x - w / 2 - 4, y);
+    ctx.lineTo(x - w / 2 + 6, y + h);
+    ctx.lineTo(x + w / 2 - 6, y + h);
+    ctx.lineTo(x + w / 2 + 4, y);
+    ctx.closePath();
+    ctx.fill();
+    // rim
+    ctx.strokeStyle = shieldTimer > 0 ? CYAN : MAGENTA;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = shieldTimer > 0 ? 'rgba(0,240,255,0.6)' : 'rgba(255,45,123,0.5)';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.moveTo(x - w / 2 - 6, y - 1);
+    ctx.lineTo(x + w / 2 + 6, y - 1);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    // inner lines for depth
+    ctx.strokeStyle = DIM;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(x - w / 4, y + 2);
+    ctx.lineTo(x - w / 4 + 3, y + h - 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, y + 2);
+    ctx.lineTo(x, y + h - 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + w / 4, y + 2);
+    ctx.lineTo(x + w / 4 - 3, y + h - 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawItem(item) {
+    let wobbleX = Math.sin(item.wobble) * 1.5;
+    let x = item.x + wobbleX;
+    let y = item.y;
+
+    if (item.type === 'gem') {
+      let g = item.gem;
+      switch (g.shape) {
+        case 'diamond': drawDiamond(x, y, item.size, g.color, g.glow); break;
+        case 'circle': drawCircleGem(x, y, item.size, g.color, g.glow); break;
+        case 'hexagon': drawHexagon(x, y, item.size, g.color, g.glow); break;
+        case 'star': drawStar(x, y, item.size, g.color, g.glow); break;
+      }
+    } else if (item.type === 'bomb') {
+      drawBomb(x, y, item.size, item.rotation);
+    } else if (item.type === 'shield') {
+      drawShieldPowerup(x, y, item.size);
+    } else if (item.type === 'magnet') {
+      drawMagnetPowerup(x, y, item.size);
+    }
+  }
+
+  function drawParticles() {
+    for (let p of particles) {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawFloatingTexts() {
+    for (let ft of floatingTexts) {
+      ctx.globalAlpha = ft.life;
+      ctx.fillStyle = ft.color;
+      ctx.font = 'bold 14px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = ft.color;
+      ctx.shadowBlur = 8;
+      ctx.fillText(ft.text, ft.x, ft.y);
+      ctx.shadowBlur = 0;
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawBackground() {
+    ctx.fillStyle = VOID;
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle grid lines
+    ctx.strokeStyle = 'rgba(122,122,144,0.06)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 40) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let y = 0; y < H; y += 40) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+
+    // Ground line
+    let groundY = H - 40;
+    ctx.strokeStyle = DIM;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, groundY + 20);
+    ctx.lineTo(W, groundY + 20);
+    ctx.stroke();
+  }
+
+  function updateHUD() {
+    document.getElementById('score-val').textContent = score;
+    document.getElementById('level-val').textContent = level;
+    let hearts = '';
+    for (let i = 0; i < lives; i++) hearts += '\u2665 ';
+    document.getElementById('lives-val').textContent = hearts;
+    let cd = document.getElementById('combo-display');
+    if (combo >= 3) {
+      cd.textContent = 'x' + combo + ' COMBO';
+    } else {
+      cd.textContent = '';
+    }
+  }
+
+  function update() {
+    let basketY = H - 50;
+    let effectiveW = basket.w + (magnetTimer > 0 ? 30 : 0);
+
+    // Smooth basket movement toward mouse
+    let targetX = Math.max(effectiveW / 2 + 6, Math.min(W - effectiveW / 2 - 6, mouseX));
+    basket.x += (targetX - basket.x) * 0.15;
+
+    // Spawn items
+    spawnTimer++;
+    spawnInterval = Math.max(15, 50 - level * 3);
+    if (spawnTimer >= spawnInterval) {
+      spawnTimer = 0;
+      createItem();
+    }
+
+    // Update items
+    for (let i = items.length - 1; i >= 0; i--) {
+      let item = items[i];
+      item.y += item.speed;
+      item.wobble += item.wobbleSpeed * 0.05;
+      item.rotation += 0.03;
+
+      // Magnet pull for gems
+      if (magnetTimer > 0 && item.type === 'gem') {
+        let dx = basket.x - item.x;
+        if (Math.abs(dx) < 120 && item.y > basketY - 80) {
+          item.x += dx * 0.04;
+        }
+      }
+
+      // Check catch
+      let catchW = effectiveW / 2 + item.size;
+      if (item.y + item.size >= basketY && item.y - item.size <= basketY + basket.h) {
+        if (Math.abs(item.x - basket.x) < catchW) {
+          // Caught!
+          if (item.type === 'gem') {
+            let pts = item.gem.points;
+            combo++;
+            if (combo > maxCombo) maxCombo = combo;
+            let multiplier = combo >= 10 ? 4 : combo >= 7 ? 3 : combo >= 5 ? 2.5 : combo >= 3 ? 2 : 1;
+            let earned = Math.round(pts * multiplier);
+            score += earned;
+            totalCaught++;
+            spawnParticles(item.x, item.y, item.gem.color, 8);
+            addFloatingText(item.x, item.y - 15, '+' + earned, item.gem.color);
+            // Level up
+            if (totalCaught % 15 === 0) {
+              level++;
+              addFloatingText(W / 2, H / 2, 'LEVEL ' + level, GREEN);
+              spawnParticles(W / 2, H / 2, GREEN, 20);
+            }
+          } else if (item.type === 'bomb') {
+            if (shieldTimer > 0) {
+              shieldTimer = 0;
+              spawnParticles(item.x, item.y, CYAN, 12);
+              addFloatingText(item.x, item.y - 15, 'BLOCKED', CYAN);
+            } else {
+              lives--;
+              combo = 0;
+              screenShake = 10;
+              spawnParticles(item.x, item.y, CRIMSON, 15);
+              addFloatingText(item.x, item.y - 15, '-1', CRIMSON);
+              if (lives <= 0) {
+                state = 'over';
+                if (score > best) {
+                  best = score;
+                  localStorage.setItem('neon-catcher-best', best);
+                  updateBestDisplay();
+                }
+                document.getElementById('final-score').textContent = 'SCORE: ' + score;
+                document.getElementById('final-level').textContent = 'LEVEL ' + level + ' \u2022 MAX COMBO x' + maxCombo;
+                document.getElementById('game-over-screen').style.display = 'flex';
+              }
+            }
+          } else if (item.type === 'shield') {
+            shieldTimer = 300; // 5 seconds at 60fps
+            spawnParticles(item.x, item.y, CYAN, 10);
+            addFloatingText(item.x, item.y - 15, 'SHIELD', CYAN);
+          } else if (item.type === 'magnet') {
+            magnetTimer = 360; // 6 seconds
+            spawnParticles(item.x, item.y, AMBER, 10);
+            addFloatingText(item.x, item.y - 15, 'MAGNET', AMBER);
+          }
+          items.splice(i, 1);
+          continue;
+        }
+      }
+
+      // Missed (fell off bottom)
+      if (item.y > H + 20) {
+        if (item.type === 'gem') {
+          combo = 0;
+        }
+        items.splice(i, 1);
+      }
+    }
+
+    // Update particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      let p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.05;
+      p.life -= p.decay;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // Update floating texts
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+      let ft = floatingTexts[i];
+      ft.y += ft.vy;
+      ft.life -= 0.02;
+      if (ft.life <= 0) floatingTexts.splice(i, 1);
+    }
+
+    // Timers
+    if (shieldTimer > 0) shieldTimer--;
+    if (magnetTimer > 0) magnetTimer--;
+    if (screenShake > 0) screenShake--;
+  }
+
+  function draw() {
+    ctx.save();
+    if (screenShake > 0) {
+      let sx = (Math.random() - 0.5) * screenShake * 0.8;
+      let sy = (Math.random() - 0.5) * screenShake * 0.8;
+      ctx.translate(sx, sy);
+    }
+
+    drawBackground();
+
+    // Draw powerup timers as bars
+    if (shieldTimer > 0) {
+      ctx.fillStyle = 'rgba(0,240,255,0.3)';
+      ctx.fillRect(0, H - 4, W * (shieldTimer / 300), 4);
+    }
+    if (magnetTimer > 0) {
+      ctx.fillStyle = 'rgba(255,176,0,0.3)';
+      ctx.fillRect(0, H - 8, W * (magnetTimer / 360), 4);
+    }
+
+    // Draw items
+    for (let item of items) {
+      drawItem(item);
+    }
+
+    // Draw basket
+    drawBasket(basket.x, H - 50, basket.w + (magnetTimer > 0 ? 30 : 0), basket.h);
+
+    // Draw particles and text
+    drawParticles();
+    drawFloatingTexts();
+
+    ctx.restore();
+  }
+
+  function loop(time) {
+    if (state === 'playing') {
+      update();
+      draw();
+      updateHUD();
+    } else if (state === 'start') {
+      drawBackground();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  function startGame() {
+    score = 0;
+    level = 1;
+    lives = 3;
+    combo = 0;
+    maxCombo = 0;
+    totalCaught = 0;
+    basket.x = W / 2;
+    items = [];
+    particles = [];
+    floatingTexts = [];
+    shieldTimer = 0;
+    magnetTimer = 0;
+    spawnTimer = 0;
+    screenShake = 0;
+    state = 'playing';
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('game-over-screen').style.display = 'none';
+    updateHUD();
+  }
+
+  // Input
+  function getCanvasX(clientX) {
+    let rect = canvas.getBoundingClientRect();
+    return (clientX - rect.left) * (W / rect.width);
+  }
+
+  canvas.addEventListener('mousemove', function(e) {
+    mouseX = getCanvasX(e.clientX);
+  });
+
+  canvas.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    if (e.touches.length > 0) {
+      mouseX = getCanvasX(e.touches[0].clientX);
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    if (e.touches.length > 0) {
+      mouseX = getCanvasX(e.touches[0].clientX);
+    }
+  }, { passive: false });
+
+  document.getElementById('start-btn').addEventListener('click', startGame);
+  document.getElementById('restart-btn').addEventListener('click', startGame);
+
+  // Keyboard fallback
+  let keysDown = {};
+  document.addEventListener('keydown', function(e) {
+    keysDown[e.key] = true;
+    if (e.key === ' ' && state !== 'playing') {
+      startGame();
+    }
+  });
+  document.addEventListener('keyup', function(e) {
+    keysDown[e.key] = false;
+  });
+
+  // Keyboard movement in update
+  let origUpdate = update;
+  update = function() {
+    if (keysDown['ArrowLeft'] || keysDown['a']) mouseX = basket.x - 8;
+    if (keysDown['ArrowRight'] || keysDown['d']) mouseX = basket.x + 8;
+    origUpdate();
+  };
+
+  requestAnimationFrame(loop);
+})();
+  </script>
+</body>
+</html>

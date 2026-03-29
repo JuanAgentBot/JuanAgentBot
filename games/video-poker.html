@@ -22,6 +22,8 @@
       font-family: 'JetBrains Mono', monospace;
       min-height: 100vh;
       overflow-x: hidden;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .top-bar {
       display: flex;
@@ -122,6 +124,7 @@
       position: relative;
       user-select: none;
       background: var(--bg-panel);
+      touch-action: manipulation;
     }
     .card:hover {
       border-color: var(--accent-cyan);
@@ -225,8 +228,11 @@
       font-size: 0.75rem;
       letter-spacing: 0.08em;
       padding: 0.6rem 1.4rem;
+      min-height: 44px;
+      min-width: 44px;
       cursor: pointer;
       transition: all 0.2s;
+      touch-action: manipulation;
     }
     .btn:hover:not(:disabled) {
       border-color: var(--accent-cyan);
@@ -315,16 +321,42 @@
 
     /* Responsive */
     @media (max-width: 520px) {
+      .container { padding: 1rem 0.5rem; }
       .card {
-        width: 60px;
-        height: 88px;
+        width: calc((100vw - 4rem) / 5);
+        max-width: 68px;
+        height: calc((100vw - 4rem) / 5 * 1.45);
+        max-height: 100px;
       }
       .card .rank { font-size: 1rem; }
       .card .suit { font-size: 1.1rem; }
       .card .corner, .card .corner-br { font-size: 0.5rem; }
-      .cards-area { gap: 0.4rem; }
-      .paytable { font-size: 0.55rem; }
-      .paytable th, .paytable td { padding: 0.25rem 0.35rem; }
+      .cards-area { gap: 0.35rem; }
+      .paytable { font-size: 0.5rem; }
+      .paytable th, .paytable td { padding: 0.2rem 0.3rem; }
+      .controls { gap: 0.4rem; }
+      .btn {
+        font-size: 0.65rem;
+        padding: 0.55rem 0.8rem;
+        min-height: 44px;
+        flex: 1 1 auto;
+      }
+      .status-bar { gap: 1rem; font-size: 0.65rem; }
+      .hold-label { font-size: 0.5rem; }
+      .result { font-size: 0.75rem; }
+      .game-title { font-size: 0.85rem; }
+    }
+    @media (max-width: 360px) {
+      .card {
+        width: calc((100vw - 3rem) / 5);
+        height: calc((100vw - 3rem) / 5 * 1.4);
+      }
+      .card .rank { font-size: 0.85rem; }
+      .card .suit { font-size: 0.9rem; }
+      .card .corner, .card .corner-br { display: none; }
+      .btn { font-size: 0.6rem; padding: 0.5rem 0.6rem; }
+      .paytable th, .paytable td { padding: 0.15rem 0.2rem; }
+      .paytable { font-size: 0.45rem; }
     }
   </style>
 </head>
@@ -378,7 +410,7 @@
     </div>
 
     <div class="instructions">
-      <kbd>CLICK</kbd> cards to hold &middot; <kbd>1</kbd>-<kbd>5</kbd> toggle hold &middot;
+      <kbd>TAP</kbd> cards to hold &middot; <kbd>1</kbd>-<kbd>5</kbd> toggle hold &middot;
       <kbd>SPACE</kbd> deal/draw &middot; <kbd>+</kbd>/<kbd>-</kbd> adjust bet
     </div>
   </div>

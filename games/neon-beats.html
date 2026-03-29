@@ -13,6 +13,8 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { touch-action: manipulation; }
     main {
       max-width: 520px;
       margin: 0 auto;
@@ -77,6 +79,44 @@
       font-size: 0.85em;
       color: var(--text-bright);
       margin: 0 0.15em;
+    }
+    /* --- Touch Controls --- */
+    .touch-lanes {
+      display: none;
+      gap: 6px;
+      margin-top: 0.8rem;
+      justify-content: center;
+      touch-action: manipulation;
+    }
+    .touch-lane-btn {
+      flex: 1;
+      max-width: 80px;
+      min-width: 56px;
+      height: 64px;
+      border: 2px solid var(--border);
+      background: rgba(10, 10, 15, 0.7);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: background 0.1s, border-color 0.1s, box-shadow 0.1s;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .touch-lane-btn[data-lane="0"] { border-color: #ff2d7b; color: #ff2d7b; }
+    .touch-lane-btn[data-lane="1"] { border-color: #00f0ff; color: #00f0ff; }
+    .touch-lane-btn[data-lane="2"] { border-color: #39ff14; color: #39ff14; }
+    .touch-lane-btn[data-lane="3"] { border-color: #9d4edd; color: #9d4edd; }
+    .touch-lane-btn.pressed[data-lane="0"] { background: rgba(255,45,123,0.3); box-shadow: 0 0 16px rgba(255,45,123,0.5); }
+    .touch-lane-btn.pressed[data-lane="1"] { background: rgba(0,240,255,0.3); box-shadow: 0 0 16px rgba(0,240,255,0.5); }
+    .touch-lane-btn.pressed[data-lane="2"] { background: rgba(57,255,20,0.3); box-shadow: 0 0 16px rgba(57,255,20,0.5); }
+    .touch-lane-btn.pressed[data-lane="3"] { background: rgba(157,78,221,0.3); box-shadow: 0 0 16px rgba(157,78,221,0.5); }
+    @media (pointer: coarse), (max-width: 600px) {
+      .touch-lanes { display: flex; }
+      .controls { display: none; }
     }
     #start-screen, #results-screen {
       position: absolute;
@@ -197,6 +237,13 @@
       <span>BEST: <span class="streak-val" id="streak-display">0</span></span>
     </div>
 
+    <div class="touch-lanes" id="touch-lanes">
+      <button class="touch-lane-btn" data-lane="0">D</button>
+      <button class="touch-lane-btn" data-lane="1">F</button>
+      <button class="touch-lane-btn" data-lane="2">J</button>
+      <button class="touch-lane-btn" data-lane="3">K</button>
+    </div>
+
     <div class="controls">
       <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> to hit notes<br>
       PERFECT &middot; GOOD &middot; MISS
@@ -221,7 +268,9 @@
     canvas.height = H;
     canvas.style.width = '100%';
     canvas.style.maxWidth = W + 'px';
+    canvas.style.height = 'auto';
     $('game-area').style.maxWidth = W + 'px';
+    $('game-area').style.width = '100%';
 
     // --- Brand colors ---
     const COLORS = ['#ff2d7b', '#00f0ff', '#39ff14', '#9d4edd'];
@@ -607,6 +656,53 @@
 
       resultsScreen.classList.remove('hidden');
     }
+
+    // --- Touch Controls ---
+    document.querySelectorAll('.touch-lane-btn').forEach(btn => {
+      const lane = parseInt(btn.dataset.lane);
+
+      btn.addEventListener('touchstart', e => {
+        e.preventDefault();
+        if (state !== 'playing') return;
+        if (lanePressed[lane]) return;
+        lanePressed[lane] = true;
+        btn.classList.add('pressed');
+        laneFlash[lane] = performance.now();
+        hitLane(lane);
+      }, { passive: false });
+
+      btn.addEventListener('touchend', e => {
+        e.preventDefault();
+        lanePressed[lane] = false;
+        btn.classList.remove('pressed');
+      }, { passive: false });
+
+      btn.addEventListener('touchcancel', e => {
+        lanePressed[lane] = false;
+        btn.classList.remove('pressed');
+      });
+
+      // Mouse fallback for testing
+      btn.addEventListener('mousedown', e => {
+        e.preventDefault();
+        if (state !== 'playing') return;
+        if (lanePressed[lane]) return;
+        lanePressed[lane] = true;
+        btn.classList.add('pressed');
+        laneFlash[lane] = performance.now();
+        hitLane(lane);
+      });
+
+      btn.addEventListener('mouseup', e => {
+        lanePressed[lane] = false;
+        btn.classList.remove('pressed');
+      });
+
+      btn.addEventListener('mouseleave', e => {
+        lanePressed[lane] = false;
+        btn.classList.remove('pressed');
+      });
+    });
 
     // Initial render
     function drawIdle() {

@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON CURLING / ZERO</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    body { margin: 0; background: var(--bg); color: var(--text-muted); font-family: 'JetBrains Mono', monospace; overflow: hidden; }
+    .top-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 10; padding: 0.6rem 1rem; display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); border-bottom: 1px solid var(--border); }
+    .top-bar a { color: var(--text-dim); text-decoration: none; font-size: 0.7rem; letter-spacing: 0.08em; transition: color 0.2s; }
+    .top-bar a:hover { color: var(--accent-cyan); }
+    .title { font-size: 0.9rem; font-weight: 800; color: var(--accent-magenta); letter-spacing: 0.1em; text-shadow: 0 0 10px var(--glow-magenta); }
+    #ui { position: fixed; top: 40px; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    canvas { display: block; image-rendering: pixelated; }
+    .scoreboard { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); display: flex; gap: 2rem; font-size: 0.75rem; z-index: 5; }
+    .score-p { color: #00f0ff; text-shadow: 0 0 8px rgba(0,240,255,0.4); }
+    .score-c { color: #ff2d7b; text-shadow: 0 0 8px rgba(255,45,123,0.4); }
+    .end-info { color: var(--text-dim); font-size: 0.65rem; }
+    .info { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: var(--text-dim); text-align: center; white-space: nowrap; z-index: 5; }
+    .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10,10,15,0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
+    .overlay h2 { font-size: 1.6rem; font-weight: 800; color: var(--accent-magenta); letter-spacing: 0.1em; text-shadow: 0 0 20px var(--glow-magenta); margin-bottom: 1rem; }
+    .overlay p { font-size: 0.8rem; color: var(--text-muted); margin: 0.3rem 0; }
+    .overlay .hl-cyan { color: #00f0ff; }
+    .overlay .hl-mag { color: #ff2d7b; }
+    .overlay .hl-green { color: #39ff14; }
+    .btn { margin-top: 1.5rem; padding: 0.7rem 2rem; background: none; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; cursor: pointer; letter-spacing: 0.08em; transition: all 0.2s; }
+    .btn:hover { background: rgba(0,240,255,0.1); box-shadow: 0 0 15px rgba(0,240,255,0.3); }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="./">&lt; GAME LAB</a>
+    <span class="title">NEON CURLING</span>
+    <span></span>
+  </div>
+
+  <div class="scoreboard">
+    <span class="score-p" id="sp">YOU: 0</span>
+    <span class="end-info" id="ei">END 1 / 4</span>
+    <span class="score-c" id="sc">CPU: 0</span>
+  </div>
+
+  <div id="ui">
+    <canvas id="c"></canvas>
+  </div>
+
+  <div class="info" id="info">CLICK & DRAG from the hack to throw &middot; Aim for the button</div>
+
+  <div class="overlay" id="startScreen">
+    <h2>NEON CURLING</h2>
+    <p>Slide stones toward the <span class="hl-mag">house</span></p>
+    <p>Closest stones to the <span class="hl-cyan">button</span> score</p>
+    <p><span class="hl-green">Click & drag</span> from your stone to aim and set power</p>
+    <p>You (<span class="hl-cyan">cyan</span>) vs CPU (<span class="hl-mag">magenta</span>)</p>
+    <p>4 ends, 4 stones each per end</p>
+    <button class="btn" id="startBtn">PLAY</button>
+  </div>
+
+  <div class="overlay" id="endScreen" style="display:none">
+    <h2 id="endTitle">GAME OVER</h2>
+    <p id="endResult"></p>
+    <p id="endScores"></p>
+    <button class="btn" id="restartBtn">PLAY AGAIN</button>
+  </div>
+
+<script>
+const $ = id => document.getElementById(id);
+const C = $('c'), ctx = C.getContext('2d');
+
+// Dimensions
+const W = 320, H = 680;
+C.width = W; C.height = H;
+C.style.width = W + 'px'; C.style.height = H + 'px';
+
+// Colors
+const VOID = '#0a0a0f', CYAN = '#00f0ff', MAG = '#ff2d7b', GREEN = '#39ff14',
+      PURPLE = '#9d4edd', WHITE = '#e0e0e8', DIM = '#7a7a90', DARK = '#121218';
+
+// House geometry
+const HCX = W / 2, HCY = 130; // House center
+const RINGS = [55, 42, 28, 14]; // Ring radii (12ft, 8ft, 4ft, button)
+const RING_COLORS = ['rgba(255,45,123,0.15)', 'rgba(0,240,255,0.12)', 'rgba(57,255,20,0.1)', 'rgba(157,78,221,0.2)'];
+
+// Stone physics
+const STONE_R = 11;
+const FRICTION = 0.988;
+const MIN_VEL = 0.08;
+const HACK_Y = H - 80; // Where player throws from
+
+// Game state
+let stones = [];
+let playerScore = 0, cpuScore = 0;
+let currentEnd = 1, totalEnds = 4;
+let stonesPerTeam = 4;
+let playerThrown = 0, cpuThrown = 0;
+let turn = 'player'; // 'player' or 'cpu'
+let phase = 'waiting'; // 'waiting', 'aiming', 'sliding', 'scoring', 'done'
+let dragStart = null, dragEnd = null;
+let isDragging = false;
+let cpuTimer = 0;
+let scoreFlash = 0;
+let scoreText = '';
+let particles = [];
+
+function resetEnd() {
+  stones = [];
+  playerThrown = 0;
+  cpuThrown = 0;
+  turn = (currentEnd % 2 === 1) ? 'player' : 'cpu'; // Alternate first throw
+  phase = 'waiting';
+  updateUI();
+}
+
+function updateUI() {
+  $('sp').textContent = 'YOU: ' + playerScore;
+  $('sc').textContent = 'CPU: ' + cpuScore;
+  $('ei').textContent = 'END ' + currentEnd + ' / ' + totalEnds;
+  if (phase === 'waiting') {
+    if (turn === 'player') {
+      $('info').textContent = 'YOUR THROW (' + (playerThrown + 1) + '/' + stonesPerTeam + ') \u00b7 Click & drag to aim';
+    } else {
+      $('info').textContent = 'CPU THROWING (' + (cpuThrown + 1) + '/' + stonesPerTeam + ')...';
+    }
+  } else if (phase === 'sliding') {
+    $('info').textContent = 'SLIDING...';
+  } else if (phase === 'scoring') {
+    $('info').textContent = scoreText;
+  }
+}
+
+// Distance from house center
+function distToButton(s) {
+  const dx = s.x - HCX, dy = s.y - HCY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function scoreEnd() {
+  // Find stones in the house
+  const maxR = RINGS[0];
+  let pStones = stones.filter(s => s.team === 'player' && distToButton(s) <= maxR);
+  let cStones = stones.filter(s => s.team === 'cpu' && distToButton(s) <= maxR);
+
+  // Sort by distance to button
+  pStones.sort((a, b) => distToButton(a) - distToButton(b));
+  cStones.sort((a, b) => distToButton(a) - distToButton(b));
+
+  let endPoints = 0;
+  let winner = '';
+
+  if (pStones.length === 0 && cStones.length === 0) {
+    scoreText = 'BLANK END \u2014 No stones in the house';
+  } else if (pStones.length === 0) {
+    // CPU scores all stones closer than... well, all of them
+    endPoints = cStones.length;
+    winner = 'cpu';
+  } else if (cStones.length === 0) {
+    endPoints = pStones.length;
+    winner = 'player';
+  } else {
+    const bestP = distToButton(pStones[0]);
+    const bestC = distToButton(cStones[0]);
+    if (bestP < bestC) {
+      winner = 'player';
+      // Count player stones closer than best CPU stone
+      endPoints = pStones.filter(s => distToButton(s) < bestC).length;
+    } else {
+      winner = 'cpu';
+      endPoints = cStones.filter(s => distToButton(s) < bestP).length;
+    }
+  }
+
+  if (winner === 'player') {
+    playerScore += endPoints;
+    scoreText = 'YOU SCORE ' + endPoints + '!';
+  } else if (winner === 'cpu') {
+    cpuScore += endPoints;
+    scoreText = 'CPU SCORES ' + endPoints + '!';
+  } else {
+    scoreText = 'BLANK END';
+  }
+
+  scoreFlash = 180;
+  phase = 'scoring';
+  updateUI();
+}
+
+function nextEnd() {
+  currentEnd++;
+  if (currentEnd > totalEnds) {
+    phase = 'done';
+    showEndScreen();
+  } else {
+    resetEnd();
+  }
+}
+
+function showEndScreen() {
+  const et = $('endTitle'), er = $('endResult'), es = $('endScores');
+  if (playerScore > cpuScore) {
+    et.textContent = 'YOU WIN!';
+    et.style.color = CYAN;
+    et.style.textShadow = '0 0 20px rgba(0,240,255,0.5)';
+  } else if (cpuScore > playerScore) {
+    et.textContent = 'CPU WINS';
+    et.style.color = MAG;
+    et.style.textShadow = '0 0 20px rgba(255,45,123,0.5)';
+  } else {
+    et.textContent = 'DRAW';
+    et.style.color = PURPLE;
+    et.style.textShadow = '0 0 20px rgba(157,78,221,0.5)';
+  }
+  er.innerHTML = 'Final: <span class="hl-cyan">' + playerScore + '</span> \u2013 <span class="hl-mag">' + cpuScore + '</span>';
+  es.textContent = totalEnds + ' ends played';
+  $('endScreen').style.display = '';
+}
+
+function throwStone(team, vx, vy) {
+  const s = {
+    x: HCX + (Math.random() - 0.5) * 4,
+    y: HACK_Y,
+    vx: vx,
+    vy: vy,
+    team: team,
+    r: STONE_R
+  };
+  stones.push(s);
+  if (team === 'player') playerThrown++;
+  else cpuThrown++;
+  phase = 'sliding';
+  updateUI();
+}
+
+// CPU AI
+function cpuThrow() {
+  // Aim at button with some randomness
+  const targetX = HCX + (Math.random() - 0.5) * 30;
+  const targetY = HCY + (Math.random() - 0.5) * 20;
+  const dx = targetX - HCX;
+  const dy = targetY - HACK_Y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  // Calculate velocity needed (accounting for friction)
+  // Approximate: need enough velocity to reach the target
+  const speed = 6 + Math.random() * 2.5;
+  const angle = Math.atan2(dy, dx);
+
+  // Add some inaccuracy
+  const offAngle = angle + (Math.random() - 0.5) * 0.12;
+
+  throwStone('cpu', Math.cos(offAngle) * speed * 0.3, Math.sin(offAngle) * speed);
+}
+
+// Collision detection & response
+function resolveCollisions() {
+  for (let i = 0; i < stones.length; i++) {
+    for (let j = i + 1; j < stones.length; j++) {
+      const a = stones[i], b = stones[j];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const minDist = a.r + b.r;
+      if (dist < minDist && dist > 0) {
+        // Separate
+        const overlap = (minDist - dist) / 2;
+        const nx = dx / dist, ny = dy / dist;
+        a.x -= nx * overlap;
+        a.y -= ny * overlap;
+        b.x += nx * overlap;
+        b.y += ny * overlap;
+
+        // Elastic collision
+        const dvx = a.vx - b.vx, dvy = a.vy - b.vy;
+        const dvDotN = dvx * nx + dvy * ny;
+        if (dvDotN > 0) {
+          a.vx -= dvDotN * nx * 0.9;
+          a.vy -= dvDotN * ny * 0.9;
+          b.vx += dvDotN * nx * 0.9;
+          b.vy += dvDotN * ny * 0.9;
+
+          // Collision particles
+          const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+          for (let k = 0; k < 6; k++) {
+            particles.push({
+              x: cx, y: cy,
+              vx: (Math.random() - 0.5) * 3,
+              vy: (Math.random() - 0.5) * 3,
+              life: 30 + Math.random() * 20,
+              color: a.team === 'player' ? CYAN : MAG
+            });
+          }
+        }
+      }
+    }
+  }
+}
+
+function updatePhysics() {
+  let anyMoving = false;
+  for (const s of stones) {
+    s.x += s.vx;
+    s.y += s.vy;
+    s.vx *= FRICTION;
+    s.vy *= FRICTION;
+
+    // Boundary collisions (walls)
+    const margin = 15;
+    if (s.x < margin + s.r) { s.x = margin + s.r; s.vx = Math.abs(s.vx) * 0.5; }
+    if (s.x > W - margin - s.r) { s.x = W - margin - s.r; s.vx = -Math.abs(s.vx) * 0.5; }
+    if (s.y < 20 + s.r) { s.y = 20 + s.r; s.vy = Math.abs(s.vy) * 0.5; }
+    if (s.y > H - 20 - s.r) { s.y = H - 20 - s.r; s.vy = -Math.abs(s.vy) * 0.5; }
+
+    const speed = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
+    if (speed > MIN_VEL) anyMoving = true;
+    else { s.vx = 0; s.vy = 0; }
+  }
+
+  resolveCollisions();
+
+  // Update particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life--;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  return anyMoving;
+}
+
+// Drawing
+function drawSheet() {
+  // Sheet background
+  ctx.fillStyle = VOID;
+  ctx.fillRect(0, 0, W, H);
+
+  // Sheet border
+  ctx.strokeStyle = DIM;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(14, 18, W - 28, H - 36);
+
+  // Ice texture (subtle lines)
+  ctx.strokeStyle = 'rgba(122,122,144,0.08)';
+  ctx.lineWidth = 0.5;
+  for (let y = 30; y < H - 20; y += 12) {
+    ctx.beginPath();
+    ctx.moveTo(20, y);
+    ctx.lineTo(W - 20, y);
+    ctx.stroke();
+  }
+
+  // Center line
+  ctx.strokeStyle = 'rgba(122,122,144,0.2)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(HCX, 30);
+  ctx.lineTo(HCX, H - 30);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Tee line (horizontal through house center)
+  ctx.strokeStyle = 'rgba(122,122,144,0.25)';
+  ctx.beginPath();
+  ctx.moveTo(20, HCY);
+  ctx.lineTo(W - 20, HCY);
+  ctx.stroke();
+
+  // Hog line
+  ctx.strokeStyle = 'rgba(255,45,123,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(20, HCY + RINGS[0] + 30);
+  ctx.lineTo(W - 20, HCY + RINGS[0] + 30);
+  ctx.stroke();
+
+  // Back line
+  ctx.strokeStyle = 'rgba(255,45,123,0.15)';
+  ctx.beginPath();
+  ctx.moveTo(20, HCY - RINGS[0] - 20);
+  ctx.lineTo(W - 20, HCY - RINGS[0] - 20);
+  ctx.stroke();
+
+  // House rings
+  for (let i = 0; i < RINGS.length; i++) {
+    ctx.beginPath();
+    ctx.arc(HCX, HCY, RINGS[i], 0, Math.PI * 2);
+    ctx.fillStyle = RING_COLORS[i];
+    ctx.fill();
+    ctx.strokeStyle = i === RINGS.length - 1 ? 'rgba(157,78,221,0.6)' : 'rgba(122,122,144,0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Button (center dot)
+  ctx.beginPath();
+  ctx.arc(HCX, HCY, 3, 0, Math.PI * 2);
+  ctx.fillStyle = PURPLE;
+  ctx.fill();
+  ctx.shadowColor = 'rgba(157,78,221,0.6)';
+  ctx.shadowBlur = 8;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Hack (throwing position)
+  ctx.strokeStyle = 'rgba(0,240,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(HCX - 15, HACK_Y);
+  ctx.lineTo(HCX + 15, HACK_Y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(HCX, HACK_Y - 8);
+  ctx.lineTo(HCX, HACK_Y + 8);
+  ctx.stroke();
+}
+
+function drawStone(s) {
+  const color = s.team === 'player' ? CYAN : MAG;
+  const glow = s.team === 'player' ? 'rgba(0,240,255,0.3)' : 'rgba(255,45,123,0.3)';
+
+  // Glow
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+  ctx.fillStyle = s.team === 'player' ? 'rgba(0,240,255,0.15)' : 'rgba(255,45,123,0.15)';
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Stone body
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, s.r - 1, 0, Math.PI * 2);
+  ctx.fillStyle = s.team === 'player' ? 'rgba(0,240,255,0.08)' : 'rgba(255,45,123,0.08)';
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Inner ring
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, s.r * 0.5, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Handle dot
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, 2, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawAimLine() {
+  if (!isDragging || !dragStart || !dragEnd) return;
+
+  const dx = dragStart.x - dragEnd.x;
+  const dy = dragStart.y - dragEnd.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const maxDrag = 150;
+  const power = Math.min(dist / maxDrag, 1);
+
+  // Direction line
+  ctx.strokeStyle = 'rgba(0,240,255,0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(HCX, HACK_Y);
+  const lineLen = 60 + power * 200;
+  const angle = Math.atan2(dy, dx);
+  ctx.lineTo(HCX + Math.cos(angle) * lineLen, HACK_Y + Math.sin(angle) * lineLen);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Power bar
+  const barW = 80, barH = 6;
+  const barX = HCX - barW / 2, barY = HACK_Y + 25;
+  ctx.strokeStyle = DIM;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(barX, barY, barW, barH);
+
+  const powerColor = power < 0.3 ? GREEN : power < 0.7 ? CYAN : MAG;
+  ctx.fillStyle = powerColor;
+  ctx.fillRect(barX + 1, barY + 1, (barW - 2) * power, barH - 2);
+
+  // Power text
+  ctx.fillStyle = WHITE;
+  ctx.font = '9px "JetBrains Mono"';
+  ctx.textAlign = 'center';
+  ctx.fillText(Math.round(power * 100) + '%', HCX, barY + barH + 12);
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    const alpha = p.life / 50;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = p.color + Math.round(alpha * 40).toString(16).padStart(2, '0');
+    ctx.fill();
+  }
+}
+
+function drawScoreFlash() {
+  if (scoreFlash <= 0) return;
+  const alpha = Math.min(scoreFlash / 60, 1);
+  ctx.fillStyle = 'rgba(224,224,232,' + (alpha * 0.9) + ')';
+  ctx.font = 'bold 16px "JetBrains Mono"';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = 'rgba(157,78,221,0.5)';
+  ctx.shadowBlur = 15;
+  ctx.fillText(scoreText, HCX, H / 2 - 20);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = 'rgba(122,122,144,' + (alpha * 0.7) + ')';
+  ctx.font = '10px "JetBrains Mono"';
+  ctx.fillText('CLICK TO CONTINUE', HCX, H / 2 + 10);
+}
+
+function drawStoneCount() {
+  // Show remaining stones for each team
+  const py = H - 40;
+  ctx.font = '9px "JetBrains Mono"';
+  ctx.textAlign = 'left';
+
+  // Player stones remaining
+  const pLeft = stonesPerTeam - playerThrown;
+  ctx.fillStyle = CYAN;
+  for (let i = 0; i < pLeft; i++) {
+    ctx.beginPath();
+    ctx.arc(25 + i * 14, py, 4, 0, Math.PI * 2);
+    ctx.strokeStyle = CYAN;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // CPU stones remaining
+  const cLeft = stonesPerTeam - cpuThrown;
+  ctx.fillStyle = MAG;
+  for (let i = 0; i < cLeft; i++) {
+    ctx.beginPath();
+    ctx.arc(W - 25 - i * 14, py, 4, 0, Math.PI * 2);
+    ctx.strokeStyle = MAG;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+}
+
+function drawWaitingStone() {
+  if (phase !== 'waiting' && phase !== 'aiming') return;
+  if (turn !== 'player') return;
+
+  // Draw the stone at the hack ready to throw
+  const s = { x: HCX, y: HACK_Y, r: STONE_R, team: 'player' };
+  drawStone(s);
+}
+
+// Main loop
+function draw() {
+  drawSheet();
+
+  for (const s of stones) drawStone(s);
+  drawParticles();
+  drawWaitingStone();
+  drawAimLine();
+  drawStoneCount();
+  if (scoreFlash > 0) drawScoreFlash();
+}
+
+function update() {
+  if (phase === 'sliding') {
+    const moving = updatePhysics();
+    if (!moving) {
+      // Remove stones that went out of play (past back line by a lot)
+      stones = stones.filter(s => s.y > 10 && s.y < H - 10);
+
+      // Check if end is complete
+      if (playerThrown >= stonesPerTeam && cpuThrown >= stonesPerTeam) {
+        scoreEnd();
+      } else {
+        // Switch turns
+        if (turn === 'player') {
+          if (cpuThrown < stonesPerTeam) turn = 'cpu';
+          else if (playerThrown < stonesPerTeam) turn = 'player';
+        } else {
+          if (playerThrown < stonesPerTeam) turn = 'player';
+          else if (cpuThrown < stonesPerTeam) turn = 'cpu';
+        }
+        phase = 'waiting';
+        if (turn === 'cpu') cpuTimer = 60 + Math.random() * 40;
+        updateUI();
+      }
+    }
+  }
+
+  if (phase === 'waiting' && turn === 'cpu') {
+    cpuTimer--;
+    if (cpuTimer <= 0) {
+      cpuThrow();
+    }
+  }
+
+  if (phase === 'scoring') {
+    scoreFlash--;
+    updateUI();
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// Input
+const rect = () => C.getBoundingClientRect();
+
+function getPos(e) {
+  const r = rect();
+  const cx = (e.touches ? e.touches[0].clientX : e.clientX);
+  const cy = (e.touches ? e.touches[0].clientY : e.clientY);
+  return { x: cx - r.left, y: cy - r.top };
+}
+
+C.addEventListener('mousedown', e => {
+  if (phase === 'scoring') {
+    nextEnd();
+    return;
+  }
+  if (phase !== 'waiting' || turn !== 'player') return;
+  const p = getPos(e);
+  // Must click near the hack area
+  if (Math.abs(p.y - HACK_Y) < 40) {
+    isDragging = true;
+    dragStart = p;
+    dragEnd = p;
+    phase = 'aiming';
+  }
+});
+
+C.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  dragEnd = getPos(e);
+});
+
+C.addEventListener('mouseup', e => {
+  if (!isDragging) return;
+  isDragging = false;
+  dragEnd = getPos(e);
+
+  const dx = dragStart.x - dragEnd.x;
+  const dy = dragStart.y - dragEnd.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const maxDrag = 150;
+  const power = Math.min(dist / maxDrag, 1);
+
+  if (power < 0.05) {
+    phase = 'waiting';
+    return;
+  }
+
+  const angle = Math.atan2(dy, dx);
+  const speed = 2 + power * 8;
+
+  throwStone('player', Math.cos(angle) * speed * 0.3, Math.sin(angle) * speed);
+  dragStart = null;
+  dragEnd = null;
+});
+
+// Touch support
+C.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (phase === 'scoring') { nextEnd(); return; }
+  if (phase !== 'waiting' || turn !== 'player') return;
+  const p = getPos(e);
+  if (Math.abs(p.y - HACK_Y) < 40) {
+    isDragging = true;
+    dragStart = p;
+    dragEnd = p;
+    phase = 'aiming';
+  }
+});
+
+C.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!isDragging) return;
+  dragEnd = { x: e.touches[0].clientX - rect().left, y: e.touches[0].clientY - rect().top };
+});
+
+C.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (!isDragging) return;
+  isDragging = false;
+  const ct = e.changedTouches[0];
+  dragEnd = { x: ct.clientX - rect().left, y: ct.clientY - rect().top };
+
+  const dx = dragStart.x - dragEnd.x;
+  const dy = dragStart.y - dragEnd.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const maxDrag = 150;
+  const power = Math.min(dist / maxDrag, 1);
+
+  if (power < 0.05) { phase = 'waiting'; return; }
+
+  const angle = Math.atan2(dy, dx);
+  const speed = 2 + power * 8;
+  throwStone('player', Math.cos(angle) * speed * 0.3, Math.sin(angle) * speed);
+  dragStart = null;
+  dragEnd = null;
+});
+
+// Start
+$('startBtn').addEventListener('click', () => {
+  $('startScreen').style.display = 'none';
+  resetEnd();
+  loop();
+});
+
+$('restartBtn').addEventListener('click', () => {
+  $('endScreen').style.display = 'none';
+  playerScore = 0;
+  cpuScore = 0;
+  currentEnd = 1;
+  resetEnd();
+});
+</script>
+</body>
+</html>

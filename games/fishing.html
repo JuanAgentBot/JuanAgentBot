@@ -51,6 +51,7 @@
       width: 100vw;
       height: 100vh;
       cursor: crosshair;
+      touch-action: manipulation;
     }
     .controls-hint {
       position: fixed;
@@ -74,7 +75,7 @@
     <div></div>
   </div>
   <canvas id="game-canvas"></canvas>
-  <div class="controls-hint">CLICK/SPACE: CAST &amp; HOOK &bull; HOLD TO SET DEPTH</div>
+  <div class="controls-hint">TAP/CLICK/SPACE: CAST &amp; HOOK &bull; HOLD TO SET DEPTH</div>
   <script>
 (function() {
   const canvas = document.getElementById('game-canvas');
@@ -101,11 +102,12 @@
     boat:    isDark ? '#3a3a50' : '#5a5a70',
   };
 
-  let W, H, WATER_Y;
+  let W, H, WATER_Y, MOBILE;
   function resize() {
     W = canvas.width = window.innerWidth;
     H = canvas.height = window.innerHeight;
     WATER_Y = H * 0.32;
+    MOBILE = W < 600;
   }
   resize();
   window.addEventListener('resize', resize);
@@ -594,23 +596,23 @@
     // Bite indicator
     if (state === STATE.BITE) {
       ctx.save();
-      ctx.font = '700 14px "JetBrains Mono"';
+      ctx.font = MOBILE ? '700 18px "JetBrains Mono"' : '700 14px "JetBrains Mono"';
       ctx.textAlign = 'center';
       ctx.fillStyle = C.amber;
       ctx.shadowColor = C.amber;
       ctx.shadowBlur = 10;
       const bounce = Math.sin(Date.now() * 0.008) * 4;
-      ctx.fillText('! BITE !', hookX, hookY - 20 + bounce);
+      ctx.fillText(MOBILE ? '! TAP !' : '! BITE !', hookX, hookY - 20 + bounce);
 
       // Timer bar
-      const barW = 40;
-      const barH = 4;
+      const barW = MOBILE ? 54 : 40;
+      const barH = MOBILE ? 6 : 4;
       const frac = biteTimer / BITE_WINDOW;
       ctx.fillStyle = frac > 0.3 ? C.green : C.crimson;
-      ctx.fillRect(hookX - barW / 2, hookY - 32, barW * frac, barH);
+      ctx.fillRect(hookX - barW / 2, hookY - 36, barW * frac, barH);
       ctx.strokeStyle = C.dim;
       ctx.lineWidth = 1;
-      ctx.strokeRect(hookX - barW / 2, hookY - 32, barW, barH);
+      ctx.strokeRect(hookX - barW / 2, hookY - 36, barW, barH);
       ctx.shadowBlur = 0;
       ctx.restore();
     }
@@ -618,86 +620,93 @@
 
   function drawDepthMeter() {
     if (state !== STATE.CASTING) return;
-    const meterX = W - 40;
+    const meterW = MOBILE ? 20 : 16;
+    const meterX = W - (MOBILE ? 30 : 40);
     const meterTop = WATER_Y + 20;
     const meterH = H - WATER_Y - 60;
 
     ctx.strokeStyle = C.dim;
     ctx.lineWidth = 1;
-    ctx.strokeRect(meterX - 8, meterTop, 16, meterH);
+    ctx.strokeRect(meterX - meterW / 2, meterTop, meterW, meterH);
 
     ctx.fillStyle = C.cyan;
     ctx.shadowColor = C.cyan;
     ctx.shadowBlur = 6;
     const fillH = meterH * castPower;
-    ctx.fillRect(meterX - 6, meterTop + meterH - fillH, 12, fillH);
+    ctx.fillRect(meterX - meterW / 2 + 2, meterTop + meterH - fillH, meterW - 4, fillH);
     ctx.shadowBlur = 0;
 
-    ctx.font = '600 10px "JetBrains Mono"';
+    ctx.font = MOBILE ? '600 11px "JetBrains Mono"' : '600 10px "JetBrains Mono"';
     ctx.textAlign = 'center';
     ctx.fillStyle = C.white;
     ctx.fillText('DEPTH', meterX, meterTop - 8);
   }
 
   function drawHUD() {
+    const pad = MOBILE ? 12 : 16;
+    const hudY = MOBILE ? 54 : 60;
+    const labelOff = MOBILE ? 16 : 14;
+
     // Score
-    ctx.font = '700 20px "JetBrains Mono"';
+    ctx.font = MOBILE ? '700 22px "JetBrains Mono"' : '700 20px "JetBrains Mono"';
     ctx.textAlign = 'left';
     ctx.fillStyle = C.cyan;
     ctx.shadowColor = C.cyan;
     ctx.shadowBlur = 8;
-    ctx.fillText(score.toString(), 16, 60);
+    ctx.fillText(score.toString(), pad, hudY);
     ctx.shadowBlur = 0;
-    ctx.font = '400 10px "JetBrains Mono"';
+    ctx.font = MOBILE ? '400 11px "JetBrains Mono"' : '400 10px "JetBrains Mono"';
     ctx.fillStyle = C.dim;
-    ctx.fillText('SCORE', 16, 74);
+    ctx.fillText('SCORE', pad, hudY + labelOff);
 
     // Hi score
     ctx.textAlign = 'right';
-    ctx.font = '700 14px "JetBrains Mono"';
+    ctx.font = MOBILE ? '700 16px "JetBrains Mono"' : '700 14px "JetBrains Mono"';
     ctx.fillStyle = C.amber;
-    ctx.fillText(hiScore.toString(), W - 16, 60);
-    ctx.font = '400 10px "JetBrains Mono"';
+    ctx.fillText(hiScore.toString(), W - pad, hudY);
+    ctx.font = MOBILE ? '400 11px "JetBrains Mono"' : '400 10px "JetBrains Mono"';
     ctx.fillStyle = C.dim;
-    ctx.fillText('BEST', W - 16, 74);
+    ctx.fillText('BEST', W - pad, hudY + labelOff);
 
     // Timer
     ctx.textAlign = 'center';
     const mins = Math.floor(timeLeft / 60);
     const secs = Math.floor(timeLeft % 60);
-    ctx.font = '700 16px "JetBrains Mono"';
+    ctx.font = MOBILE ? '700 18px "JetBrains Mono"' : '700 16px "JetBrains Mono"';
     ctx.fillStyle = timeLeft < 15 ? C.crimson : C.white;
     if (timeLeft < 15) {
       ctx.shadowColor = C.crimson;
       ctx.shadowBlur = 8;
     }
-    ctx.fillText(`${mins}:${secs.toString().padStart(2, '0')}`, W / 2, 60);
+    ctx.fillText(`${mins}:${secs.toString().padStart(2, '0')}`, W / 2, hudY);
     ctx.shadowBlur = 0;
-    ctx.font = '400 10px "JetBrains Mono"';
+    ctx.font = MOBILE ? '400 11px "JetBrains Mono"' : '400 10px "JetBrains Mono"';
     ctx.fillStyle = C.dim;
-    ctx.fillText('TIME', W / 2, 74);
+    ctx.fillText('TIME', W / 2, hudY + labelOff);
 
     // Combo
     if (combo > 1) {
-      ctx.font = '700 12px "JetBrains Mono"';
+      ctx.font = MOBILE ? '700 14px "JetBrains Mono"' : '700 12px "JetBrains Mono"';
       ctx.fillStyle = C.green;
       ctx.shadowColor = C.green;
       ctx.shadowBlur = 6;
       ctx.textAlign = 'left';
-      ctx.fillText(`x${Math.min(combo, 5)} COMBO`, 16, 94);
+      ctx.fillText(`x${Math.min(combo, 5)} COMBO`, pad, hudY + 34);
       ctx.shadowBlur = 0;
     }
 
     // Catch log
     ctx.textAlign = 'left';
+    const logStart = hudY + 58;
+    const logSpacing = MOBILE ? 20 : 18;
     for (let i = 0; i < catches.length; i++) {
       const c = catches[i];
       if (c.anim <= 0) continue;
       ctx.globalAlpha = c.anim;
-      ctx.font = '600 11px "JetBrains Mono"';
+      ctx.font = MOBILE ? '600 12px "JetBrains Mono"' : '600 11px "JetBrains Mono"';
       ctx.fillStyle = c.color;
       const sign = c.pts >= 0 ? '+' : '';
-      ctx.fillText(`${c.name} ${sign}${c.pts}`, 16, 118 + i * 18);
+      ctx.fillText(`${c.name} ${sign}${c.pts}`, pad, logStart + i * logSpacing);
     }
     ctx.globalAlpha = 1;
   }
@@ -738,64 +747,70 @@
     ctx.fillRect(0, 0, W, H);
     ctx.globalAlpha = 1;
 
-    const cy = H * 0.4;
+    const cy = H * (MOBILE ? 0.28 : 0.4);
     ctx.textAlign = 'center';
-    ctx.font = '800 32px "JetBrains Mono"';
+    ctx.font = MOBILE ? '800 24px "JetBrains Mono"' : '800 32px "JetBrains Mono"';
     ctx.fillStyle = C.magenta;
     ctx.shadowColor = C.magenta;
     ctx.shadowBlur = 20;
     ctx.fillText('NEON FISHING', W / 2, cy);
     ctx.shadowBlur = 0;
 
-    ctx.font = '400 12px "JetBrains Mono"';
+    ctx.font = MOBILE ? '400 11px "JetBrains Mono"' : '400 12px "JetBrains Mono"';
     ctx.fillStyle = C.dim;
-    ctx.fillText('Cast your line, catch neon fish, chase the high score', W / 2, cy + 30);
+    if (MOBILE) {
+      ctx.fillText('Cast your line, catch neon fish', W / 2, cy + 26);
+    } else {
+      ctx.fillText('Cast your line, catch neon fish, chase the high score', W / 2, cy + 30);
+    }
 
     // Fish legend
-    const legendY = cy + 65;
+    const legendGap = MOBILE ? 22 : 22;
+    const legendY = cy + (MOBILE ? 55 : 65);
+    const legendSpread = MOBILE ? Math.min(W * 0.35, 70) : 80;
     const legendItems = FISH_TYPES.map(t => ({ name: t.name, color: t.color, pts: t.pts }));
     for (let i = 0; i < legendItems.length; i++) {
       const li = legendItems[i];
-      const y = legendY + i * 22;
+      const y = legendY + i * legendGap;
       ctx.fillStyle = li.color;
       ctx.beginPath();
-      ctx.ellipse(W / 2 - 80, y - 4, 8, 4, 0, 0, Math.PI * 2);
+      ctx.ellipse(W / 2 - legendSpread, y - 4, 8, 4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.font = '400 11px "JetBrains Mono"';
+      ctx.font = MOBILE ? '400 12px "JetBrains Mono"' : '400 11px "JetBrains Mono"';
       ctx.textAlign = 'left';
-      ctx.fillText(`${li.name}`, W / 2 - 65, y);
+      ctx.fillText(`${li.name}`, W / 2 - legendSpread + 15, y);
       ctx.textAlign = 'right';
       ctx.fillStyle = li.pts >= 0 ? C.green : C.crimson;
-      ctx.fillText(`${li.pts >= 0 ? '+' : ''}${li.pts}`, W / 2 + 80, y);
+      ctx.fillText(`${li.pts >= 0 ? '+' : ''}${li.pts}`, W / 2 + legendSpread, y);
       ctx.textAlign = 'center';
     }
 
     if (timeLeft <= 0 && score > 0) {
-      ctx.font = '700 18px "JetBrains Mono"';
+      ctx.font = MOBILE ? '700 16px "JetBrains Mono"' : '700 18px "JetBrains Mono"';
       ctx.fillStyle = C.cyan;
       ctx.shadowColor = C.cyan;
       ctx.shadowBlur = 10;
-      ctx.fillText(`FINAL SCORE: ${score}`, W / 2, legendY + legendItems.length * 22 + 25);
+      ctx.fillText(`FINAL SCORE: ${score}`, W / 2, legendY + legendItems.length * legendGap + 25);
       ctx.shadowBlur = 0;
       if (score >= hiScore) {
-        ctx.font = '700 12px "JetBrains Mono"';
+        ctx.font = MOBILE ? '700 12px "JetBrains Mono"' : '700 12px "JetBrains Mono"';
         ctx.fillStyle = C.amber;
-        ctx.fillText('NEW HIGH SCORE!', W / 2, legendY + legendItems.length * 22 + 50);
+        ctx.fillText('NEW HIGH SCORE!', W / 2, legendY + legendItems.length * legendGap + 50);
       }
     }
 
-    ctx.font = '600 13px "JetBrains Mono"';
+    ctx.font = MOBILE ? '600 14px "JetBrains Mono"' : '600 13px "JetBrains Mono"';
     ctx.fillStyle = C.green;
     ctx.shadowColor = C.green;
     ctx.shadowBlur = 8;
     const pulseAlpha = 0.5 + Math.sin(Date.now() * 0.003) * 0.5;
     ctx.globalAlpha = pulseAlpha;
-    ctx.fillText('[ CLICK OR PRESS SPACE ]', W / 2, H * 0.82);
+    ctx.fillText(MOBILE ? '[ TAP TO START ]' : '[ CLICK OR PRESS SPACE ]', W / 2, H * 0.82);
     ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
 
     if (hiScore > 0) {
-      ctx.font = '400 11px "JetBrains Mono"';
+      ctx.font = MOBILE ? '400 12px "JetBrains Mono"' : '400 11px "JetBrains Mono"';
       ctx.fillStyle = C.dim;
       ctx.fillText(`BEST: ${hiScore}`, W / 2, H * 0.88);
     }
@@ -893,7 +908,7 @@
 
     // Casting instruction
     if (state === STATE.CASTING) {
-      ctx.font = '600 12px "JetBrains Mono"';
+      ctx.font = MOBILE ? '600 14px "JetBrains Mono"' : '600 12px "JetBrains Mono"';
       ctx.textAlign = 'center';
       ctx.fillStyle = C.cyan;
       ctx.globalAlpha = 0.7 + Math.sin(Date.now() * 0.005) * 0.3;
@@ -903,10 +918,10 @@
 
     // Idle instruction
     if (state === STATE.IDLE && timeLeft > 0) {
-      ctx.font = '400 11px "JetBrains Mono"';
+      ctx.font = MOBILE ? '400 13px "JetBrains Mono"' : '400 11px "JetBrains Mono"';
       ctx.textAlign = 'center';
       ctx.fillStyle = C.dim;
-      ctx.fillText('CLICK OR SPACE TO CAST', W / 2, H - 40);
+      ctx.fillText(MOBILE ? 'TAP TO CAST' : 'CLICK OR SPACE TO CAST', W / 2, H - 40);
     }
 
     // Menu

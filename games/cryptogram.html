@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRYPTOGRAM / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+    }
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 2rem;
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 1.5rem;
+      font-size: 0.75rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .stat-label { color: var(--text-dim); margin-right: 0.3rem; }
+    .stat-val { color: var(--accent-cyan); }
+    .stat-val.green { color: var(--accent-green); }
+
+    .puzzle-area {
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      line-height: 2.8;
+      user-select: none;
+    }
+
+    .cipher-char {
+      display: inline-block;
+      text-align: center;
+      width: 1.4em;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .cipher-char .guess {
+      display: block;
+      font-size: 1rem;
+      font-weight: 700;
+      height: 1.4em;
+      line-height: 1.4em;
+      color: var(--accent-cyan);
+      border-bottom: 2px solid var(--border);
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .cipher-char .guess.empty {
+      color: transparent;
+    }
+
+    .cipher-char .guess.correct {
+      color: var(--accent-green);
+      border-color: var(--accent-green);
+      text-shadow: 0 0 8px var(--glow-green);
+    }
+
+    .cipher-char .guess.hint {
+      color: var(--accent-purple);
+      border-color: var(--accent-purple);
+      text-shadow: 0 0 8px var(--glow-purple);
+    }
+
+    .cipher-char .cipher {
+      display: block;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 0.15em;
+    }
+
+    .cipher-char.selected .guess {
+      border-color: var(--accent-magenta);
+      box-shadow: 0 2px 0 0 var(--accent-magenta);
+    }
+
+    .cipher-char.selected .cipher {
+      color: var(--accent-magenta);
+    }
+
+    .space-char {
+      display: inline-block;
+      width: 0.8em;
+    }
+
+    .punct-char {
+      display: inline-block;
+      width: 1.1em;
+      text-align: center;
+    }
+
+    .punct-char .top {
+      display: block;
+      font-size: 1rem;
+      font-weight: 700;
+      height: 1.4em;
+      line-height: 1.4em;
+      color: var(--text-muted);
+    }
+
+    .punct-char .bottom {
+      display: block;
+      font-size: 0.7rem;
+      color: transparent;
+      margin-top: 0.15em;
+    }
+
+    .freq-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      margin-bottom: 1.5rem;
+      justify-content: center;
+    }
+
+    .freq-cell {
+      width: 2rem;
+      text-align: center;
+      font-size: 0.65rem;
+      padding: 0.2rem 0;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .freq-cell .fc-letter { display: block; color: var(--text-dim); font-weight: 700; }
+    .freq-cell .fc-count { display: block; color: var(--text-muted); font-size: 0.6rem; }
+    .freq-cell.used .fc-letter { color: var(--accent-green); }
+    .freq-cell.mapped .fc-letter { color: var(--accent-cyan); }
+    .freq-cell:hover { border-color: var(--accent-cyan); }
+
+    .controls {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+    .btn.magenta:hover { border-color: var(--accent-magenta); color: var(--accent-magenta); }
+
+    .instructions {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      line-height: 1.6;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+    .instructions kbd {
+      border: 1px solid var(--border);
+      padding: 0.1em 0.4em;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+
+    .win-banner {
+      text-align: center;
+      padding: 1.5rem;
+      border: 1px solid var(--accent-green);
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+    .win-banner.show { display: block; }
+    .win-banner h2 {
+      color: var(--accent-green);
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 15px var(--glow-green);
+    }
+    .win-banner p { color: var(--text-muted); font-size: 0.8rem; }
+
+    .attribution {
+      text-align: center;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 0.5rem;
+      font-style: italic;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>CRYPTOGRAM</h1>
+    <p class="subtitle">DECODE THE CIPHER. CRACK THE QUOTE.</p>
+
+    <div class="stats-bar">
+      <span><span class="stat-label">PUZZLE</span><span class="stat-val" id="puzzle-num">1/20</span></span>
+      <span><span class="stat-label">SOLVED</span><span class="stat-val green" id="solved-count">0</span></span>
+      <span><span class="stat-label">HINTS</span><span class="stat-val" id="hints-left">3</span></span>
+      <span><span class="stat-label">TIME</span><span class="stat-val" id="timer">0:00</span></span>
+    </div>
+
+    <div class="win-banner" id="win-banner">
+      <h2>DECRYPTED</h2>
+      <p id="win-msg"></p>
+    </div>
+
+    <div class="puzzle-area" id="puzzle-area"></div>
+    <div class="attribution" id="attribution"></div>
+
+    <p style="font-size:0.65rem;color:var(--text-dim);margin-bottom:0.8rem;text-align:center;">CIPHER LETTER FREQUENCY (click to filter)</p>
+    <div class="freq-bar" id="freq-bar"></div>
+
+    <div class="controls">
+      <button class="btn" id="btn-hint">HINT</button>
+      <button class="btn" id="btn-clear">CLEAR ALL</button>
+      <button class="btn magenta" id="btn-next">NEXT PUZZLE &gt;</button>
+    </div>
+
+    <div class="instructions">
+      <p><kbd>Click</kbd> a cipher letter, then type the real letter. All instances update at once.</p>
+      <p><kbd>Backspace</kbd> clears the selected letter. <kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> move between letters.</p>
+      <p><kbd>Hint</kbd> reveals one correct letter (3 per puzzle).</p>
+    </div>
+  </main>
+
+  <script>
+    const QUOTES = [
+      { text: "The only way to do great work is to love what you do", author: "Steve Jobs" },
+      { text: "In the middle of difficulty lies opportunity", author: "Albert Einstein" },
+      { text: "To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment", author: "Ralph Waldo Emerson" },
+      { text: "The future belongs to those who believe in the beauty of their dreams", author: "Eleanor Roosevelt" },
+      { text: "It is not the strongest of the species that survives but the most adaptable to change", author: "Charles Darwin" },
+      { text: "Life is what happens when you are busy making other plans", author: "John Lennon" },
+      { text: "The only thing we have to fear is fear itself", author: "Franklin Roosevelt" },
+      { text: "Imagination is more important than knowledge", author: "Albert Einstein" },
+      { text: "Not all those who wander are lost", author: "J R R Tolkien" },
+      { text: "Be the change that you wish to see in the world", author: "Mahatma Gandhi" },
+      { text: "Simplicity is the ultimate sophistication", author: "Leonardo da Vinci" },
+      { text: "Stay hungry stay foolish", author: "Steve Jobs" },
+      { text: "I think therefore I am", author: "Rene Descartes" },
+      { text: "That which does not kill us makes us stronger", author: "Friedrich Nietzsche" },
+      { text: "The unexamined life is not worth living", author: "Socrates" },
+      { text: "We are what we repeatedly do excellence then is not an act but a habit", author: "Aristotle" },
+      { text: "The best time to plant a tree was twenty years ago the second best time is now", author: "Chinese Proverb" },
+      { text: "Whether you think you can or you think you cannot you are right", author: "Henry Ford" },
+      { text: "Two things are infinite the universe and human stupidity and I am not sure about the universe", author: "Albert Einstein" },
+      { text: "You must be the change you wish to see in the world", author: "Mahatma Gandhi" },
+      { text: "The journey of a thousand miles begins with a single step", author: "Lao Tzu" },
+      { text: "In three words I can sum up everything I learned about life it goes on", author: "Robert Frost" },
+      { text: "Do what you can with what you have where you are", author: "Theodore Roosevelt" },
+      { text: "A room without books is like a body without a soul", author: "Marcus Tullius Cicero" },
+      { text: "If you judge people you have no time to love them", author: "Mother Teresa" },
+      { text: "The only impossible journey is the one you never begin", author: "Tony Robbins" },
+      { text: "Success is not final failure is not fatal it is the courage to continue that counts", author: "Winston Churchill" },
+      { text: "It does not matter how slowly you go as long as you do not stop", author: "Confucius" },
+      { text: "Everything you can imagine is real", author: "Pablo Picasso" },
+      { text: "The mind is everything what you think you become", author: "Buddha" }
+    ];
+
+    let puzzleIndex = 0;
+    let solvedCount = 0;
+    let hintsLeft = 3;
+    let cipher = {};       // original -> cipher
+    let decipher = {};     // cipher -> original
+    let guesses = {};      // cipherLetter -> guessedLetter
+    let hinted = new Set();
+    let selectedCipher = null;
+    let timerStart = 0;
+    let timerInterval = null;
+    let won = false;
+    let shuffledOrder = [];
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function makeCipher() {
+      const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+      let shuffled;
+      do {
+        shuffled = shuffle(alpha);
+      } while (alpha.some((c, i) => c === shuffled[i])); // derangement
+      cipher = {};
+      decipher = {};
+      alpha.forEach((c, i) => {
+        cipher[c] = shuffled[i];
+        decipher[shuffled[i]] = c;
+      });
+    }
+
+    function encrypt(text) {
+      return text.toUpperCase().split('').map(c => cipher[c] || c).join('');
+    }
+
+    function getQuote() {
+      return QUOTES[shuffledOrder[puzzleIndex]];
+    }
+
+    function startTimer() {
+      timerStart = Date.now();
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (won) return;
+        const s = Math.floor((Date.now() - timerStart) / 1000);
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        document.getElementById('timer').textContent = m + ':' + String(sec).padStart(2, '0');
+      }, 250);
+    }
+
+    function renderPuzzle() {
+      const q = getQuote();
+      const plain = q.text.toUpperCase();
+      const encrypted = encrypt(q.text);
+      const area = document.getElementById('puzzle-area');
+      area.innerHTML = '';
+
+      // Build word-wrapped spans
+      const words = [];
+      let wordChars = [];
+      for (let i = 0; i < encrypted.length; i++) {
+        const ec = encrypted[i];
+        const pc = plain[i];
+        if (ec === ' ') {
+          if (wordChars.length) { words.push(wordChars); wordChars = []; }
+          words.push([{ type: 'space' }]);
+        } else if (/[A-Z]/.test(ec)) {
+          wordChars.push({ type: 'letter', cipher: ec, plain: pc, index: i });
+        } else {
+          wordChars.push({ type: 'punct', char: ec });
+        }
+      }
+      if (wordChars.length) words.push(wordChars);
+
+      words.forEach(word => {
+        if (word.length === 1 && word[0].type === 'space') {
+          const sp = document.createElement('span');
+          sp.className = 'space-char';
+          sp.textContent = ' ';
+          area.appendChild(sp);
+          return;
+        }
+        const wrapper = document.createElement('span');
+        wrapper.style.display = 'inline-block';
+        wrapper.style.whiteSpace = 'nowrap';
+        word.forEach(ch => {
+          if (ch.type === 'punct') {
+            const el = document.createElement('span');
+            el.className = 'punct-char';
+            el.innerHTML = '<span class="top">' + ch.char + '</span><span class="bottom">&nbsp;</span>';
+            wrapper.appendChild(el);
+          } else {
+            const el = document.createElement('span');
+            el.className = 'cipher-char';
+            el.dataset.cipher = ch.cipher;
+            el.dataset.plain = ch.plain;
+
+            const g = guesses[ch.cipher] || '';
+            const isCorrect = g === ch.plain;
+            const isHinted = hinted.has(ch.cipher);
+            let cls = 'guess';
+            if (!g) cls += ' empty';
+            else if (isHinted) cls += ' hint';
+            else if (isCorrect) cls += ' correct';
+
+            el.innerHTML =
+              '<span class="' + cls + '">' + (g || '&nbsp;') + '</span>' +
+              '<span class="cipher">' + ch.cipher + '</span>';
+
+            if (ch.cipher === selectedCipher) el.classList.add('selected');
+
+            el.addEventListener('click', () => selectCipher(ch.cipher));
+            wrapper.appendChild(el);
+          }
+        });
+        area.appendChild(wrapper);
+      });
+
+      document.getElementById('attribution').textContent = '';
+    }
+
+    function renderFreqBar() {
+      const q = getQuote();
+      const encrypted = encrypt(q.text);
+      const freq = {};
+      for (const c of encrypted) {
+        if (/[A-Z]/.test(c)) freq[c] = (freq[c] || 0) + 1;
+      }
+
+      const bar = document.getElementById('freq-bar');
+      bar.innerHTML = '';
+      const letters = Object.keys(freq).sort((a, b) => freq[b] - freq[a]);
+      letters.forEach(l => {
+        const cell = document.createElement('div');
+        cell.className = 'freq-cell';
+        if (guesses[l]) cell.classList.add('mapped');
+
+        // Check if this cipher letter's guessed value is correct for ALL occurrences
+        const plain = decipher[l];
+        if (guesses[l] === plain) cell.classList.add('used');
+
+        cell.innerHTML = '<span class="fc-letter">' + l + '</span><span class="fc-count">' + freq[l] + '</span>';
+        cell.addEventListener('click', () => selectCipher(l));
+        bar.appendChild(cell);
+      });
+    }
+
+    function selectCipher(c) {
+      if (won) return;
+      selectedCipher = c;
+      renderPuzzle();
+      renderFreqBar();
+    }
+
+    function checkWin() {
+      const q = getQuote();
+      const plain = q.text.toUpperCase();
+      const uniqueLetters = new Set(plain.replace(/[^A-Z]/g, '').split(''));
+      for (const l of uniqueLetters) {
+        const cl = cipher[l];
+        if (guesses[cl] !== l) return false;
+      }
+      return true;
+    }
+
+    function showWin() {
+      won = true;
+      solvedCount++;
+      const q = getQuote();
+      const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+      const m = Math.floor(elapsed / 60);
+      const s = elapsed % 60;
+      document.getElementById('win-banner').classList.add('show');
+      document.getElementById('win-msg').textContent = 'Cracked in ' + m + ':' + String(s).padStart(2, '0');
+      document.getElementById('solved-count').textContent = solvedCount;
+      document.getElementById('attribution').textContent = '— ' + q.author;
+      selectedCipher = null;
+      renderPuzzle();
+      renderFreqBar();
+    }
+
+    function handleKey(e) {
+      if (won && e.key !== 'Enter') return;
+      if (won && e.key === 'Enter') { nextPuzzle(); return; }
+      if (!selectedCipher) return;
+
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        moveCursor(e.shiftKey ? -1 : 1);
+        return;
+      }
+
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        // Remove any guess that maps to this cipher letter
+        delete guesses[selectedCipher];
+        renderPuzzle();
+        renderFreqBar();
+        return;
+      }
+
+      const letter = e.key.toUpperCase();
+      if (!/^[A-Z]$/.test(letter)) return;
+      e.preventDefault();
+
+      // Remove previous mapping of this letter (so each guess letter used only once)
+      for (const [k, v] of Object.entries(guesses)) {
+        if (v === letter && k !== selectedCipher) {
+          delete guesses[k];
+        }
+      }
+
+      guesses[selectedCipher] = letter;
+      renderPuzzle();
+      renderFreqBar();
+
+      if (checkWin()) {
+        showWin();
+      } else {
+        moveCursor(1);
+      }
+    }
+
+    function moveCursor(dir) {
+      const q = getQuote();
+      const encrypted = encrypt(q.text);
+      const letters = [];
+      const seen = new Set();
+      for (const c of encrypted) {
+        if (/[A-Z]/.test(c) && !seen.has(c)) {
+          seen.add(c);
+          letters.push(c);
+        }
+      }
+      if (!letters.length) return;
+      const idx = letters.indexOf(selectedCipher);
+      let next = idx + dir;
+      if (next < 0) next = letters.length - 1;
+      if (next >= letters.length) next = 0;
+      selectCipher(letters[next]);
+    }
+
+    function giveHint() {
+      if (won || hintsLeft <= 0) return;
+      const q = getQuote();
+      const plain = q.text.toUpperCase();
+      const encrypted = encrypt(q.text);
+
+      // Find an unsolved cipher letter
+      const unsolved = [];
+      const seen = new Set();
+      for (let i = 0; i < encrypted.length; i++) {
+        const ec = encrypted[i];
+        if (/[A-Z]/.test(ec) && !seen.has(ec) && guesses[ec] !== decipher[ec]) {
+          seen.add(ec);
+          unsolved.push(ec);
+        }
+      }
+      if (!unsolved.length) return;
+
+      const pick = unsolved[Math.floor(Math.random() * unsolved.length)];
+      const answer = decipher[pick];
+
+      // Clear conflicting guess
+      for (const [k, v] of Object.entries(guesses)) {
+        if (v === answer && k !== pick) delete guesses[k];
+      }
+
+      guesses[pick] = answer;
+      hinted.add(pick);
+      hintsLeft--;
+      document.getElementById('hints-left').textContent = hintsLeft;
+
+      renderPuzzle();
+      renderFreqBar();
+
+      if (checkWin()) showWin();
+    }
+
+    function clearAll() {
+      if (won) return;
+      // Keep hinted letters
+      const newGuesses = {};
+      for (const c of hinted) {
+        if (guesses[c]) newGuesses[c] = guesses[c];
+      }
+      guesses = newGuesses;
+      selectedCipher = null;
+      renderPuzzle();
+      renderFreqBar();
+    }
+
+    function nextPuzzle() {
+      puzzleIndex++;
+      if (puzzleIndex >= QUOTES.length) {
+        puzzleIndex = 0;
+        shuffledOrder = shuffle([...Array(QUOTES.length).keys()]);
+      }
+      won = false;
+      hintsLeft = 3;
+      guesses = {};
+      hinted = new Set();
+      selectedCipher = null;
+      makeCipher();
+      document.getElementById('win-banner').classList.remove('show');
+      document.getElementById('puzzle-num').textContent = (puzzleIndex + 1) + '/' + QUOTES.length;
+      document.getElementById('hints-left').textContent = hintsLeft;
+      document.getElementById('attribution').textContent = '';
+      startTimer();
+      renderPuzzle();
+      renderFreqBar();
+    }
+
+    function init() {
+      shuffledOrder = shuffle([...Array(QUOTES.length).keys()]);
+      makeCipher();
+      document.getElementById('puzzle-num').textContent = '1/' + QUOTES.length;
+      startTimer();
+      renderPuzzle();
+      renderFreqBar();
+
+      document.addEventListener('keydown', handleKey);
+      document.getElementById('btn-hint').addEventListener('click', giveHint);
+      document.getElementById('btn-clear').addEventListener('click', clearAll);
+      document.getElementById('btn-next').addEventListener('click', nextPuzzle);
+    }
+
+    init();
+  </script>
+</body>
+</html>

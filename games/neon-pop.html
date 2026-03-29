@@ -16,8 +16,10 @@
     main {
       max-width: 620px;
       margin: 0 auto;
-      padding: 2rem 1.5rem 4rem;
+      padding: 2rem 1rem 4rem;
       text-align: center;
+      overflow-x: hidden;
+      box-sizing: border-box;
     }
 
     .back {
@@ -86,10 +88,15 @@
       padding: 2px;
       line-height: 0;
       cursor: pointer;
+      max-width: 100%;
+      box-sizing: border-box;
+      touch-action: manipulation;
     }
 
     canvas {
       display: block;
+      max-width: 100%;
+      height: auto;
     }
 
     .controls {
@@ -107,8 +114,10 @@
       font-size: 0.7rem;
       letter-spacing: 0.08em;
       padding: 0.5rem 1.2rem;
+      min-height: 44px;
       cursor: pointer;
       transition: border-color 0.2s, color 0.2s;
+      touch-action: manipulation;
     }
 
     .btn:hover {
@@ -147,6 +156,7 @@
       justify-content: center;
       gap: 0.5rem;
       margin-bottom: 1rem;
+      flex-wrap: wrap;
     }
 
     .diff-btn {
@@ -154,11 +164,14 @@
       border: 1px solid var(--border);
       color: var(--text-dim);
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.6rem;
+      font-size: 0.65rem;
       letter-spacing: 0.06em;
-      padding: 0.3rem 0.8rem;
+      padding: 0.5rem 1rem;
+      min-height: 44px;
+      min-width: 44px;
       cursor: pointer;
       transition: border-color 0.2s, color 0.2s;
+      touch-action: manipulation;
     }
 
     .diff-btn:hover {
@@ -572,6 +585,14 @@
 
       const group = findGroup(cell[0], cell[1]);
       highlighted = group;
+
+      if (group.length >= 2) {
+        const pts = (group.length - 1) * (group.length - 1);
+        hoverEl.textContent = group.length + ' blocks = +' + pts + ' points';
+      } else {
+        hoverEl.innerHTML = '&nbsp;';
+      }
+
       draw();
     }, { passive: false });
 

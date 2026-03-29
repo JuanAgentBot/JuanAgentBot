@@ -66,7 +66,7 @@
       line-height: 0;
       margin-bottom: 0.6rem;
     }
-    canvas { display: block; image-rendering: pixelated; }
+    canvas { display: block; image-rendering: pixelated; touch-action: manipulation; }
     #log {
       text-align: left;
       font-size: 0.65rem;
@@ -148,8 +148,58 @@
       width: 10px;
       height: 10px;
     }
-    @media (max-width: 500px) {
-      canvas { max-width: 100%; height: auto; }
+    canvas { max-width: 100%; height: auto; }
+    #touch-controls {
+      display: none;
+      margin: 0.6rem auto 0;
+      max-width: 240px;
+      touch-action: manipulation;
+    }
+    .touch-row {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+    .touch-btn {
+      width: 56px;
+      height: 56px;
+      background: rgba(0,240,255,0.06);
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.2rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      transition: background 0.1s;
+    }
+    .touch-btn:active {
+      background: rgba(0,240,255,0.2);
+    }
+    .touch-btn.wait-btn {
+      width: 56px;
+      font-size: 0.6rem;
+      letter-spacing: 0.04em;
+      color: var(--accent-magenta);
+      border-color: var(--accent-magenta);
+      background: rgba(255,45,123,0.06);
+    }
+    .touch-btn.wait-btn:active {
+      background: rgba(255,45,123,0.2);
+    }
+    .touch-spacer {
+      width: 56px;
+      height: 56px;
+    }
+    @media (pointer: coarse) {
+      #touch-controls { display: block; }
+      #controls { display: none; }
     }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
@@ -158,7 +208,7 @@
   <main>
     <a href="./" class="back">&lt; GAME LAB</a>
     <h1>NEON DUNGEON</h1>
-    <p class="info">ARROW KEYS / WASD TO MOVE &middot; BUMP ENEMIES TO ATTACK &middot; REACH THE STAIRS</p>
+    <p class="info">MOVE &middot; BUMP ENEMIES TO ATTACK &middot; REACH THE STAIRS</p>
     <div id="hud">
       <span class="hud-item">HP <span class="hud-val-hp" id="hud-hp">20/20</span></span>
       <span class="hud-item">ATK <span class="hud-val-atk" id="hud-atk">3</span></span>
@@ -177,6 +227,23 @@
     <div id="map-wrap"><canvas id="c"></canvas></div>
     <div id="log"></div>
     <p id="controls">ARROW KEYS / WASD &middot; . OR SPACE TO WAIT</p>
+    <div id="touch-controls">
+      <div class="touch-row">
+        <div class="touch-spacer"></div>
+        <button class="touch-btn" data-dir="up">▲</button>
+        <div class="touch-spacer"></div>
+      </div>
+      <div class="touch-row">
+        <button class="touch-btn" data-dir="left">◀</button>
+        <button class="touch-btn wait-btn" data-dir="wait">WAIT</button>
+        <button class="touch-btn" data-dir="right">▶</button>
+      </div>
+      <div class="touch-row">
+        <div class="touch-spacer"></div>
+        <button class="touch-btn" data-dir="down">▼</button>
+        <div class="touch-spacer"></div>
+      </div>
+    </div>
   </main>
   <div id="overlay">
     <div class="overlay-box">
@@ -703,6 +770,40 @@
     e.preventDefault();
   }, { passive: false });
 
+  // ── touch d-pad buttons ──
+  document.querySelectorAll('#touch-controls .touch-btn').forEach(function(btn) {
+    btn.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      if (gameOver) return;
+      var dir = btn.getAttribute('data-dir');
+      if (dir === 'up') movePlayer(0, -1);
+      else if (dir === 'down') movePlayer(0, 1);
+      else if (dir === 'left') movePlayer(-1, 0);
+      else if (dir === 'right') movePlayer(1, 0);
+      else if (dir === 'wait') {
+        enemyTurns();
+        computeFOV(player.x, player.y, 7);
+        updateHUD();
+        draw();
+      }
+    }, { passive: false });
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (gameOver) return;
+      var dir = btn.getAttribute('data-dir');
+      if (dir === 'up') movePlayer(0, -1);
+      else if (dir === 'down') movePlayer(0, 1);
+      else if (dir === 'left') movePlayer(-1, 0);
+      else if (dir === 'right') movePlayer(1, 0);
+      else if (dir === 'wait') {
+        enemyTurns();
+        computeFOV(player.x, player.y, 7);
+        updateHUD();
+        draw();
+      }
+    });
+  });
+
   // ── start ──
   window.startGame = function() {
     overlay.classList.remove('show');
@@ -717,7 +818,7 @@
   };
 
   // show start screen
-  showOverlay('NEON DUNGEON', '9 floors of procedural dungeon.<br>Fight enemies, find loot, reach the exit.<br><br>Arrow keys / WASD to move.<br>Bump enemies to attack.<br>. or Space to wait a turn.', 'DESCEND');
+  showOverlay('NEON DUNGEON', '9 floors of procedural dungeon.<br>Fight enemies, find loot, reach the exit.<br><br>Arrow keys / WASD / D-pad to move.<br>Bump enemies to attack.<br>. or Space to wait a turn.', 'DESCEND');
 })();
   </script>
 </body>

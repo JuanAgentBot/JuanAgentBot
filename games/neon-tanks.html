@@ -13,7 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
-    body { margin: 0; overflow: hidden; background: #0a0a0f; font-family: 'JetBrains Mono', monospace; color: #e0e0e8; }
+    body { margin: 0; overflow: hidden; background: #0a0a0f; font-family: 'JetBrains Mono', monospace; color: #e0e0e8; touch-action: manipulation; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
     .top-bar { position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; z-index: 100; background: rgba(10,10,15,0.85); border-bottom: 1px solid #7a7a90; }
     .back { color: #7a7a90; text-decoration: none; font-size: 0.7rem; letter-spacing: 0.08em; transition: color 0.3s; }
     .back:hover { color: #00f0ff; }
@@ -33,6 +33,88 @@
     .btn { background: none; border: 1px solid #ff2d7b; color: #ff2d7b; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; padding: 0.6rem 2rem; cursor: pointer; transition: all 0.25s; }
     .btn:hover { background: #ff2d7b; color: #0a0a0f; box-shadow: 0 0 20px rgba(255,45,123,0.4); }
     .hidden { display: none !important; }
+
+    /* Mobile responsive */
+    @media (max-width: 600px) {
+      .top-bar { padding: 0.3rem 0.5rem; }
+      .title { font-size: 0.7rem; }
+      .hud { gap: 0.6rem; font-size: 0.55rem; }
+      .back { font-size: 0.55rem; }
+      #overlay h2 { font-size: 1.1rem; }
+      #overlay .controls { font-size: 0.6rem; line-height: 1.6; }
+      #overlay .btn { padding: 0.8rem 2.5rem; font-size: 0.85rem; }
+    }
+
+    /* Touch controls */
+    .touch-controls {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 1.2rem;
+      z-index: 150;
+      justify-content: space-between;
+      align-items: flex-end;
+      pointer-events: none;
+    }
+    .touch-controls > * { pointer-events: auto; }
+
+    .touch-dpad {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .dpad-mid { display: flex; gap: 4px; }
+    .dpad-center { width: 52px; height: 52px; }
+
+    .touch-btn {
+      width: 52px;
+      height: 52px;
+      background: rgba(0,240,255,0.08);
+      border: 1px solid rgba(0,240,255,0.35);
+      color: rgba(0,240,255,0.7);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
+      cursor: pointer;
+    }
+    .touch-btn:active, .touch-btn.active {
+      background: rgba(0,240,255,0.22);
+      border-color: rgba(0,240,255,0.6);
+      color: #00f0ff;
+    }
+
+    .fire-btn {
+      width: 76px;
+      height: 76px;
+      background: rgba(255,45,123,0.1);
+      border: 2px solid rgba(255,45,123,0.45);
+      color: rgba(255,45,123,0.8);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      border-radius: 50%;
+    }
+    .fire-btn:active, .fire-btn.active {
+      background: rgba(255,45,123,0.25);
+      border-color: rgba(255,45,123,0.7);
+      color: #ff2d7b;
+      box-shadow: 0 0 15px rgba(255,45,123,0.3);
+    }
+
+    .touch-hint { display: none; color: #9d4edd; }
+    @media (pointer: coarse) {
+      .touch-controls { display: flex; }
+      .touch-hint { display: inline; }
+    }
   </style>
 </head>
 <body>
@@ -51,6 +133,7 @@
     <div class="sub">TOP-DOWN ARENA COMBAT</div>
     <div class="controls">
       <span>WASD</span> move &middot; <span>MOUSE</span> aim &middot; <span>CLICK</span> fire<br>
+      <span class="touch-hint">D-PAD move &middot; TAP aim &middot; FIRE button shoot<br></span>
       Destroy enemy tanks. Survive the waves.<br>
       <span>Green</span> pickups restore HP.
     </div>
@@ -60,6 +143,19 @@
   </div>
 
   <canvas id="c"></canvas>
+
+  <div id="touch-controls" class="touch-controls">
+    <div class="touch-dpad">
+      <button class="touch-btn" data-key="w">▲</button>
+      <div class="dpad-mid">
+        <button class="touch-btn" data-key="a">◄</button>
+        <div class="dpad-center"></div>
+        <button class="touch-btn" data-key="d">►</button>
+      </div>
+      <button class="touch-btn" data-key="s">▼</button>
+    </div>
+    <button class="touch-btn fire-btn" id="fire-btn">FIRE</button>
+  </div>
 
   <script>
   (() => {
@@ -92,7 +188,7 @@
 
     // Input
     const keys = {};
-    let mouseX = 0, mouseY = 0, mouseDown = false;
+    let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2, mouseDown = false;
     window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
     window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
     canvas.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
@@ -563,6 +659,90 @@
       overlay.classList.add('hidden');
       init();
       running = true;
+    });
+
+    // Touch controls
+    let touchAiming = false;
+    let touchFiring = false;
+    let aimTouchId = null;
+
+    // D-pad buttons
+    document.querySelectorAll('[data-key]').forEach(btn => {
+      const key = btn.dataset.key;
+      btn.addEventListener('touchstart', e => {
+        e.preventDefault();
+        keys[key] = true;
+        btn.classList.add('active');
+      });
+      btn.addEventListener('touchend', e => {
+        e.preventDefault();
+        keys[key] = false;
+        btn.classList.remove('active');
+      });
+      btn.addEventListener('touchcancel', e => {
+        keys[key] = false;
+        btn.classList.remove('active');
+      });
+    });
+
+    // Fire button
+    const fireBtn = document.getElementById('fire-btn');
+    fireBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      touchFiring = true;
+      mouseDown = true;
+      fireBtn.classList.add('active');
+    });
+    fireBtn.addEventListener('touchend', e => {
+      e.preventDefault();
+      touchFiring = false;
+      mouseDown = touchAiming;
+      fireBtn.classList.remove('active');
+    });
+    fireBtn.addEventListener('touchcancel', e => {
+      touchFiring = false;
+      mouseDown = touchAiming;
+      fireBtn.classList.remove('active');
+    });
+
+    // Canvas touch = aim + fire
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const t = e.changedTouches[0];
+      aimTouchId = t.identifier;
+      mouseX = t.clientX;
+      mouseY = t.clientY;
+      touchAiming = true;
+      mouseDown = true;
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        if (t.identifier === aimTouchId) {
+          mouseX = t.clientX;
+          mouseY = t.clientY;
+          break;
+        }
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', e => {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === aimTouchId) {
+          touchAiming = false;
+          mouseDown = touchFiring;
+          aimTouchId = null;
+          break;
+        }
+      }
+    });
+
+    canvas.addEventListener('touchcancel', e => {
+      touchAiming = false;
+      mouseDown = touchFiring;
+      aimTouchId = null;
     });
 
     // Draw initial frame

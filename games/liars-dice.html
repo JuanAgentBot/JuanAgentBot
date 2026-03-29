@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LIAR'S DICE / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 2rem;
+    }
+
+    /* Game area */
+    .game-area {
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      min-height: 360px;
+      position: relative;
+    }
+
+    /* Sections */
+    .section-label {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.8rem;
+      text-align: left;
+    }
+
+    /* Dice display */
+    .dice-row {
+      display: flex;
+      gap: 0.6rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .die {
+      width: 52px;
+      height: 52px;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--accent-cyan);
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .die.hidden-die {
+      color: var(--text-dim);
+      border-color: var(--text-dim);
+      font-size: 1rem;
+    }
+
+    .die.revealed {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+      text-shadow: 0 0 10px var(--glow-magenta);
+    }
+
+    .die.match {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
+    }
+
+    .die.lost {
+      opacity: 0.3;
+    }
+
+    /* Player info */
+    .player-section {
+      margin-bottom: 1.2rem;
+      padding: 0.8rem;
+      border: 1px solid var(--border);
+    }
+
+    .player-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    .player-name.you { color: var(--accent-cyan); }
+    .player-name.cpu { color: var(--accent-magenta); }
+
+    .dice-count {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Bid area */
+    .bid-area {
+      margin-top: 1.2rem;
+      padding: 1rem;
+      border: 1px solid var(--border);
+    }
+
+    .bid-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.8rem;
+    }
+
+    .current-bid {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent-green);
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+      margin-bottom: 1rem;
+      min-height: 1.5rem;
+    }
+
+    .bid-controls {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 0.8rem;
+      flex-wrap: wrap;
+    }
+
+    .bid-spinner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .bid-spinner label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+    }
+
+    .spinner-row {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .spin-btn {
+      width: 28px;
+      height: 28px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .spin-btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .spin-val {
+      width: 36px;
+      height: 28px;
+      background: transparent;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .bid-x {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      margin: 0 0.2rem;
+      padding-top: 1rem;
+    }
+
+    /* Action buttons */
+    .actions {
+      display: flex;
+      gap: 0.6rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 0.5rem 1.2rem;
+      background: transparent;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:hover:not(:disabled) {
+      background: var(--accent-cyan);
+      color: var(--bg);
+      box-shadow: 0 0 16px var(--glow-cyan-soft);
+    }
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    .btn-liar {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+    }
+    .btn-liar:hover:not(:disabled) {
+      background: var(--accent-magenta);
+      color: var(--bg);
+      box-shadow: 0 0 16px var(--glow-magenta);
+    }
+
+    .btn-green {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+    .btn-green:hover:not(:disabled) {
+      background: var(--accent-green);
+      color: var(--bg);
+      box-shadow: 0 0 16px rgba(57, 255, 20, 0.4);
+    }
+
+    /* Message log */
+    .log {
+      margin-top: 1rem;
+      padding: 0.8rem;
+      border: 1px solid var(--border);
+      max-height: 160px;
+      overflow-y: auto;
+      text-align: left;
+    }
+
+    .log-entry {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+      line-height: 1.4;
+    }
+
+    .log-entry.you-msg { color: var(--accent-cyan); }
+    .log-entry.cpu-msg { color: var(--accent-magenta); }
+    .log-entry.result-msg { color: var(--accent-green); }
+    .log-entry.lose-msg { color: #ff1744; }
+
+    /* Score area */
+    .score-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding: 0.6rem 1rem;
+      border: 1px solid var(--border);
+    }
+
+    .score-item {
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+    }
+
+    .score-item span {
+      font-weight: 700;
+    }
+
+    .score-you span { color: var(--accent-cyan); }
+    .score-cpu span { color: var(--accent-magenta); }
+    .score-round span { color: var(--accent-purple); }
+
+    /* Reveal overlay */
+    .reveal-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10, 10, 15, 0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      z-index: 10;
+      padding: 1.5rem;
+    }
+
+    .reveal-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+    }
+
+    .reveal-title.win { color: var(--accent-green); text-shadow: 0 0 16px rgba(57, 255, 20, 0.5); }
+    .reveal-title.lose { color: #ff1744; text-shadow: 0 0 16px rgba(255, 23, 68, 0.5); }
+
+    .reveal-detail {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      max-width: 400px;
+    }
+
+    .reveal-dice {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 0.5rem 0;
+    }
+
+    .reveal-dice .die {
+      width: 42px;
+      height: 42px;
+      font-size: 1.1rem;
+    }
+
+    /* Rules */
+    .rules {
+      border: 1px solid var(--border);
+      padding: 1rem;
+      margin-top: 1.5rem;
+      text-align: left;
+    }
+
+    .rules summary {
+      font-size: 0.7rem;
+      color: var(--accent-purple);
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .rules p {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-top: 0.6rem;
+    }
+
+    /* Game over */
+    .game-over {
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .game-over h2 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      margin-bottom: 0.5rem;
+    }
+
+    .game-over h2.win { color: var(--accent-green); text-shadow: 0 0 20px rgba(57, 255, 20, 0.5); }
+    .game-over h2.lose { color: #ff1744; text-shadow: 0 0 20px rgba(255, 23, 68, 0.5); }
+
+    .game-over p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+    }
+
+    /* Settings */
+    .settings {
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: 0.6rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .setting-btn {
+      padding: 0.4rem 0.8rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .setting-btn.active {
+      border-color: var(--accent-purple);
+      color: var(--accent-purple);
+    }
+
+    .setting-btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    /* Animations */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-4px) rotate(-2deg); }
+      40% { transform: translateX(4px) rotate(2deg); }
+      60% { transform: translateX(-3px) rotate(-1deg); }
+      80% { transform: translateX(3px) rotate(1deg); }
+    }
+
+    .shaking .die {
+      animation: shake 0.5s ease-in-out;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: none; }
+      50% { box-shadow: 0 0 12px var(--glow-cyan-soft); }
+    }
+
+    .your-turn .bid-area {
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>LIAR'S DICE</h1>
+    <p class="subtitle">BLUFF, BID, OR CALL THE LIAR</p>
+
+    <div id="app"></div>
+
+    <details class="rules">
+      <summary>HOW TO PLAY</summary>
+      <p>
+        Both you and the CPU start with 5 dice each. Each round, everyone rolls their dice in secret.<br><br>
+        <strong>Bidding:</strong> A bid is a claim about how many dice of a certain face value exist across ALL dice on the table.
+        Each bid must be higher than the last: either more dice of the same or any face, or the same count of a higher face.<br><br>
+        <strong>Ones are wild:</strong> Dice showing 1 count as any face value. This means there are more of every number than you might think.<br><br>
+        <strong>Calling LIAR:</strong> Instead of raising the bid, you can call "LIAR!" All dice are revealed.
+        If the actual count meets or exceeds the bid, the caller loses a die. If the bid was too high, the bidder loses a die.<br><br>
+        <strong>Winning:</strong> The last player with dice remaining wins. Lose all your dice and it's game over.<br><br>
+        <strong>Controls:</strong> Use the +/- buttons to set your bid quantity and face value, then click BID. Or click LIAR to challenge.
+      </p>
+    </details>
+  </main>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // --- State ---
+    const state = {
+      players: 2, // you + CPU(s)
+      cpuCount: 1,
+      yourDice: [],
+      cpuDice: [[]],
+      yourMax: 5,
+      cpuMax: [5],
+      startingDice: 5,
+      currentBid: null, // { quantity, face, player }
+      whoseTurn: 'you', // 'you' or 'cpu0'
+      phase: 'menu', // 'menu', 'rolling', 'bidding', 'revealing', 'roundEnd', 'gameOver'
+      log: [],
+      wins: 0,
+      losses: 0,
+      round: 1,
+      difficulty: 'normal', // 'easy', 'normal', 'hard'
+      revealData: null,
+    };
+
+    const app = document.getElementById('app');
+
+    // --- Helpers ---
+    function rollDie() { return Math.floor(Math.random() * 6) + 1; }
+
+    function rollDice(n) {
+      const dice = [];
+      for (let i = 0; i < n; i++) dice.push(rollDie());
+      return dice.sort((a, b) => a - b);
+    }
+
+    function totalDiceOnTable() {
+      return state.yourDice.length + state.cpuDice.reduce((s, d) => s + d.length, 0);
+    }
+
+    function countFace(face) {
+      let count = 0;
+      const allDice = [...state.yourDice, ...state.cpuDice.flat()];
+      for (const d of allDice) {
+        if (d === face || d === 1) count++; // 1s are wild
+      }
+      return count;
+    }
+
+    function bidIsHigher(newQ, newF, oldBid) {
+      if (!oldBid) return newQ >= 1 && newF >= 1 && newF <= 6;
+      if (newQ > oldBid.quantity) return true;
+      if (newQ === oldBid.quantity && newF > oldBid.face) return true;
+      return false;
+    }
+
+    function addLog(msg, cls) {
+      state.log.push({ msg, cls });
+      if (state.log.length > 50) state.log.shift();
+    }
+
+    // --- CPU AI ---
+    function cpuDecide(cpuIdx) {
+      const myDice = state.cpuDice[cpuIdx];
+      const bid = state.currentBid;
+      const total = totalDiceOnTable();
+
+      // Count what we have (including wilds)
+      const myCounts = [0, 0, 0, 0, 0, 0, 0]; // index 0 unused
+      for (const d of myDice) myCounts[d]++;
+      const myWilds = myCounts[1];
+
+      if (!bid) {
+        // First bid: bid based on what we have
+        let bestFace = 2, bestCount = 0;
+        for (let f = 2; f <= 6; f++) {
+          const c = myCounts[f] + myWilds;
+          if (c > bestCount) { bestCount = c; bestFace = f; }
+        }
+        // Bid conservatively
+        const quantity = Math.max(1, Math.min(bestCount, Math.ceil(total / 3)));
+        return { action: 'bid', quantity, face: bestFace };
+      }
+
+      // Evaluate current bid likelihood
+      const actualCount = countFace(bid.face);
+      const myCount = myCounts[bid.face] + myWilds;
+      const unknownDice = total - myDice.length;
+      const expectedFromOthers = unknownDice / 3; // ~1/3 chance each unknown die matches (including wilds)
+      const expectedTotal = myCount + expectedFromOthers;
+
+      // Difficulty adjustments
+      let callThreshold, bluffChance;
+      if (state.difficulty === 'easy') {
+        callThreshold = 0.7; // calls liar more readily (less accurate)
+        bluffChance = 0.05;
+      } else if (state.difficulty === 'hard') {
+        callThreshold = 1.3; // more tolerant of high bids
+        bluffChance = 0.2;
+      } else {
+        callThreshold = 1.0;
+        bluffChance = 0.1;
+      }
+
+      // Should we call liar?
+      if (bid.quantity > expectedTotal * callThreshold) {
+        // Likely a lie
+        if (Math.random() < 0.85) return { action: 'liar' };
+      }
+
+      // Very high bid relative to total dice
+      if (bid.quantity > total * 0.6) {
+        if (Math.random() < 0.6) return { action: 'liar' };
+      }
+
+      // Try to make a reasonable bid
+      // Option 1: raise quantity on same face
+      // Option 2: same quantity, higher face
+      // Option 3: bluff
+
+      let options = [];
+
+      // Raise quantity by 1 on a face we're strong in
+      for (let f = 2; f <= 6; f++) {
+        const q = bid.face <= f ? bid.quantity : bid.quantity + 1;
+        const nq = bid.face < f ? bid.quantity : bid.quantity + 1;
+        if (bidIsHigher(nq, f, bid)) {
+          const confidence = (myCounts[f] + myWilds) / nq;
+          options.push({ quantity: nq, face: f, confidence });
+        }
+      }
+
+      // Same quantity, higher face
+      for (let f = bid.face + 1; f <= 6; f++) {
+        if (bidIsHigher(bid.quantity, f, bid)) {
+          const confidence = (myCounts[f] + myWilds) / bid.quantity;
+          options.push({ quantity: bid.quantity, face: f, confidence });
+        }
+      }
+
+      // Filter to reasonable bids
+      options = options.filter(o => o.quantity <= total);
+
+      if (options.length === 0) return { action: 'liar' };
+
+      // Sort by confidence
+      options.sort((a, b) => b.confidence - a.confidence);
+
+      // Sometimes bluff
+      if (Math.random() < bluffChance && options.length > 1) {
+        const pick = options[Math.min(options.length - 1, 1 + Math.floor(Math.random() * 2))];
+        if (pick) return { action: 'bid', quantity: pick.quantity, face: pick.face };
+      }
+
+      const pick = options[0];
+      return { action: 'bid', quantity: pick.quantity, face: pick.face };
+    }
+
+    // --- Render ---
+    function render() {
+      switch (state.phase) {
+        case 'menu': renderMenu(); break;
+        case 'rolling': renderRolling(); break;
+        case 'bidding': renderBidding(); break;
+        case 'revealing': renderRevealing(); break;
+        case 'roundEnd': renderRoundEnd(); break;
+        case 'gameOver': renderGameOver(); break;
+      }
+    }
+
+    function renderMenu() {
+      app.innerHTML = `
+        <div class="score-bar">
+          <div class="score-item score-you">WINS <span>${state.wins}</span></div>
+          <div class="score-item score-round">ROUND <span>${state.round}</span></div>
+          <div class="score-item score-cpu">LOSSES <span>${state.losses}</span></div>
+        </div>
+        <div class="game-area" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;">
+          <div style="font-size:2.5rem;">&#9860;</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);max-width:320px;line-height:1.5;">
+            Roll hidden dice. Bid on what's out there.<br>Bluff or call the bluff.
+          </div>
+          <div class="settings">
+            <button class="setting-btn ${state.difficulty === 'easy' ? 'active' : ''}" onclick="setDiff('easy')">EASY</button>
+            <button class="setting-btn ${state.difficulty === 'normal' ? 'active' : ''}" onclick="setDiff('normal')">NORMAL</button>
+            <button class="setting-btn ${state.difficulty === 'hard' ? 'active' : ''}" onclick="setDiff('hard')">HARD</button>
+          </div>
+          <button class="btn btn-green" onclick="startRound()">ROLL DICE</button>
+        </div>
+      `;
+    }
+
+    function dieHTML(val, cls) {
+      const pips = ['', '\u2680', '\u2681', '\u2682', '\u2683', '\u2684', '\u2685'];
+      return `<div class="die ${cls || ''}">${pips[val] || '?'}</div>`;
+    }
+
+    function renderBidding() {
+      const bid = state.currentBid;
+      const bidText = bid ?
+        `${bid.quantity} &times; ${['','&#9856;','&#9857;','&#9858;','&#9859;','&#9860;','&#9861;'][bid.face]}` +
+        ` <span style="color:${bid.player === 'you' ? 'var(--accent-cyan)' : 'var(--accent-magenta)'};font-size:0.65rem;">(${bid.player === 'you' ? 'YOU' : 'CPU'})</span>` :
+        'NO BID YET';
+
+      const isYourTurn = state.whoseTurn === 'you';
+
+      // Default bid values
+      const defQ = bid ? bid.quantity + 1 : 1;
+      const defF = bid ? bid.face : 2;
+
+      app.innerHTML = `
+        <div class="score-bar">
+          <div class="score-item score-you">YOUR DICE <span>${state.yourDice.length}</span></div>
+          <div class="score-item score-round">ROUND <span>${state.round}</span></div>
+          <div class="score-item score-cpu">CPU DICE <span>${state.cpuDice[0].length}</span></div>
+        </div>
+        <div class="game-area ${isYourTurn ? 'your-turn' : ''}">
+          <!-- CPU dice (hidden) -->
+          <div class="player-section">
+            <div class="player-name cpu">CPU</div>
+            <div class="dice-count">${state.cpuDice[0].length} DICE</div>
+            <div class="dice-row">
+              ${state.cpuDice[0].map(() => '<div class="die hidden-die">?</div>').join('')}
+            </div>
+          </div>
+
+          <!-- Your dice -->
+          <div class="player-section">
+            <div class="player-name you">YOU</div>
+            <div class="dice-count">${state.yourDice.length} DICE</div>
+            <div class="dice-row">
+              ${state.yourDice.map(d => dieHTML(d)).join('')}
+            </div>
+          </div>
+
+          <!-- Current bid -->
+          <div class="bid-area">
+            <div class="bid-label">CURRENT BID</div>
+            <div class="current-bid">${bidText}</div>
+
+            ${isYourTurn ? `
+              <div class="bid-controls">
+                <div class="bid-spinner">
+                  <label>QUANTITY</label>
+                  <div class="spinner-row">
+                    <button class="spin-btn" onclick="spinQ(-1)">-</button>
+                    <div class="spin-val" id="bid-q">${defQ}</div>
+                    <button class="spin-btn" onclick="spinQ(1)">+</button>
+                  </div>
+                </div>
+                <div class="bid-x">&times;</div>
+                <div class="bid-spinner">
+                  <label>FACE</label>
+                  <div class="spinner-row">
+                    <button class="spin-btn" onclick="spinF(-1)">-</button>
+                    <div class="spin-val" id="bid-f">${['','&#9856;','&#9857;','&#9858;','&#9859;','&#9860;','&#9861;'][defF]}</div>
+                    <button class="spin-btn" onclick="spinF(1)">+</button>
+                  </div>
+                </div>
+              </div>
+              <div class="actions">
+                <button class="btn" onclick="playerBid()" id="bid-btn">BID</button>
+                <button class="btn btn-liar" onclick="playerCallLiar()" ${!bid ? 'disabled' : ''}>LIAR!</button>
+              </div>
+            ` : `
+              <div style="color:var(--accent-magenta);font-size:0.75rem;letter-spacing:0.08em;margin-top:0.5rem;">CPU IS THINKING...</div>
+            `}
+          </div>
+
+          <!-- Log -->
+          <div class="log" id="game-log">
+            ${state.log.map(l => `<div class="log-entry ${l.cls || ''}">${l.msg}</div>`).join('')}
+          </div>
+        </div>
+      `;
+
+      // Store current spinner values
+      window._bidQ = defQ;
+      window._bidF = defF;
+
+      // Auto-scroll log
+      const logEl = document.getElementById('game-log');
+      if (logEl) logEl.scrollTop = logEl.scrollHeight;
+
+      // If CPU's turn, trigger after delay
+      if (!isYourTurn) {
+        setTimeout(cpuTurn, 1200 + Math.random() * 800);
+      }
+    }
+
+    function renderRevealing() {
+      const rd = state.revealData;
+      const allDice = [...state.yourDice, ...state.cpuDice.flat()];
+      const actual = countFace(rd.bid.face);
+      const bidMet = actual >= rd.bid.quantity;
+      const callerLost = bidMet; // caller was wrong
+      const callerIsYou = rd.caller === 'you';
+      const youLost = (callerIsYou && callerLost) || (!callerIsYou && !callerLost);
+
+      app.innerHTML = `
+        <div class="score-bar">
+          <div class="score-item score-you">YOUR DICE <span>${state.yourDice.length}</span></div>
+          <div class="score-item score-round">ROUND <span>${state.round}</span></div>
+          <div class="score-item score-cpu">CPU DICE <span>${state.cpuDice[0].length}</span></div>
+        </div>
+        <div class="game-area">
+          <div class="reveal-overlay">
+            <div class="reveal-title ${youLost ? 'lose' : 'win'}">
+              ${youLost ? 'YOU LOSE A DIE' : 'CPU LOSES A DIE'}
+            </div>
+            <div class="reveal-detail">
+              Bid: ${rd.bid.quantity} &times; ${['','&#9856;','&#9857;','&#9858;','&#9859;','&#9860;','&#9861;'][rd.bid.face]}<br>
+              Actual count: <strong>${actual}</strong> (including wilds)
+            </div>
+            <div style="font-size:0.65rem;color:var(--text-dim);letter-spacing:0.06em;margin:0.3rem 0;">ALL DICE</div>
+            <div class="reveal-dice">
+              ${allDice.map(d => {
+                const isMatch = d === rd.bid.face || d === 1;
+                return dieHTML(d, isMatch ? 'match' : 'revealed');
+              }).join('')}
+            </div>
+            <div class="reveal-detail" style="margin-top:0.5rem;">
+              ${callerIsYou ? 'You' : 'CPU'} called LIAR.<br>
+              ${bidMet ? 'The bid was valid. Caller loses a die.' : 'The bid was a lie! Bidder loses a die.'}
+            </div>
+            <button class="btn btn-green" onclick="resolveReveal(${youLost ? 'true' : 'false'})" style="margin-top:0.5rem;">CONTINUE</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderRoundEnd() {
+      // Check for game over
+      if (state.yourDice.length <= 0 || state.cpuDice[0].length <= 0) {
+        state.phase = 'gameOver';
+        if (state.yourDice.length <= 0) state.losses++;
+        else state.wins++;
+        render();
+        return;
+      }
+      // Otherwise go to next round
+      state.phase = 'menu';
+      render();
+    }
+
+    function renderGameOver() {
+      const youWon = state.cpuDice[0].length <= 0;
+      app.innerHTML = `
+        <div class="score-bar">
+          <div class="score-item score-you">WINS <span>${state.wins}</span></div>
+          <div class="score-item score-round">ROUND <span>${state.round}</span></div>
+          <div class="score-item score-cpu">LOSSES <span>${state.losses}</span></div>
+        </div>
+        <div class="game-area">
+          <div class="game-over">
+            <h2 class="${youWon ? 'win' : 'lose'}">${youWon ? 'VICTORY' : 'DEFEAT'}</h2>
+            <p>${youWon ? 'The CPU has no dice left. You called every bluff.' : 'You\'re out of dice. The CPU outplayed you.'}</p>
+            <button class="btn btn-green" onclick="newGame()">PLAY AGAIN</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderRolling() {
+      app.innerHTML = `
+        <div class="score-bar">
+          <div class="score-item score-you">YOUR DICE <span>${state.yourDice.length}</span></div>
+          <div class="score-item score-round">ROUND <span>${state.round}</span></div>
+          <div class="score-item score-cpu">CPU DICE <span>${state.cpuDice[0].length}</span></div>
+        </div>
+        <div class="game-area" style="display:flex;align-items:center;justify-content:center;">
+          <div class="shaking">
+            <div class="dice-row">
+              ${[1,2,3,4,5].map(d => dieHTML(d)).join('')}
+            </div>
+            <div style="font-size:0.8rem;color:var(--accent-green);letter-spacing:0.1em;margin-top:1rem;">ROLLING...</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // --- Game Logic ---
+    window.setDiff = function(d) {
+      state.difficulty = d;
+      render();
+    };
+
+    window.startRound = function() {
+      state.yourDice = rollDice(state.yourMax);
+      state.cpuDice[0] = rollDice(state.cpuMax[0]);
+      state.currentBid = null;
+      state.log = [];
+      state.whoseTurn = 'you';
+      state.phase = 'rolling';
+      render();
+
+      setTimeout(() => {
+        state.phase = 'bidding';
+        addLog('New round. ' + totalDiceOnTable() + ' dice on the table.', '');
+        render();
+      }, 1000);
+    };
+
+    window.spinQ = function(dir) {
+      const total = totalDiceOnTable();
+      window._bidQ = Math.max(1, Math.min(total, (window._bidQ || 1) + dir));
+      document.getElementById('bid-q').textContent = window._bidQ;
+    };
+
+    window.spinF = function(dir) {
+      const pips = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
+      window._bidF = Math.max(1, Math.min(6, (window._bidF || 2) + dir));
+      document.getElementById('bid-f').innerHTML = ['','&#9856;','&#9857;','&#9858;','&#9859;','&#9860;','&#9861;'][window._bidF];
+    };
+
+    window.playerBid = function() {
+      const q = window._bidQ;
+      const f = window._bidF;
+
+      if (!bidIsHigher(q, f, state.currentBid)) {
+        addLog('Invalid bid. Must be higher than current.', 'lose-msg');
+        render();
+        return;
+      }
+
+      state.currentBid = { quantity: q, face: f, player: 'you' };
+      const pips = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
+      addLog(`You bid: ${q} × ${pips[f]}`, 'you-msg');
+      state.whoseTurn = 'cpu0';
+      render();
+    };
+
+    window.playerCallLiar = function() {
+      if (!state.currentBid) return;
+      addLog('You call: LIAR!', 'you-msg');
+      state.revealData = { caller: 'you', bid: state.currentBid };
+      state.phase = 'revealing';
+      render();
+    };
+
+    function cpuTurn() {
+      if (state.phase !== 'bidding' || state.whoseTurn !== 'cpu0') return;
+
+      const decision = cpuDecide(0);
+      const pips = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
+
+      if (decision.action === 'liar') {
+        addLog('CPU calls: LIAR!', 'cpu-msg');
+        state.revealData = { caller: 'cpu0', bid: state.currentBid };
+        state.phase = 'revealing';
+        render();
+      } else {
+        state.currentBid = { quantity: decision.quantity, face: decision.face, player: 'cpu0' };
+        addLog(`CPU bids: ${decision.quantity} × ${pips[decision.face]}`, 'cpu-msg');
+        state.whoseTurn = 'you';
+        render();
+      }
+    }
+
+    window.resolveReveal = function(youLost) {
+      if (youLost) {
+        state.yourMax = Math.max(0, state.yourMax - 1);
+      } else {
+        state.cpuMax[0] = Math.max(0, state.cpuMax[0] - 1);
+      }
+      state.round++;
+      state.phase = 'roundEnd';
+      render();
+    };
+
+    window.newGame = function() {
+      state.yourMax = state.startingDice;
+      state.cpuMax = [state.startingDice];
+      state.round = 1;
+      state.log = [];
+      state.currentBid = null;
+      state.phase = 'menu';
+      render();
+    };
+
+    // Load stats
+    try {
+      const saved = localStorage.getItem('zero-liars-dice');
+      if (saved) {
+        const d = JSON.parse(saved);
+        state.wins = d.wins || 0;
+        state.losses = d.losses || 0;
+      }
+    } catch(e) {}
+
+    // Save stats periodically
+    const origRender = render;
+    function renderAndSave() {
+      origRender();
+      try {
+        localStorage.setItem('zero-liars-dice', JSON.stringify({ wins: state.wins, losses: state.losses }));
+      } catch(e) {}
+    }
+
+    // Override
+    render = renderAndSave;
+
+    // Init
+    render();
+
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Poker / ZERO</title>
+  <meta name="description" content="Jacks or Better video poker. Bet, deal, hold, draw, win. Neon cards, classic paytable.">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-void);
+      color: var(--text-bright);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .top-bar a {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      transition: color 0.3s;
+    }
+    .top-bar a:hover { color: var(--accent-cyan); }
+    .game-title {
+      color: var(--accent-magenta);
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-shadow: 0 0 10px var(--glow-magenta);
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem;
+    }
+
+    /* Paytable */
+    .paytable {
+      border: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+      font-size: 0.65rem;
+      overflow-x: auto;
+    }
+    .paytable table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .paytable th, .paytable td {
+      padding: 0.35rem 0.6rem;
+      text-align: right;
+      border-bottom: 1px solid rgba(122,122,144,0.2);
+    }
+    .paytable th:first-child, .paytable td:first-child {
+      text-align: left;
+    }
+    .paytable th {
+      color: var(--text-dim);
+      font-weight: 400;
+      letter-spacing: 0.06em;
+    }
+    .paytable td {
+      color: var(--text-muted);
+    }
+    .paytable td:first-child {
+      color: var(--text-bright);
+    }
+    .paytable .active-col {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 6px var(--glow-cyan-soft);
+    }
+    .paytable .win-row td {
+      color: var(--accent-green);
+      text-shadow: 0 0 8px rgba(57,255,20,0.4);
+    }
+    .paytable .win-row .active-col {
+      color: var(--accent-green);
+      font-weight: 700;
+    }
+
+    /* Cards area */
+    .cards-area {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .card-slot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .card {
+      width: 90px;
+      height: 130px;
+      border: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      user-select: none;
+      background: var(--bg-panel);
+    }
+    .card:hover {
+      border-color: var(--accent-cyan);
+    }
+    .card.held {
+      border-color: var(--accent-green);
+      box-shadow: 0 0 12px rgba(57,255,20,0.3);
+      transform: translateY(-6px);
+    }
+    .card.face-down {
+      background: linear-gradient(135deg, var(--bg-panel) 25%, rgba(157,78,221,0.15) 50%, var(--bg-panel) 75%);
+      border-color: var(--border);
+    }
+    .card.face-down::after {
+      content: '◆';
+      color: var(--accent-purple);
+      font-size: 1.8rem;
+      opacity: 0.4;
+    }
+    .card.win-card {
+      border-color: var(--accent-magenta);
+      box-shadow: 0 0 16px var(--glow-magenta);
+    }
+    .card .rank {
+      font-weight: 700;
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+    .card .suit {
+      font-size: 1.6rem;
+      line-height: 1;
+      margin-top: 0.15rem;
+    }
+    .card .corner {
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      font-size: 0.6rem;
+      line-height: 1.1;
+      text-align: center;
+    }
+    .card .corner-br {
+      position: absolute;
+      bottom: 4px;
+      right: 6px;
+      font-size: 0.6rem;
+      line-height: 1.1;
+      text-align: center;
+      transform: rotate(180deg);
+    }
+    .suit-red { color: var(--accent-magenta); }
+    .suit-black { color: var(--accent-cyan); }
+
+    .hold-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      color: var(--accent-green);
+      text-shadow: 0 0 6px rgba(57,255,20,0.4);
+      height: 1rem;
+      visibility: hidden;
+      font-weight: 700;
+    }
+    .hold-label.visible {
+      visibility: visible;
+    }
+
+    /* Result */
+    .result {
+      text-align: center;
+      min-height: 2rem;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+    }
+    .result .hand-name {
+      color: var(--accent-magenta);
+      font-weight: 700;
+      text-shadow: 0 0 10px var(--glow-magenta);
+    }
+    .result .payout {
+      color: var(--accent-green);
+      text-shadow: 0 0 8px rgba(57,255,20,0.4);
+    }
+    .result .no-win {
+      color: var(--text-dim);
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      padding: 0.6rem 1.4rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:hover:not(:disabled) {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--glow-cyan-soft);
+    }
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+    .btn.primary {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+    }
+    .btn.primary:hover:not(:disabled) {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+      box-shadow: 0 0 10px var(--glow-magenta);
+    }
+
+    /* Bet & Credits */
+    .status-bar {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      font-size: 0.75rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .status-label {
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+    }
+    .status-value {
+      color: var(--accent-cyan);
+      font-weight: 700;
+      text-shadow: 0 0 6px var(--glow-cyan-soft);
+    }
+    .status-value.credits {
+      color: var(--accent-green);
+      text-shadow: 0 0 6px rgba(57,255,20,0.4);
+    }
+
+    /* Instructions */
+    .instructions {
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+      text-align: center;
+    }
+    .instructions kbd {
+      border: 1px solid var(--border);
+      padding: 0.1rem 0.35rem;
+      font-size: 0.6rem;
+      color: var(--text-muted);
+    }
+
+    /* Stats */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .stat {
+      text-align: center;
+    }
+    .stat-val {
+      color: var(--accent-cyan);
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+    .stat-lbl {
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+    }
+
+    /* Responsive */
+    @media (max-width: 520px) {
+      .card {
+        width: 60px;
+        height: 88px;
+      }
+      .card .rank { font-size: 1rem; }
+      .card .suit { font-size: 1.1rem; }
+      .card .corner, .card .corner-br { font-size: 0.5rem; }
+      .cards-area { gap: 0.4rem; }
+      .paytable { font-size: 0.55rem; }
+      .paytable th, .paytable td { padding: 0.25rem 0.35rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="./">&lt; GAME LAB</a>
+    <div class="game-title">VIDEO POKER</div>
+    <div style="width:80px"></div>
+  </div>
+
+  <div class="container">
+    <div class="paytable" id="paytable"></div>
+
+    <div class="status-bar">
+      <div class="status-item">
+        <span class="status-label">CREDITS</span>
+        <span class="status-value credits" id="credits">100</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">BET</span>
+        <span class="status-value" id="bet-display">1</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">WON</span>
+        <span class="status-value" id="won-display" style="color:var(--accent-green)">0</span>
+      </div>
+    </div>
+
+    <div class="cards-area" id="cards-area">
+      <div class="card-slot"><div class="hold-label">HOLD</div><div class="card face-down" data-idx="0"></div></div>
+      <div class="card-slot"><div class="hold-label">HOLD</div><div class="card face-down" data-idx="1"></div></div>
+      <div class="card-slot"><div class="hold-label">HOLD</div><div class="card face-down" data-idx="2"></div></div>
+      <div class="card-slot"><div class="hold-label">HOLD</div><div class="card face-down" data-idx="3"></div></div>
+      <div class="card-slot"><div class="hold-label">HOLD</div><div class="card face-down" data-idx="4"></div></div>
+    </div>
+
+    <div class="result" id="result"></div>
+
+    <div class="controls">
+      <button class="btn" id="btn-bet-down">BET -</button>
+      <button class="btn" id="btn-bet-up">BET +</button>
+      <button class="btn primary" id="btn-deal">DEAL</button>
+      <button class="btn" id="btn-max">MAX BET</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-val" id="stat-hands">0</div><div class="stat-lbl">HANDS</div></div>
+      <div class="stat"><div class="stat-val" id="stat-wins">0</div><div class="stat-lbl">WINS</div></div>
+      <div class="stat"><div class="stat-val" id="stat-best">0</div><div class="stat-lbl">BEST WIN</div></div>
+      <div class="stat"><div class="stat-val" id="stat-peak">100</div><div class="stat-lbl">PEAK</div></div>
+    </div>
+
+    <div class="instructions">
+      <kbd>CLICK</kbd> cards to hold &middot; <kbd>1</kbd>-<kbd>5</kbd> toggle hold &middot;
+      <kbd>SPACE</kbd> deal/draw &middot; <kbd>+</kbd>/<kbd>-</kbd> adjust bet
+    </div>
+  </div>
+
+<script>
+(function() {
+  'use strict';
+
+  // --- Constants ---
+  const SUITS = ['♠','♥','♦','♣'];
+  const SUIT_COLORS = {'♠':'black','♣':'black','♥':'red','♦':'red'};
+  const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+  const RANK_VALUES = {};
+  RANKS.forEach((r,i) => RANK_VALUES[r] = i + 2);
+
+  // Jacks or Better paytable [bet1, bet2, bet3, bet4, bet5]
+  const HANDS = [
+    { name: 'Royal Flush',    pays: [250, 500, 750, 1000, 4000] },
+    { name: 'Straight Flush', pays: [50, 100, 150, 200, 250] },
+    { name: 'Four of a Kind', pays: [25, 50, 75, 100, 125] },
+    { name: 'Full House',     pays: [9, 18, 27, 36, 45] },
+    { name: 'Flush',          pays: [6, 12, 18, 24, 30] },
+    { name: 'Straight',       pays: [4, 8, 12, 16, 20] },
+    { name: 'Three of a Kind',pays: [3, 6, 9, 12, 15] },
+    { name: 'Two Pair',       pays: [2, 4, 6, 8, 10] },
+    { name: 'Jacks or Better',pays: [1, 2, 3, 4, 5] },
+  ];
+
+  // --- State ---
+  let credits = 100;
+  let bet = 1;
+  let phase = 'bet'; // 'bet', 'hold', 'result'
+  let deck = [];
+  let hand = [null, null, null, null, null];
+  let held = [false, false, false, false, false];
+  let lastWon = 0;
+  let stats = { hands: 0, wins: 0, best: 0, peak: 100 };
+
+  // Load saved state
+  try {
+    const saved = JSON.parse(localStorage.getItem('zero-vpoker'));
+    if (saved) {
+      credits = saved.credits || 100;
+      stats = saved.stats || stats;
+    }
+  } catch(e) {}
+
+  // --- DOM refs ---
+  const cardEls = document.querySelectorAll('.card');
+  const holdLabels = document.querySelectorAll('.hold-label');
+  const resultEl = document.getElementById('result');
+  const creditsEl = document.getElementById('credits');
+  const betEl = document.getElementById('bet-display');
+  const wonEl = document.getElementById('won-display');
+  const btnDeal = document.getElementById('btn-deal');
+  const btnBetUp = document.getElementById('btn-bet-up');
+  const btnBetDown = document.getElementById('btn-bet-down');
+  const btnMax = document.getElementById('btn-max');
+
+  // --- Paytable render ---
+  function renderPaytable() {
+    let html = '<table><tr><th></th>';
+    for (let b = 1; b <= 5; b++) {
+      html += `<th class="${b === bet ? 'active-col' : ''}">${b}</th>`;
+    }
+    html += '</tr>';
+    for (const h of HANDS) {
+      const isWin = phase === 'result' && lastWon > 0 && h.name === lastWinHand;
+      html += `<tr class="${isWin ? 'win-row' : ''}">`;
+      html += `<td>${h.name}</td>`;
+      for (let b = 0; b < 5; b++) {
+        html += `<td class="${(b+1) === bet ? 'active-col' : ''}">${h.pays[b]}</td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</table>';
+    document.getElementById('paytable').innerHTML = html;
+  }
+
+  let lastWinHand = '';
+
+  // --- Deck ---
+  function createDeck() {
+    const d = [];
+    for (const s of SUITS) {
+      for (const r of RANKS) {
+        d.push({ rank: r, suit: s, value: RANK_VALUES[r] });
+      }
+    }
+    // Shuffle (Fisher-Yates)
+    for (let i = d.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [d[i], d[j]] = [d[j], d[i]];
+    }
+    return d;
+  }
+
+  // --- Hand evaluation ---
+  function evaluateHand(cards) {
+    const values = cards.map(c => c.value).sort((a,b) => a - b);
+    const suits = cards.map(c => c.suit);
+    const ranks = cards.map(c => c.rank);
+
+    // Count values
+    const counts = {};
+    for (const v of values) counts[v] = (counts[v] || 0) + 1;
+    const groups = Object.values(counts).sort((a,b) => b - a);
+
+    const isFlush = suits.every(s => s === suits[0]);
+
+    // Check straight
+    let isStraight = false;
+    const unique = [...new Set(values)];
+    if (unique.length === 5) {
+      if (unique[4] - unique[0] === 4) isStraight = true;
+      // Ace-low straight: A,2,3,4,5
+      if (unique[0] === 2 && unique[1] === 3 && unique[2] === 4 && unique[3] === 5 && unique[4] === 14) isStraight = true;
+    }
+
+    const isRoyal = isFlush && isStraight && values.includes(14) && values.includes(13);
+
+    if (isRoyal) return { hand: 0, name: 'Royal Flush' };
+    if (isFlush && isStraight) return { hand: 1, name: 'Straight Flush' };
+    if (groups[0] === 4) return { hand: 2, name: 'Four of a Kind' };
+    if (groups[0] === 3 && groups[1] === 2) return { hand: 3, name: 'Full House' };
+    if (isFlush) return { hand: 4, name: 'Flush' };
+    if (isStraight) return { hand: 5, name: 'Straight' };
+    if (groups[0] === 3) return { hand: 6, name: 'Three of a Kind' };
+    if (groups[0] === 2 && groups[1] === 2) return { hand: 7, name: 'Two Pair' };
+    if (groups[0] === 2) {
+      // Check if pair is jacks or better
+      const pairValue = parseInt(Object.keys(counts).find(k => counts[k] === 2));
+      if (pairValue >= 11) return { hand: 8, name: 'Jacks or Better' };
+    }
+    return null;
+  }
+
+  // --- Card rendering ---
+  function renderCard(el, card, faceDown) {
+    if (faceDown || !card) {
+      el.className = 'card face-down';
+      el.innerHTML = '';
+      return;
+    }
+    const colorClass = SUIT_COLORS[card.suit] === 'red' ? 'suit-red' : 'suit-black';
+    el.className = 'card ' + colorClass;
+    el.innerHTML = `
+      <div class="corner">${card.rank}<br>${card.suit}</div>
+      <div class="rank">${card.rank}</div>
+      <div class="suit">${card.suit}</div>
+      <div class="corner-br">${card.rank}<br>${card.suit}</div>
+    `;
+  }
+
+  function renderAll() {
+    for (let i = 0; i < 5; i++) {
+      renderCard(cardEls[i], hand[i], phase === 'bet');
+      holdLabels[i].classList.toggle('visible', held[i] && phase === 'hold');
+      cardEls[i].classList.toggle('held', held[i] && phase === 'hold');
+    }
+    creditsEl.textContent = credits;
+    betEl.textContent = bet;
+    wonEl.textContent = lastWon;
+
+    btnDeal.textContent = phase === 'hold' ? 'DRAW' : 'DEAL';
+    btnDeal.disabled = phase === 'result';
+    btnBetUp.disabled = phase !== 'bet';
+    btnBetDown.disabled = phase !== 'bet';
+    btnMax.disabled = phase !== 'bet';
+
+    // Stats
+    document.getElementById('stat-hands').textContent = stats.hands;
+    document.getElementById('stat-wins').textContent = stats.wins;
+    document.getElementById('stat-best').textContent = stats.best;
+    document.getElementById('stat-peak').textContent = stats.peak;
+
+    renderPaytable();
+  }
+
+  function saveState() {
+    localStorage.setItem('zero-vpoker', JSON.stringify({ credits, stats }));
+  }
+
+  // --- Game actions ---
+  function deal() {
+    if (credits < bet) {
+      resultEl.innerHTML = '<span class="no-win">NOT ENOUGH CREDITS</span>';
+      return;
+    }
+    credits -= bet;
+    lastWon = 0;
+    lastWinHand = '';
+    resultEl.innerHTML = '';
+    held = [false, false, false, false, false];
+    deck = createDeck();
+    hand = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+    phase = 'hold';
+
+    // Remove win-card class
+    cardEls.forEach(el => el.classList.remove('win-card'));
+
+    renderAll();
+  }
+
+  function draw() {
+    // Replace non-held cards
+    for (let i = 0; i < 5; i++) {
+      if (!held[i]) {
+        hand[i] = deck.pop();
+      }
+    }
+    phase = 'result';
+
+    const result = evaluateHand(hand);
+    stats.hands++;
+
+    if (result) {
+      const payout = HANDS[result.hand].pays[bet - 1];
+      credits += payout;
+      lastWon = payout;
+      lastWinHand = result.name;
+      stats.wins++;
+      if (payout > stats.best) stats.best = payout;
+      if (credits > stats.peak) stats.peak = credits;
+      resultEl.innerHTML = `<span class="hand-name">${result.name.toUpperCase()}</span> &mdash; <span class="payout">WIN ${payout}</span>`;
+
+      // Highlight winning cards
+      highlightWinCards(result);
+    } else {
+      lastWon = 0;
+      lastWinHand = '';
+      resultEl.innerHTML = '<span class="no-win">NO WIN</span>';
+    }
+
+    held = [false, false, false, false, false];
+    renderAll();
+    saveState();
+
+    // Auto-advance after delay
+    setTimeout(() => {
+      if (phase === 'result') {
+        phase = 'bet';
+        cardEls.forEach(el => el.classList.remove('win-card'));
+        if (credits <= 0) {
+          credits = 100;
+          resultEl.innerHTML = '<span class="no-win">BUSTED — RELOADED 100 CREDITS</span>';
+        }
+        renderAll();
+        saveState();
+      }
+    }, 2200);
+  }
+
+  function highlightWinCards(result) {
+    // For flush/straight/royal, highlight all
+    if (result.hand <= 1 || result.hand === 4 || result.hand === 5) {
+      cardEls.forEach(el => el.classList.add('win-card'));
+      return;
+    }
+    // For pairs/trips/quads, highlight the matching cards
+    const counts = {};
+    hand.forEach((c,i) => {
+      counts[c.value] = counts[c.value] || [];
+      counts[c.value].push(i);
+    });
+
+    if (result.hand === 3) { // Full House - all
+      cardEls.forEach(el => el.classList.add('win-card'));
+      return;
+    }
+
+    // Find groups that matter
+    for (const [val, indices] of Object.entries(counts)) {
+      if (indices.length >= 2) {
+        indices.forEach(i => cardEls[i].classList.add('win-card'));
+      }
+    }
+  }
+
+  function toggleHold(idx) {
+    if (phase !== 'hold') return;
+    held[idx] = !held[idx];
+    renderAll();
+  }
+
+  // --- Event handlers ---
+  cardEls.forEach((el, i) => {
+    el.addEventListener('click', () => toggleHold(i));
+  });
+
+  btnDeal.addEventListener('click', () => {
+    if (phase === 'bet') deal();
+    else if (phase === 'hold') draw();
+  });
+
+  btnBetUp.addEventListener('click', () => {
+    if (phase !== 'bet') return;
+    bet = Math.min(5, bet + 1);
+    renderAll();
+  });
+
+  btnBetDown.addEventListener('click', () => {
+    if (phase !== 'bet') return;
+    bet = Math.max(1, bet - 1);
+    renderAll();
+  });
+
+  btnMax.addEventListener('click', () => {
+    if (phase !== 'bet') return;
+    bet = 5;
+    renderAll();
+  });
+
+  // Keyboard
+  document.addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      if (phase === 'bet') deal();
+      else if (phase === 'hold') draw();
+    }
+    if (e.key >= '1' && e.key <= '5') {
+      toggleHold(parseInt(e.key) - 1);
+    }
+    if (e.key === '+' || e.key === '=') {
+      if (phase === 'bet') { bet = Math.min(5, bet + 1); renderAll(); }
+    }
+    if (e.key === '-' || e.key === '_') {
+      if (phase === 'bet') { bet = Math.max(1, bet - 1); renderAll(); }
+    }
+  });
+
+  // --- Init ---
+  renderAll();
+
+})();
+</script>
+</body>
+</html>

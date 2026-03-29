@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POKER SQUARES / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      transition: color 0.3s;
+    }
+    .back:hover { color: var(--accent-cyan); }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Layout */
+    .game-area {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Grid */
+    .grid-wrap {
+      position: relative;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, 52px);
+      grid-template-rows: repeat(5, 72px);
+      gap: 3px;
+    }
+    .cell {
+      width: 52px;
+      height: 72px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      position: relative;
+      font-size: 0.7rem;
+    }
+    .cell:hover:not(.filled) {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 12px var(--glow-cyan);
+    }
+    .cell.filled {
+      cursor: default;
+    }
+
+    /* Cards */
+    .card-face {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1rem;
+      line-height: 1;
+    }
+    .card-face .rank { font-size: 1.1rem; }
+    .card-face .suit { font-size: 0.9rem; margin-top: 2px; }
+    .card-face.red { color: var(--accent-magenta); }
+    .card-face.black { color: var(--accent-cyan); }
+
+    /* Current card to place */
+    .current-card {
+      border: 2px solid var(--accent-magenta);
+      width: 80px;
+      height: 110px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px var(--glow-magenta);
+      margin-bottom: 0.5rem;
+    }
+    .current-card .card-face { font-size: 1.4rem; }
+    .current-card .card-face .rank { font-size: 1.6rem; }
+    .current-card .card-face .suit { font-size: 1.2rem; }
+
+    /* Side panel */
+    .side {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.8rem;
+      min-width: 110px;
+    }
+    .side-label {
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .cards-left {
+      color: var(--accent-green);
+      font-size: 0.7rem;
+      text-shadow: 0 0 8px var(--glow-green);
+    }
+
+    /* Row/col hand labels */
+    .row-labels {
+      position: absolute;
+      right: -115px;
+      top: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .row-label {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      white-space: nowrap;
+      width: 110px;
+      padding-left: 8px;
+    }
+    .row-label.scored { color: var(--accent-green); text-shadow: 0 0 6px var(--glow-green); }
+
+    .col-labels {
+      display: grid;
+      grid-template-columns: repeat(5, 52px);
+      gap: 3px;
+      margin-top: 4px;
+    }
+    .col-label {
+      font-size: 0.5rem;
+      color: var(--text-dim);
+      text-align: center;
+      line-height: 1.3;
+    }
+    .col-label.scored { color: var(--accent-green); text-shadow: 0 0 6px var(--glow-green); }
+
+    /* Score display */
+    .score-area {
+      margin-top: 1rem;
+    }
+    .total-score {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--accent-cyan);
+      text-shadow: 0 0 15px var(--glow-cyan);
+    }
+    .score-label {
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.2rem;
+    }
+    .best-score {
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      margin-top: 0.3rem;
+    }
+
+    /* Scoring table */
+    .scoring-table {
+      margin-top: 1.5rem;
+      border: 1px solid var(--border);
+      font-size: 0.6rem;
+      text-align: left;
+    }
+    .scoring-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .scoring-table th {
+      color: var(--accent-magenta);
+      padding: 0.4rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+    .scoring-table td {
+      padding: 0.25rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-body);
+    }
+    .scoring-table tr:last-child td { border-bottom: none; }
+    .scoring-table td:last-child {
+      text-align: right;
+      color: var(--accent-cyan);
+      font-weight: 700;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-block;
+      padding: 0.5rem 1.2rem;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      background: transparent;
+      font-family: inherit;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      margin-top: 1rem;
+    }
+    .btn:hover {
+      background: rgba(0, 240, 255, 0.08);
+      box-shadow: 0 0 12px var(--glow-cyan);
+    }
+
+    /* Instructions */
+    .instructions {
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      line-height: 1.6;
+      margin-top: 1.5rem;
+      text-align: left;
+      border: 1px solid var(--border);
+      padding: 1rem;
+    }
+    .instructions strong { color: var(--text-muted); }
+
+    /* Game over overlay */
+    .game-over {
+      display: none;
+      margin-top: 1rem;
+    }
+    .game-over.show { display: block; }
+    .game-over-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      text-shadow: 0 0 20px var(--glow-magenta);
+      margin-bottom: 0.5rem;
+    }
+    .breakdown {
+      text-align: left;
+      font-size: 0.6rem;
+      border: 1px solid var(--border);
+      padding: 0.8rem;
+      margin-top: 0.8rem;
+    }
+    .breakdown-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.15rem 0;
+      color: var(--text-body);
+    }
+    .breakdown-row .hand-name { color: var(--text-muted); }
+    .breakdown-row .hand-score { color: var(--accent-cyan); font-weight: 700; }
+    .breakdown-row.section-header {
+      color: var(--accent-magenta);
+      font-weight: 700;
+      margin-top: 0.3rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.2rem;
+    }
+    .breakdown-row.total {
+      border-top: 1px solid var(--accent-cyan);
+      margin-top: 0.3rem;
+      padding-top: 0.3rem;
+      font-weight: 800;
+    }
+    .breakdown-row.total .hand-score { color: var(--accent-green); text-shadow: 0 0 8px var(--glow-green); }
+
+    /* Mobile responsive */
+    @media (max-width: 700px) {
+      .row-labels { display: none; }
+      .grid { grid-template-columns: repeat(5, 48px); grid-template-rows: repeat(5, 66px); }
+      .cell { width: 48px; height: 66px; }
+      .col-labels { grid-template-columns: repeat(5, 48px); }
+      .col-label { font-size: 0.45rem; }
+    }
+    @media (max-width: 400px) {
+      .grid { grid-template-columns: repeat(5, 40px); grid-template-rows: repeat(5, 56px); gap: 2px; }
+      .cell { width: 40px; height: 56px; }
+      .col-labels { grid-template-columns: repeat(5, 40px); gap: 2px; }
+      .card-face .rank { font-size: 0.9rem; }
+      .card-face .suit { font-size: 0.7rem; }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>POKER SQUARES</h1>
+    <div class="subtitle">PLACE 25 CARDS INTO A 5×5 GRID — MAXIMIZE YOUR POKER HANDS</div>
+
+    <div class="game-area">
+      <div class="side">
+        <div class="side-label">NEXT CARD</div>
+        <div class="current-card" id="current-card"></div>
+        <div class="cards-left" id="cards-left">25 LEFT</div>
+        <div class="score-label">SCORE</div>
+        <div class="total-score" id="total-score">0</div>
+        <div class="best-score" id="best-score"></div>
+      </div>
+
+      <div class="grid-wrap">
+        <div class="grid" id="grid"></div>
+        <div class="row-labels" id="row-labels"></div>
+        <div class="col-labels" id="col-labels"></div>
+      </div>
+    </div>
+
+    <div class="game-over" id="game-over">
+      <div class="game-over-title">GAME COMPLETE</div>
+      <div class="breakdown" id="breakdown"></div>
+      <button class="btn" onclick="newGame()">NEW GAME</button>
+    </div>
+
+    <div class="scoring-table">
+      <table>
+        <tr><th>HAND</th><th>POINTS</th></tr>
+        <tr><td>Royal Flush</td><td>100</td></tr>
+        <tr><td>Straight Flush</td><td>75</td></tr>
+        <tr><td>Four of a Kind</td><td>50</td></tr>
+        <tr><td>Full House</td><td>25</td></tr>
+        <tr><td>Flush</td><td>20</td></tr>
+        <tr><td>Straight</td><td>15</td></tr>
+        <tr><td>Three of a Kind</td><td>10</td></tr>
+        <tr><td>Two Pair</td><td>5</td></tr>
+        <tr><td>One Pair</td><td>2</td></tr>
+        <tr><td>High Card</td><td>0</td></tr>
+      </table>
+    </div>
+
+    <div class="instructions">
+      <strong>HOW TO PLAY:</strong> A card is dealt one at a time. Click any empty cell in the 5×5 grid to place it. Once placed, cards cannot be moved. After all 25 cards are placed, each row and column is scored as a poker hand. Maximize your total score across all 10 hands.
+      <br><br>
+      <strong>STRATEGY:</strong> Plan ahead. Group same suits for flushes, same ranks for pairs and sets. Rows and columns both score, so every placement affects two hands.
+    </div>
+  </main>
+
+  <script>
+    const SUITS = ['♠','♥','♦','♣'];
+    const SUIT_COLORS = {'♠':'black','♣':'black','♥':'red','♦':'red'};
+    const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+    const RANK_VALUES = {'A':14,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13};
+
+    const HAND_SCORES = {
+      'Royal Flush': 100,
+      'Straight Flush': 75,
+      'Four of a Kind': 50,
+      'Full House': 25,
+      'Flush': 20,
+      'Straight': 15,
+      'Three of a Kind': 10,
+      'Two Pair': 5,
+      'One Pair': 2,
+      'High Card': 0
+    };
+
+    let grid = []; // 5x5 array, null or {rank, suit}
+    let deck = [];
+    let currentCard = null;
+    let cardsPlaced = 0;
+    let totalScore = 0;
+    let bestScore = parseInt(localStorage.getItem('poker-squares-best') || '0');
+
+    function makeDeck() {
+      let d = [];
+      for (let s of SUITS) {
+        for (let r of RANKS) {
+          d.push({ rank: r, suit: s });
+        }
+      }
+      // Shuffle
+      for (let i = d.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [d[i], d[j]] = [d[j], d[i]];
+      }
+      return d;
+    }
+
+    function cardHTML(card, big) {
+      let colorClass = SUIT_COLORS[card.suit] === 'red' ? 'red' : 'black';
+      return `<div class="card-face ${colorClass}">
+        <span class="rank">${card.rank}</span>
+        <span class="suit">${card.suit}</span>
+      </div>`;
+    }
+
+    function evaluateHand(cards) {
+      if (cards.length !== 5 || cards.some(c => c === null)) return { name: 'High Card', score: 0 };
+
+      let values = cards.map(c => RANK_VALUES[c.rank]).sort((a, b) => a - b);
+      let suits = cards.map(c => c.suit);
+      let rankCounts = {};
+      for (let c of cards) {
+        rankCounts[c.rank] = (rankCounts[c.rank] || 0) + 1;
+      }
+      let counts = Object.values(rankCounts).sort((a, b) => b - a);
+
+      let isFlush = suits.every(s => s === suits[0]);
+
+      // Check straight (including ace-low: A,2,3,4,5)
+      let isStraight = false;
+      let uniqueVals = [...new Set(values)];
+      if (uniqueVals.length === 5) {
+        if (values[4] - values[0] === 4) {
+          isStraight = true;
+        }
+        // Ace-low: A(14),2,3,4,5
+        if (values[0] === 2 && values[1] === 3 && values[2] === 4 && values[3] === 5 && values[4] === 14) {
+          isStraight = true;
+        }
+      }
+
+      let isRoyal = isFlush && isStraight && values[0] === 10;
+
+      if (isRoyal) return { name: 'Royal Flush', score: 100 };
+      if (isFlush && isStraight) return { name: 'Straight Flush', score: 75 };
+      if (counts[0] === 4) return { name: 'Four of a Kind', score: 50 };
+      if (counts[0] === 3 && counts[1] === 2) return { name: 'Full House', score: 25 };
+      if (isFlush) return { name: 'Flush', score: 20 };
+      if (isStraight) return { name: 'Straight', score: 15 };
+      if (counts[0] === 3) return { name: 'Three of a Kind', score: 10 };
+      if (counts[0] === 2 && counts[1] === 2) return { name: 'Two Pair', score: 5 };
+      if (counts[0] === 2) return { name: 'One Pair', score: 2 };
+      return { name: 'High Card', score: 0 };
+    }
+
+    function getRow(r) {
+      return grid[r];
+    }
+
+    function getCol(c) {
+      return [grid[0][c], grid[1][c], grid[2][c], grid[3][c], grid[4][c]];
+    }
+
+    function renderGrid() {
+      let gridEl = document.getElementById('grid');
+      gridEl.innerHTML = '';
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+          let cell = document.createElement('div');
+          cell.className = 'cell' + (grid[r][c] ? ' filled' : '');
+          if (grid[r][c]) {
+            cell.innerHTML = cardHTML(grid[r][c]);
+          }
+          if (!grid[r][c] && currentCard) {
+            cell.onclick = () => placeCard(r, c);
+          }
+          gridEl.appendChild(cell);
+        }
+      }
+    }
+
+    function renderCurrentCard() {
+      let el = document.getElementById('current-card');
+      if (currentCard) {
+        el.innerHTML = cardHTML(currentCard);
+      } else {
+        el.innerHTML = '';
+      }
+    }
+
+    function renderLabels() {
+      // Row labels
+      let rowEl = document.getElementById('row-labels');
+      rowEl.innerHTML = '';
+      for (let r = 0; r < 5; r++) {
+        let row = getRow(r);
+        let label = document.createElement('div');
+        label.className = 'row-label';
+        if (row.every(c => c !== null)) {
+          let hand = evaluateHand(row);
+          label.textContent = hand.name + ' +' + hand.score;
+          label.className += ' scored';
+        } else {
+          label.textContent = 'Row ' + (r + 1);
+        }
+        rowEl.appendChild(label);
+      }
+
+      // Col labels
+      let colEl = document.getElementById('col-labels');
+      colEl.innerHTML = '';
+      for (let c = 0; c < 5; c++) {
+        let col = getCol(c);
+        let label = document.createElement('div');
+        label.className = 'col-label';
+        if (col.every(card => card !== null)) {
+          let hand = evaluateHand(col);
+          label.textContent = hand.name + '\n+' + hand.score;
+          label.className += ' scored';
+        } else {
+          label.textContent = 'Col ' + (c + 1);
+        }
+        colEl.appendChild(label);
+      }
+    }
+
+    function updateScore() {
+      totalScore = 0;
+      for (let r = 0; r < 5; r++) {
+        let row = getRow(r);
+        if (row.every(c => c !== null)) {
+          totalScore += evaluateHand(row).score;
+        }
+      }
+      for (let c = 0; c < 5; c++) {
+        let col = getCol(c);
+        if (col.every(card => card !== null)) {
+          totalScore += evaluateHand(col).score;
+        }
+      }
+      document.getElementById('total-score').textContent = totalScore;
+    }
+
+    function renderBest() {
+      let el = document.getElementById('best-score');
+      if (bestScore > 0) {
+        el.textContent = 'BEST: ' + bestScore;
+      } else {
+        el.textContent = '';
+      }
+    }
+
+    function placeCard(r, c) {
+      if (grid[r][c] || !currentCard) return;
+      grid[r][c] = currentCard;
+      cardsPlaced++;
+      document.getElementById('cards-left').textContent = (25 - cardsPlaced) + ' LEFT';
+
+      if (cardsPlaced < 25) {
+        currentCard = deck.pop();
+      } else {
+        currentCard = null;
+      }
+
+      renderGrid();
+      renderCurrentCard();
+      renderLabels();
+      updateScore();
+
+      if (cardsPlaced === 25) {
+        endGame();
+      }
+    }
+
+    function endGame() {
+      if (totalScore > bestScore) {
+        bestScore = totalScore;
+        localStorage.setItem('poker-squares-best', bestScore);
+      }
+      renderBest();
+
+      // Build breakdown
+      let html = '';
+      html += '<div class="breakdown-row section-header"><span>ROWS</span><span></span></div>';
+      for (let r = 0; r < 5; r++) {
+        let hand = evaluateHand(getRow(r));
+        html += `<div class="breakdown-row"><span class="hand-name">Row ${r + 1}: ${hand.name}</span><span class="hand-score">+${hand.score}</span></div>`;
+      }
+      html += '<div class="breakdown-row section-header"><span>COLUMNS</span><span></span></div>';
+      for (let c = 0; c < 5; c++) {
+        let hand = evaluateHand(getCol(c));
+        html += `<div class="breakdown-row"><span class="hand-name">Col ${c + 1}: ${hand.name}</span><span class="hand-score">+${hand.score}</span></div>`;
+      }
+      html += `<div class="breakdown-row total"><span>TOTAL</span><span class="hand-score">${totalScore}</span></div>`;
+
+      document.getElementById('breakdown').innerHTML = html;
+      document.getElementById('game-over').classList.add('show');
+    }
+
+    function newGame() {
+      grid = Array.from({ length: 5 }, () => Array(5).fill(null));
+      deck = makeDeck().slice(0, 25); // Only need 25 cards
+      cardsPlaced = 0;
+      totalScore = 0;
+      currentCard = deck.pop();
+
+      document.getElementById('game-over').classList.remove('show');
+      document.getElementById('total-score').textContent = '0';
+      document.getElementById('cards-left').textContent = '25 LEFT';
+
+      renderGrid();
+      renderCurrentCard();
+      renderLabels();
+      renderBest();
+    }
+
+    // Init
+    newGame();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

@@ -21,6 +21,8 @@
       font-family: 'JetBrains Mono', monospace;
       min-height: 100vh;
       overflow-x: hidden;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .top-bar {
       display: flex;
@@ -84,6 +86,7 @@
       position: relative;
       width: 100%;
       padding: 1rem 0.5rem;
+      padding-bottom: 8rem;
       min-height: calc(100vh - 120px);
       user-select: none;
     }
@@ -154,19 +157,29 @@
     .suit-spade, .suit-club { color: var(--accent-cyan, #00f0ff); }
     .suit-heart, .suit-diamond { color: var(--accent-magenta, #ff2d7b); }
 
-    .stock-area {
+    .bottom-bar {
       position: fixed;
-      bottom: 1rem;
-      right: 1rem;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      background: var(--bg, #0a0a0f);
+      border-top: 1px solid var(--border, #7a7a90);
+      z-index: 100;
+    }
+
+    .stock-area {
       display: flex;
       gap: 0.5rem;
       align-items: center;
-      z-index: 100;
     }
 
     .stock-pile {
       width: 72px;
-      height: 100px;
+      height: 52px;
       border: 2px solid var(--accent-purple, #9d4edd);
       display: flex;
       align-items: center;
@@ -179,6 +192,7 @@
       color: var(--text-dim, #7a7a90);
       text-align: center;
       line-height: 1.4;
+      min-height: 44px;
     }
 
     .stock-pile:hover {
@@ -193,12 +207,9 @@
     }
 
     .foundations {
-      position: fixed;
-      bottom: 1rem;
-      left: 1rem;
       display: flex;
       gap: 4px;
-      z-index: 100;
+      align-items: center;
     }
 
     .foundation-slot {
@@ -256,33 +267,39 @@
 
     .hint-text {
       position: fixed;
-      bottom: 7.5rem;
+      bottom: 5.5rem;
       left: 50%;
       transform: translateX(-50%);
       font-size: 0.6rem;
       color: var(--text-dim, #7a7a90);
       text-align: center;
       letter-spacing: 0.05em;
-      z-index: 50;
+      z-index: 150;
       pointer-events: none;
       opacity: 0;
       transition: opacity 0.3s;
+      background: var(--bg, #0a0a0f);
+      padding: 0.3rem 0.8rem;
+      border: 1px solid var(--border, #7a7a90);
     }
     .hint-text.show { opacity: 1; }
 
     @media (max-width: 800px) {
       .column { width: 56px; }
       .card { width: 56px; height: 80px; font-size: 0.6rem; padding: 2px 4px; }
-      .stock-pile { width: 56px; height: 80px; }
-      .foundation-slot { width: 28px; height: 40px; font-size: 0.45rem; }
+      .stock-pile { width: 56px; height: 48px; }
+      .foundation-slot { width: 28px; height: 36px; font-size: 0.45rem; }
     }
     @media (max-width: 620px) {
       .column { width: 34px; }
       .card { width: 34px; height: 50px; font-size: 0.45rem; padding: 1px 2px; }
       .card .rank-suit-bottom { display: none; }
-      .stock-pile { width: 48px; height: 66px; font-size: 0.5rem; }
-      .foundation-slot { width: 22px; height: 32px; font-size: 0.35rem; }
+      .stock-pile { width: 52px; height: 44px; font-size: 0.5rem; }
+      .foundation-slot { width: 20px; height: 28px; font-size: 0.3rem; }
       .tableau { gap: 2px; }
+      .bottom-bar { padding: 0.4rem 0.5rem; }
+      #game-area { padding-bottom: 5rem; }
+      .hint-text { bottom: 4.5rem; font-size: 0.5rem; }
     }
   </style>
 </head>
@@ -312,10 +329,11 @@
     <div class="tableau" id="tableau"></div>
   </div>
 
-  <div class="foundations" id="foundations"></div>
-
-  <div class="stock-area">
-    <div class="stock-pile" id="stock-pile">DEAL<br>10</div>
+  <div class="bottom-bar">
+    <div class="foundations" id="foundations"></div>
+    <div class="stock-area">
+      <div class="stock-pile" id="stock-pile">DEAL<br>10</div>
+    </div>
   </div>
 
   <div class="hint-text" id="hint-text"></div>

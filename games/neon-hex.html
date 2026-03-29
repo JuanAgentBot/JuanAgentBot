@@ -49,6 +49,53 @@
       margin: 0 auto 1rem;
       border: 1px solid var(--border);
       max-width: 100%;
+      touch-action: manipulation;
+    }
+    .touch-controls {
+      display: none;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .touch-btn {
+      width: 72px;
+      height: 56px;
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid var(--accent-cyan);
+      border-radius: 8px;
+      color: var(--accent-cyan);
+      font-size: 1.4rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .touch-btn:active {
+      background: rgba(0, 240, 255, 0.2);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+    }
+    .touch-btn-start {
+      width: 100%;
+      max-width: 200px;
+      height: 48px;
+      background: rgba(255, 45, 123, 0.1);
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+    }
+    .touch-btn-start:active {
+      background: rgba(255, 45, 123, 0.25);
+      box-shadow: 0 0 12px rgba(255, 45, 123, 0.3);
+    }
+    @media (pointer: coarse), (hover: none) {
+      .touch-controls { display: flex; }
     }
     .hud {
       display: flex;
@@ -91,6 +138,12 @@
     </div>
 
     <div class="msg" id="msg">PRESS SPACE OR TAP TO START</div>
+
+    <div class="touch-controls" id="touchControls">
+      <button class="touch-btn" id="btnLeft">◀</button>
+      <button class="touch-btn touch-btn-start" id="btnStart">START</button>
+      <button class="touch-btn" id="btnRight">▶</button>
+    </div>
 
     <div class="controls">
       <span>← →</span> or <span>A D</span> ROTATE &nbsp;|&nbsp; <span>SPACE</span> START / RESTART
@@ -210,6 +263,7 @@
     state = 'playing';
     msgEl.textContent = '';
     lastFrame = performance.now();
+    if (typeof updateStartBtn === 'function') updateStartBtn();
   }
 
   function update(dt) {
@@ -283,10 +337,11 @@
       bestTime = elapsed;
       localStorage.setItem('zero-hex-best', bestTime.toFixed(2));
       bestEl.textContent = bestTime.toFixed(2);
-      msgEl.textContent = 'NEW BEST! PRESS SPACE TO RETRY';
+      msgEl.textContent = 'NEW BEST! PRESS SPACE OR TAP TO RETRY';
     } else {
       msgEl.textContent = 'PRESS SPACE OR TAP TO RETRY';
     }
+    updateStartBtn();
   }
 
   function normalizeAngle(a) {
@@ -481,6 +536,39 @@
   canvas.addEventListener('click', () => {
     if (state !== 'playing') resetGame();
   });
+
+  // Touch button controls
+  const btnLeft = document.getElementById('btnLeft');
+  const btnRight = document.getElementById('btnRight');
+  const btnStart = document.getElementById('btnStart');
+
+  function updateStartBtn() {
+    if (btnStart) btnStart.textContent = state === 'playing' ? '⟳' : 'START';
+  }
+
+  if (btnLeft) {
+    btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); inputLeft = true; });
+    btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); inputLeft = false; });
+    btnLeft.addEventListener('touchcancel', () => { inputLeft = false; });
+    btnLeft.addEventListener('mousedown', (e) => { e.preventDefault(); inputLeft = true; });
+    btnLeft.addEventListener('mouseup', () => { inputLeft = false; });
+    btnLeft.addEventListener('mouseleave', () => { inputLeft = false; });
+  }
+  if (btnRight) {
+    btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); inputRight = true; });
+    btnRight.addEventListener('touchend', (e) => { e.preventDefault(); inputRight = false; });
+    btnRight.addEventListener('touchcancel', () => { inputRight = false; });
+    btnRight.addEventListener('mousedown', (e) => { e.preventDefault(); inputRight = true; });
+    btnRight.addEventListener('mouseup', () => { inputRight = false; });
+    btnRight.addEventListener('mouseleave', () => { inputRight = false; });
+  }
+  if (btnStart) {
+    btnStart.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (state !== 'playing') resetGame();
+      updateStartBtn();
+    });
+  }
 
   // Initial draw
   lastFrame = performance.now();

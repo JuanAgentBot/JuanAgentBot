@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DOTS & BOXES / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+      transition: color 0.3s;
+    }
+
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .tagline {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+    }
+
+    .scoreboard {
+      display: flex;
+      justify-content: center;
+      gap: 2.5rem;
+      margin-bottom: 1.2rem;
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+    }
+
+    .score-player {
+      color: #00f0ff;
+      text-shadow: 0 0 10px rgba(0,240,255,0.5);
+    }
+
+    .score-cpu {
+      color: #ff2d7b;
+      text-shadow: 0 0 10px rgba(255,45,123,0.5);
+    }
+
+    .score-val {
+      font-weight: 700;
+      font-size: 1.3rem;
+    }
+
+    .turn-indicator {
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 1rem;
+      min-height: 1.2em;
+    }
+
+    .turn-player { color: #00f0ff; text-shadow: 0 0 8px rgba(0,240,255,0.4); }
+    .turn-cpu { color: #ff2d7b; text-shadow: 0 0 8px rgba(255,45,123,0.4); }
+    .turn-done { color: #39ff14; text-shadow: 0 0 10px rgba(57,255,20,0.5); }
+
+    canvas {
+      display: block;
+      margin: 0 auto 1.2rem;
+      cursor: pointer;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .controls button {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .controls button:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .controls button.active {
+      border-color: #9d4edd;
+      color: #9d4edd;
+    }
+
+    .sizes {
+      display: flex;
+      justify-content: center;
+      gap: 0.6rem;
+      margin-bottom: 1rem;
+    }
+
+    .sizes button {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      padding: 0.4rem 0.7rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .sizes button:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .sizes button.active {
+      border-color: #39ff14;
+      color: #39ff14;
+    }
+
+    .help {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      line-height: 1.6;
+      letter-spacing: 0.04em;
+      margin-top: 0.5rem;
+    }
+
+    .result-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10,10,15,0.92);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    .result-overlay.show { display: flex; }
+
+    .result-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.8rem;
+    }
+
+    .result-win { color: #39ff14; text-shadow: 0 0 30px rgba(57,255,20,0.6); }
+    .result-lose { color: #ff2d7b; text-shadow: 0 0 30px rgba(255,45,123,0.6); }
+    .result-draw { color: #9d4edd; text-shadow: 0 0 30px rgba(157,78,221,0.6); }
+
+    .result-score {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .result-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      border: 1px solid #39ff14;
+      background: transparent;
+      color: #39ff14;
+      padding: 0.6rem 1.8rem;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .result-btn:hover {
+      background: #39ff14;
+      color: #0a0a0f;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>DOTS &amp; BOXES</h1>
+    <p class="tagline">DRAW LINES. CLAIM BOXES. OUTSMART THE CPU.</p>
+
+    <div class="scoreboard">
+      <div class="score-player">YOU <span class="score-val" id="score-p">0</span></div>
+      <div class="score-cpu">CPU <span class="score-val" id="score-c">0</span></div>
+    </div>
+
+    <div class="turn-indicator" id="turn">
+      <span class="turn-player">YOUR TURN — CLICK A LINE</span>
+    </div>
+
+    <canvas id="board" width="480" height="480"></canvas>
+
+    <div class="sizes">
+      <button id="sz-3" onclick="setSize(3)">3×3</button>
+      <button id="sz-4" class="active" onclick="setSize(4)">4×4</button>
+      <button id="sz-5" onclick="setSize(5)">5×5</button>
+      <button id="sz-6" onclick="setSize(6)">6×6</button>
+    </div>
+
+    <div class="controls">
+      <button id="d-easy" onclick="setDiff(0)">EASY</button>
+      <button id="d-med" class="active" onclick="setDiff(1)">MEDIUM</button>
+      <button id="d-hard" onclick="setDiff(2)">HARD</button>
+    </div>
+
+    <button class="controls" style="border:none;padding:0;margin-bottom:0.5rem;">
+      <button onclick="newGame()">NEW GAME</button>
+    </button>
+
+    <p class="help">
+      CLICK BETWEEN DOTS TO DRAW A LINE.<br>
+      COMPLETE A BOX TO CLAIM IT AND GO AGAIN.<br>
+      MOST BOXES WINS.
+    </p>
+  </main>
+
+  <div class="result-overlay" id="result">
+    <div class="result-title" id="result-title">YOU WIN</div>
+    <div class="result-score" id="result-score">12 – 4</div>
+    <button class="result-btn" onclick="dismissResult()">PLAY AGAIN</button>
+  </div>
+
+  <script>
+  (function() {
+    const C = document.getElementById('board');
+    const ctx = C.getContext('2d');
+    const MAGENTA = '#ff2d7b';
+    const CYAN = '#00f0ff';
+    const GREEN = '#39ff14';
+    const PURPLE = '#9d4edd';
+    const DIM = '#7a7a90';
+    const VOID = '#0a0a0f';
+    const WHITE = '#e0e0e8';
+    const MAGENTA_FILL = 'rgba(255,45,123,0.15)';
+    const CYAN_FILL = 'rgba(0,240,255,0.15)';
+    const MAGENTA_GLOW = 'rgba(255,45,123,0.4)';
+    const CYAN_GLOW = 'rgba(0,240,255,0.4)';
+
+    let gridSize = 4;   // boxes per side
+    let diff = 1;        // 0=easy, 1=med, 2=hard
+    let hLines, vLines;  // hLines[row][col], vLines[row][col]
+    let boxes;           // boxes[row][col] = 0 (unclaimed), 1 (player), 2 (cpu)
+    let turn;            // 1=player, 2=cpu
+    let scoreP, scoreC;
+    let gameOver;
+    let hoverLine = null; // {type:'h'|'v', r, c}
+    let cpuThinking = false;
+
+    function init() {
+      const rows = gridSize;
+      const cols = gridSize;
+      hLines = Array.from({length: rows + 1}, () => Array(cols).fill(false));
+      vLines = Array.from({length: rows}, () => Array(cols + 1).fill(false));
+      boxes = Array.from({length: rows}, () => Array(cols).fill(0));
+      turn = 1;
+      scoreP = 0;
+      scoreC = 0;
+      gameOver = false;
+      cpuThinking = false;
+      hoverLine = null;
+      updateUI();
+      draw();
+    }
+
+    function cellSize() {
+      const pad = 30;
+      return (C.width - pad * 2) / gridSize;
+    }
+
+    function padX() { return (C.width - cellSize() * gridSize) / 2; }
+    function padY() { return (C.height - cellSize() * gridSize) / 2; }
+
+    function draw() {
+      const cs = cellSize();
+      const px = padX();
+      const py = padY();
+      const rows = gridSize;
+      const cols = gridSize;
+
+      // Determine if light theme
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      const bg = isLight ? '#f0eff5' : VOID;
+      const dotColor = isLight ? '#3a3a52' : WHITE;
+      const dimLine = isLight ? '#c8c8d6' : '#2a2a35';
+      const cyanColor = isLight ? '#00717f' : CYAN;
+      const magentaColor = isLight ? '#cc1166' : MAGENTA;
+      const cyanBoxFill = isLight ? 'rgba(0,113,127,0.12)' : CYAN_FILL;
+      const magentaBoxFill = isLight ? 'rgba(204,17,102,0.12)' : MAGENTA_FILL;
+      const hoverColor = isLight ? 'rgba(0,113,127,0.35)' : 'rgba(0,240,255,0.3)';
+
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, C.width, C.height);
+
+      // Draw box fills
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (boxes[r][c] !== 0) {
+            const x = px + c * cs;
+            const y = py + r * cs;
+            ctx.fillStyle = boxes[r][c] === 1 ? cyanBoxFill : magentaBoxFill;
+            ctx.fillRect(x + 2, y + 2, cs - 4, cs - 4);
+
+            // Owner initial
+            ctx.fillStyle = boxes[r][c] === 1 ? cyanColor : magentaColor;
+            ctx.globalAlpha = 0.5;
+            ctx.font = `bold ${cs * 0.35}px 'JetBrains Mono', monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(boxes[r][c] === 1 ? 'Y' : 'C', x + cs / 2, y + cs / 2);
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+
+      // Draw potential line positions (dim guides)
+      ctx.strokeStyle = dimLine;
+      ctx.lineWidth = 1;
+      for (let r = 0; r <= rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (!hLines[r][c]) {
+            const x1 = px + c * cs;
+            const y1 = py + r * cs;
+            ctx.beginPath();
+            ctx.setLineDash([3, 5]);
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x1 + cs, y1);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+        }
+      }
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c <= cols; c++) {
+          if (!vLines[r][c]) {
+            const x1 = px + c * cs;
+            const y1 = py + r * cs;
+            ctx.beginPath();
+            ctx.setLineDash([3, 5]);
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x1, y1 + cs);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+        }
+      }
+
+      // Draw placed lines
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      for (let r = 0; r <= rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (hLines[r][c]) {
+            const x1 = px + c * cs;
+            const y1 = py + r * cs;
+            ctx.strokeStyle = hLines[r][c] === 1 ? cyanColor : magentaColor;
+            ctx.shadowColor = hLines[r][c] === 1 ? (isLight ? 'transparent' : CYAN_GLOW) : (isLight ? 'transparent' : MAGENTA_GLOW);
+            ctx.shadowBlur = isLight ? 0 : 8;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x1 + cs, y1);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+          }
+        }
+      }
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c <= cols; c++) {
+          if (vLines[r][c]) {
+            const x1 = px + c * cs;
+            const y1 = py + r * cs;
+            ctx.strokeStyle = vLines[r][c] === 1 ? cyanColor : magentaColor;
+            ctx.shadowColor = vLines[r][c] === 1 ? (isLight ? 'transparent' : CYAN_GLOW) : (isLight ? 'transparent' : MAGENTA_GLOW);
+            ctx.shadowBlur = isLight ? 0 : 8;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x1, y1 + cs);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+          }
+        }
+      }
+
+      // Draw hover highlight
+      if (hoverLine && !gameOver && turn === 1 && !cpuThinking) {
+        const {type, r, c} = hoverLine;
+        ctx.strokeStyle = hoverColor;
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        if (type === 'h') {
+          const x1 = px + c * cs;
+          const y1 = py + r * cs;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x1 + cs, y1);
+          ctx.stroke();
+        } else {
+          const x1 = px + c * cs;
+          const y1 = py + r * cs;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x1, y1 + cs);
+          ctx.stroke();
+        }
+      }
+
+      // Draw dots
+      const dotR = Math.max(4, cs * 0.06);
+      for (let r = 0; r <= rows; r++) {
+        for (let c = 0; c <= cols; c++) {
+          const x = px + c * cs;
+          const y = py + r * cs;
+          ctx.fillStyle = dotColor;
+          if (!isLight) {
+            ctx.shadowColor = 'rgba(224,224,232,0.4)';
+            ctx.shadowBlur = 6;
+          }
+          ctx.beginPath();
+          ctx.arc(x, y, dotR, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+      }
+    }
+
+    function getLineAt(mx, my) {
+      const cs = cellSize();
+      const px = padX();
+      const py = padY();
+      const rows = gridSize;
+      const cols = gridSize;
+      const thresh = cs * 0.3;
+
+      let best = null;
+      let bestDist = Infinity;
+
+      // Check horizontal lines
+      for (let r = 0; r <= rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const x1 = px + c * cs;
+          const y1 = py + r * cs;
+          const cx = x1 + cs / 2;
+          const cy = y1;
+          const d = Math.sqrt((mx - cx) ** 2 + (my - cy) ** 2);
+          if (d < thresh && d < bestDist) {
+            bestDist = d;
+            best = {type: 'h', r, c};
+          }
+        }
+      }
+
+      // Check vertical lines
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c <= cols; c++) {
+          const x1 = px + c * cs;
+          const y1 = py + r * cs;
+          const cx = x1;
+          const cy = y1 + cs / 2;
+          const d = Math.sqrt((mx - cx) ** 2 + (my - cy) ** 2);
+          if (d < thresh && d < bestDist) {
+            bestDist = d;
+            best = {type: 'v', r, c};
+          }
+        }
+      }
+
+      return best;
+    }
+
+    function isLineSet(line) {
+      if (line.type === 'h') return hLines[line.r][line.c] !== false;
+      return vLines[line.r][line.c] !== false;
+    }
+
+    function setLine(line, player) {
+      if (line.type === 'h') hLines[line.r][line.c] = player;
+      else vLines[line.r][line.c] = player;
+    }
+
+    function checkBoxes(player) {
+      const rows = gridSize;
+      const cols = gridSize;
+      let claimed = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (boxes[r][c] === 0) {
+            if (hLines[r][c] && hLines[r + 1][c] && vLines[r][c] && vLines[r][c + 1]) {
+              boxes[r][c] = player;
+              claimed++;
+            }
+          }
+        }
+      }
+      return claimed;
+    }
+
+    function allLinesFilled() {
+      for (let r = 0; r <= gridSize; r++)
+        for (let c = 0; c < gridSize; c++)
+          if (!hLines[r][c]) return false;
+      for (let r = 0; r < gridSize; r++)
+        for (let c = 0; c <= gridSize; c++)
+          if (!vLines[r][c]) return false;
+      return true;
+    }
+
+    function getAvailableLines() {
+      const lines = [];
+      for (let r = 0; r <= gridSize; r++)
+        for (let c = 0; c < gridSize; c++)
+          if (!hLines[r][c]) lines.push({type: 'h', r, c});
+      for (let r = 0; r < gridSize; r++)
+        for (let c = 0; c <= gridSize; c++)
+          if (!vLines[r][c]) lines.push({type: 'v', r, c});
+      return lines;
+    }
+
+    function countSides(r, c) {
+      let n = 0;
+      if (hLines[r][c]) n++;
+      if (hLines[r + 1][c]) n++;
+      if (vLines[r][c]) n++;
+      if (vLines[r][c + 1]) n++;
+      return n;
+    }
+
+    // Which boxes does a line border?
+    function adjacentBoxes(line) {
+      const result = [];
+      if (line.type === 'h') {
+        // hLines[r][c] is top of box (r,c) and bottom of box (r-1,c)
+        if (line.r < gridSize) result.push({r: line.r, c: line.c});
+        if (line.r > 0) result.push({r: line.r - 1, c: line.c});
+      } else {
+        // vLines[r][c] is left of box (r,c) and right of box (r,c-1)
+        if (line.c < gridSize) result.push({r: line.r, c: line.c});
+        if (line.c > 0) result.push({r: line.r, c: line.c - 1});
+      }
+      return result;
+    }
+
+    function wouldComplete(line) {
+      const adj = adjacentBoxes(line);
+      return adj.some(b => boxes[b.r][b.c] === 0 && countSides(b.r, b.c) === 3);
+    }
+
+    function completionCount(line) {
+      const adj = adjacentBoxes(line);
+      return adj.filter(b => boxes[b.r][b.c] === 0 && countSides(b.r, b.c) === 3).length;
+    }
+
+    function wouldGive3(line) {
+      // Would this line give an opponent a box with 3 sides?
+      const adj = adjacentBoxes(line);
+      return adj.some(b => boxes[b.r][b.c] === 0 && countSides(b.r, b.c) === 2);
+    }
+
+    function cpuMove() {
+      const avail = getAvailableLines();
+      if (avail.length === 0) return;
+
+      let chosen;
+
+      if (diff === 0) {
+        // Easy: random, but take completions sometimes
+        const completers = avail.filter(l => wouldComplete(l));
+        if (completers.length > 0 && Math.random() < 0.6) {
+          chosen = completers[Math.floor(Math.random() * completers.length)];
+        } else {
+          chosen = avail[Math.floor(Math.random() * avail.length)];
+        }
+      } else if (diff === 1) {
+        // Medium: always take completions, try to avoid giving 3-side boxes
+        const completers = avail.filter(l => wouldComplete(l));
+        if (completers.length > 0) {
+          // Pick the one that completes the most boxes
+          completers.sort((a, b) => completionCount(b) - completionCount(a));
+          chosen = completers[0];
+        } else {
+          const safe = avail.filter(l => !wouldGive3(l));
+          if (safe.length > 0) {
+            chosen = safe[Math.floor(Math.random() * safe.length)];
+          } else {
+            // All moves give opponent a 3-side box; pick least damaging
+            chosen = avail[Math.floor(Math.random() * avail.length)];
+          }
+        }
+      } else {
+        // Hard: greedy + chain awareness
+        const completers = avail.filter(l => wouldComplete(l));
+        if (completers.length > 0) {
+          completers.sort((a, b) => completionCount(b) - completionCount(a));
+          chosen = completers[0];
+        } else {
+          // Score each move: prefer safe moves, avoid giving chains
+          let bestScore = -Infinity;
+          let bestMoves = [];
+          for (const line of avail) {
+            let score = 0;
+            const adj = adjacentBoxes(line);
+            for (const b of adj) {
+              if (boxes[b.r][b.c] !== 0) continue;
+              const sides = countSides(b.r, b.c);
+              if (sides === 2) {
+                // This would create a 3-side box (bad)
+                score -= 10;
+              } else if (sides === 0) {
+                score += 1;
+              } else if (sides === 1) {
+                score += 0;
+              }
+            }
+            if (score > bestScore) {
+              bestScore = score;
+              bestMoves = [line];
+            } else if (score === bestScore) {
+              bestMoves.push(line);
+            }
+          }
+
+          if (bestMoves.length > 0 && bestScore >= -5) {
+            chosen = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+          } else {
+            // All moves are bad. Try to give away the smallest chain.
+            // Find the move that opens the fewest boxes to opponent
+            const dangerous = avail.filter(l => wouldGive3(l));
+            if (dangerous.length > 0) {
+              // Pick the one that borders the smallest group
+              let minChain = Infinity;
+              let minMoves = [];
+              for (const line of dangerous) {
+                const adj = adjacentBoxes(line);
+                let chainLen = 0;
+                for (const b of adj) {
+                  if (boxes[b.r][b.c] === 0 && countSides(b.r, b.c) === 2) {
+                    chainLen += estimateChainLength(b.r, b.c, line);
+                  }
+                }
+                if (chainLen < minChain) {
+                  minChain = chainLen;
+                  minMoves = [line];
+                } else if (chainLen === minChain) {
+                  minMoves.push(line);
+                }
+              }
+              chosen = minMoves[Math.floor(Math.random() * minMoves.length)];
+            } else {
+              chosen = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+            }
+          }
+        }
+      }
+
+      if (!chosen) chosen = avail[0];
+
+      setLine(chosen, 2);
+      const claimed = checkBoxes(2);
+      scoreC += claimed;
+      updateUI();
+      draw();
+
+      if (allLinesFilled()) {
+        endGame();
+        return;
+      }
+
+      if (claimed > 0) {
+        // CPU gets another turn
+        setTimeout(cpuTurn, 350);
+      } else {
+        turn = 1;
+        cpuThinking = false;
+        updateUI();
+      }
+    }
+
+    function estimateChainLength(br, bc, triggerLine) {
+      // Simple BFS to estimate how many boxes become completable in a chain
+      // after the trigger line is placed
+      const visited = new Set();
+      const queue = [`${br},${bc}`];
+      visited.add(`${br},${bc}`);
+      let count = 1;
+
+      while (queue.length > 0) {
+        const key = queue.shift();
+        const [r, c] = key.split(',').map(Number);
+        // Check neighbors that share an edge and have 2 sides
+        const neighbors = [
+          {r: r - 1, c, edge: 'h', er: r, ec: c},
+          {r: r + 1, c, edge: 'h', er: r + 1, ec: c},
+          {r, c: c - 1, edge: 'v', er: r, ec: c},
+          {r, c: c + 1, edge: 'v', er: r, ec: c + 1},
+        ];
+        for (const n of neighbors) {
+          if (n.r < 0 || n.r >= gridSize || n.c < 0 || n.c >= gridSize) continue;
+          const nk = `${n.r},${n.c}`;
+          if (visited.has(nk)) continue;
+          if (boxes[n.r][n.c] !== 0) continue;
+          if (countSides(n.r, n.c) >= 2) {
+            visited.add(nk);
+            queue.push(nk);
+            count++;
+          }
+        }
+      }
+      return count;
+    }
+
+    function cpuTurn() {
+      cpuThinking = true;
+      updateUI();
+      draw();
+      setTimeout(() => cpuMove(), 250 + Math.random() * 300);
+    }
+
+    function playLine(line) {
+      if (gameOver || turn !== 1 || cpuThinking) return;
+      if (isLineSet(line)) return;
+
+      setLine(line, 1);
+      const claimed = checkBoxes(1);
+      scoreP += claimed;
+      updateUI();
+      draw();
+
+      if (allLinesFilled()) {
+        endGame();
+        return;
+      }
+
+      if (claimed > 0) {
+        // Player gets another turn
+      } else {
+        turn = 2;
+        updateUI();
+        draw();
+        cpuTurn();
+      }
+    }
+
+    function endGame() {
+      gameOver = true;
+      updateUI();
+      draw();
+
+      const overlay = document.getElementById('result');
+      const title = document.getElementById('result-title');
+      const score = document.getElementById('result-score');
+
+      if (scoreP > scoreC) {
+        title.textContent = 'YOU WIN';
+        title.className = 'result-title result-win';
+      } else if (scoreC > scoreP) {
+        title.textContent = 'CPU WINS';
+        title.className = 'result-title result-lose';
+      } else {
+        title.textContent = 'DRAW';
+        title.className = 'result-title result-draw';
+      }
+      score.textContent = `${scoreP} – ${scoreC}`;
+
+      setTimeout(() => overlay.classList.add('show'), 500);
+    }
+
+    function updateUI() {
+      document.getElementById('score-p').textContent = scoreP;
+      document.getElementById('score-c').textContent = scoreC;
+      const ti = document.getElementById('turn');
+      if (gameOver) {
+        if (scoreP > scoreC) ti.innerHTML = '<span class="turn-done">GAME OVER — YOU WIN</span>';
+        else if (scoreC > scoreP) ti.innerHTML = '<span class="turn-cpu">GAME OVER — CPU WINS</span>';
+        else ti.innerHTML = '<span class="turn-done">GAME OVER — DRAW</span>';
+      } else if (turn === 1 && !cpuThinking) {
+        ti.innerHTML = '<span class="turn-player">YOUR TURN — CLICK A LINE</span>';
+      } else {
+        ti.innerHTML = '<span class="turn-cpu">CPU THINKING…</span>';
+      }
+    }
+
+    // Canvas interaction
+    function getCanvasPos(e) {
+      const rect = C.getBoundingClientRect();
+      const scaleX = C.width / rect.width;
+      const scaleY = C.height / rect.height;
+      const touch = e.touches ? e.touches[0] : e;
+      return {
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top) * scaleY
+      };
+    }
+
+    C.addEventListener('mousemove', (e) => {
+      if (gameOver || turn !== 1 || cpuThinking) { hoverLine = null; draw(); return; }
+      const pos = getCanvasPos(e);
+      const line = getLineAt(pos.x, pos.y);
+      if (line && !isLineSet(line)) {
+        hoverLine = line;
+      } else {
+        hoverLine = null;
+      }
+      draw();
+    });
+
+    C.addEventListener('mouseleave', () => {
+      hoverLine = null;
+      draw();
+    });
+
+    C.addEventListener('click', (e) => {
+      const pos = getCanvasPos(e);
+      const line = getLineAt(pos.x, pos.y);
+      if (line && !isLineSet(line)) {
+        hoverLine = null;
+        playLine(line);
+      }
+    });
+
+    C.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const pos = getCanvasPos(e);
+      const line = getLineAt(pos.x, pos.y);
+      if (line && !isLineSet(line)) {
+        playLine(line);
+      }
+    }, {passive: false});
+
+    // Sizing
+    function resizeCanvas() {
+      const maxW = Math.min(480, window.innerWidth - 48);
+      C.style.width = maxW + 'px';
+      C.style.height = maxW + 'px';
+      C.width = maxW * (window.devicePixelRatio || 1);
+      C.height = maxW * (window.devicePixelRatio || 1);
+      ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+      draw();
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    // Public functions
+    window.setSize = function(n) {
+      gridSize = n;
+      document.querySelectorAll('.sizes button').forEach(b => b.classList.remove('active'));
+      document.getElementById('sz-' + n).classList.add('active');
+      resizeCanvas();
+      init();
+    };
+
+    window.setDiff = function(d) {
+      diff = d;
+      const ids = ['d-easy', 'd-med', 'd-hard'];
+      document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+      document.getElementById(ids[d]).classList.add('active');
+      init();
+    };
+
+    window.newGame = function() {
+      init();
+    };
+
+    window.dismissResult = function() {
+      document.getElementById('result').classList.remove('show');
+      init();
+    };
+
+    // Theme change detection
+    const observer = new MutationObserver(() => draw());
+    observer.observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+
+    resizeCanvas();
+    init();
+  })();
+  </script>
+</body>
+</html>

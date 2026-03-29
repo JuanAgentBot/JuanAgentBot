@@ -18,6 +18,10 @@
       font-family: 'JetBrains Mono', monospace;
       overflow: hidden;
       height: 100vh;
+      touch-action: manipulation;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     .top-bar {
       display: flex;
@@ -50,7 +54,7 @@
       right: 0;
       display: flex;
       justify-content: center;
-      gap: 2rem;
+      gap: 1.2rem;
       padding: 0.5rem;
       z-index: 5;
       pointer-events: none;
@@ -68,6 +72,20 @@
       font-weight: 700;
       text-shadow: 0 0 10px currentColor;
     }
+    @media (max-width: 480px) {
+      .top-bar { padding: 0.5rem 0.6rem; }
+      .game-title { font-size: 0.7rem; }
+      .top-bar a { font-size: 0.6rem; }
+      #ui { top: 42px; gap: 0.6rem; padding: 0.3rem; }
+      .stat-label { font-size: 0.45rem; }
+      .stat-val { font-size: 1rem; }
+      #overlay h2 { font-size: 1.2rem; }
+      #overlay p { font-size: 0.65rem; max-width: 280px; }
+      #overlay .final-score { font-size: 2rem; }
+      #overlay .final-stats { font-size: 0.6rem; }
+      .btn { font-size: 0.7rem; padding: 0.7rem 2rem; min-height: 44px; }
+      .controls-hint { font-size: 0.55rem; }
+    }
     .stat-val.score { color: var(--accent-cyan, #00f0ff); }
     .stat-val.shots { color: var(--accent-green, #39ff14); }
     .stat-val.streak { color: var(--accent-magenta, #ff2d7b); }
@@ -76,6 +94,7 @@
       display: block;
       width: 100%;
       height: calc(100vh - 42px);
+      touch-action: none;
     }
     #msg {
       position: absolute;
@@ -172,8 +191,8 @@
   <div id="msg"></div>
   <div id="overlay">
     <h2>NEON BASKETBALL</h2>
-    <p>Click and drag from the ball to aim.<br>Release to shoot.<br>Longer drag = more power.<br><br>Score from different spots.<br>Swishes and streaks earn bonus points.<br>20 shots per round.</p>
-    <div class="controls-hint">CLICK &amp; DRAG TO SHOOT</div>
+    <p>Drag from the ball to aim.<br>Release to shoot.<br>Longer drag = more power.<br><br>Score from different spots.<br>Swishes and streaks earn bonus points.<br>20 shots per round.</p>
+    <div class="controls-hint">DRAG FROM BALL TO SHOOT</div>
     <button class="btn" id="startBtn">START</button>
   </div>
   <script>
@@ -231,8 +250,9 @@ function setupPositions() {
   const h = H / devicePixelRatio;
   // Hoop is on the right side
   const hoopX = w * 0.72;
-  const hoopY = h * 0.42;
-  const rimWidth = 50;
+  const hoopY = h * 0.38;
+  const scale = Math.min(w / 400, 1.2);
+  const rimWidth = Math.max(40, 50 * scale);
   
   hoop = {
     x: hoopX,
@@ -260,6 +280,7 @@ function setupPositions() {
 function newBall() {
   const w = W / devicePixelRatio;
   const h = H / devicePixelRatio;
+  const scale = Math.min(w / 400, 1.2);
   const posIdx = totalShots < 7 ? 0 : totalShots < 14 ? 1 : 2;
   const pos = hoopPositions[posIdx];
   ball = {
@@ -267,7 +288,7 @@ function newBall() {
     y: pos.y,
     vx: 0,
     vy: 0,
-    r: 12,
+    r: Math.max(10, 12 * scale),
     moving: false,
     scored: false,
     missed: false,
@@ -544,9 +565,10 @@ function draw() {
   ctx.setLineDash([]);
   
   // Distance markers
+  const fontScale = Math.min(w / 400, 1.2);
   for (const pos of hoopPositions) {
     ctx.fillStyle = DIM;
-    ctx.font = '9px "JetBrains Mono"';
+    ctx.font = Math.max(8, Math.round(9 * fontScale)) + 'px "JetBrains Mono"';
     ctx.textAlign = 'center';
     ctx.fillText(pos.label, pos.x, groundY + 16);
     ctx.fillText(pos.points + 'PT', pos.x, groundY + 28);
@@ -684,7 +706,7 @@ function draw() {
       
       // Power meter
       ctx.fillStyle = DIM;
-      ctx.font = '10px "JetBrains Mono"';
+      ctx.font = Math.max(9, Math.round(10 * fontScale)) + 'px "JetBrains Mono"';
       ctx.textAlign = 'center';
       ctx.fillText('POWER: ' + Math.round(power * 100) + '%', ball.x, ball.y + ball.r + 20);
     }
@@ -703,7 +725,7 @@ function draw() {
     const alpha = shotResult.timer > 10 ? 1 : shotResult.timer / 10;
     ctx.globalAlpha = alpha;
     ctx.fillStyle = shotResult.color;
-    ctx.font = 'bold 28px "JetBrains Mono"';
+    ctx.font = 'bold ' + Math.max(18, Math.round(28 * fontScale)) + 'px "JetBrains Mono"';
     ctx.textAlign = 'center';
     ctx.shadowColor = shotResult.color;
     ctx.shadowBlur = 20;
@@ -715,7 +737,7 @@ function draw() {
   // Shot distance label
   if (ball && !ball.moving && gameActive) {
     ctx.fillStyle = CYAN;
-    ctx.font = 'bold 11px "JetBrains Mono"';
+    ctx.font = 'bold ' + Math.max(9, Math.round(11 * fontScale)) + 'px "JetBrains Mono"';
     ctx.textAlign = 'center';
     ctx.shadowColor = CYAN;
     ctx.shadowBlur = 8;
@@ -785,7 +807,9 @@ canvas.addEventListener('touchstart', (e) => {
   const dx = pos.x - ball.x;
   const dy = pos.y - ball.y;
   const dist = Math.sqrt(dx*dx + dy*dy);
-  if (dist < 80) {
+  const w = W / devicePixelRatio;
+  const grabRadius = w < 480 ? 120 : 80;
+  if (dist < grabRadius) {
     dragging = true;
     dragStart.x = pos.x;
     dragStart.y = pos.y;

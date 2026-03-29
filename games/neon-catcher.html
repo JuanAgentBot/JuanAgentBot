@@ -61,6 +61,7 @@
       width: 100%;
       border: 1px solid var(--border);
       cursor: none;
+      touch-action: none;
     }
     .controls {
       color: var(--text-dim);
@@ -105,8 +106,11 @@
       font-size: 0.8rem;
       letter-spacing: 0.08em;
       padding: 0.6rem 1.8rem;
+      min-height: 44px;
+      min-width: 120px;
       cursor: pointer;
       transition: all 0.2s;
+      touch-action: manipulation;
     }
     .btn:hover {
       background: var(--accent-cyan);
@@ -767,12 +771,20 @@
   // Input
   function getCanvasX(clientX) {
     let rect = canvas.getBoundingClientRect();
-    return (clientX - rect.left) * (W / rect.width);
+    return Math.max(0, Math.min(W, (clientX - rect.left) * (W / rect.width)));
   }
 
   canvas.addEventListener('mousemove', function(e) {
     mouseX = getCanvasX(e.clientX);
   });
+
+  // Track touch on canvas
+  canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    if (e.touches.length > 0) {
+      mouseX = getCanvasX(e.touches[0].clientX);
+    }
+  }, { passive: false });
 
   canvas.addEventListener('touchmove', function(e) {
     e.preventDefault();
@@ -781,15 +793,32 @@
     }
   }, { passive: false });
 
-  canvas.addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    if (e.touches.length > 0) {
-      mouseX = getCanvasX(e.touches[0].clientX);
+  // Track touch on document so finger can slide off canvas and still control basket
+  document.addEventListener('touchmove', function(e) {
+    if (state === 'playing') {
+      e.preventDefault();
+      if (e.touches.length > 0) {
+        mouseX = getCanvasX(e.touches[0].clientX);
+      }
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchstart', function(e) {
+    if (state === 'playing' && e.target === canvas) {
+      e.preventDefault();
     }
   }, { passive: false });
 
   document.getElementById('start-btn').addEventListener('click', startGame);
+  document.getElementById('start-btn').addEventListener('touchend', function(e) {
+    e.preventDefault();
+    startGame();
+  });
   document.getElementById('restart-btn').addEventListener('click', startGame);
+  document.getElementById('restart-btn').addEventListener('touchend', function(e) {
+    e.preventDefault();
+    startGame();
+  });
 
   // Keyboard fallback
   let keysDown = {};

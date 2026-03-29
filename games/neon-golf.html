@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON GOLF / ZERO</title>
+  <meta name="description" content="2D mini golf with neon physics. Aim, shoot, sink it.">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem 4rem;
+    }
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.8rem;
+    }
+    .back {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      transition: color 0.3s;
+    }
+    .back:hover { color: var(--accent-cyan); }
+    h1 {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 20px var(--glow-magenta);
+      margin: 0;
+    }
+    .hud {
+      display: flex;
+      gap: 1.5rem;
+      font-size: 0.75rem;
+      margin-bottom: 0.6rem;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+    }
+    .hud span { color: var(--accent-cyan); }
+    .hud .par { color: var(--accent-green); }
+    .hud .total { color: var(--accent-magenta); }
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      border: 1px solid var(--border);
+      cursor: crosshair;
+      background: var(--bg-void);
+    }
+    .controls {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      margin-top: 0.6rem;
+      letter-spacing: 0.04em;
+      line-height: 1.6;
+    }
+    .controls kbd {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      padding: 0.1em 0.4em;
+      font-family: inherit;
+      font-size: inherit;
+      color: var(--accent-cyan);
+    }
+    #message {
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent-green);
+      margin-top: 0.8rem;
+      min-height: 1.4rem;
+      text-shadow: 0 0 12px var(--glow-green);
+    }
+    #scorecard {
+      display: none;
+      margin-top: 1.2rem;
+      border: 1px solid var(--border);
+      padding: 1rem;
+    }
+    #scorecard h2 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--accent-magenta);
+      margin-bottom: 0.8rem;
+      letter-spacing: 0.08em;
+      text-shadow: 0 0 12px var(--glow-magenta);
+    }
+    .sc-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .sc-row:last-child { border-bottom: none; }
+    .sc-hole { color: var(--text-dim); }
+    .sc-par { color: var(--accent-green); }
+    .sc-strokes { color: var(--accent-cyan); }
+    .sc-diff { font-weight: 700; }
+    .sc-diff.under { color: var(--accent-green); }
+    .sc-diff.over { color: var(--accent-crimson); }
+    .sc-diff.even { color: var(--text-dim); }
+    .sc-total {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding-top: 0.6rem;
+      margin-top: 0.4rem;
+      border-top: 1px solid var(--accent-magenta);
+    }
+    .sc-total .label { color: var(--accent-magenta); }
+    .sc-total .val { color: var(--accent-cyan); }
+    #restart-btn {
+      display: none;
+      margin-top: 1rem;
+      background: none;
+      border: 1px solid var(--accent-magenta);
+      color: var(--accent-magenta);
+      font-family: inherit;
+      font-size: 0.75rem;
+      padding: 0.5rem 1.2rem;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    #restart-btn:hover {
+      background: rgba(255, 45, 123, 0.1);
+      box-shadow: 0 0 16px var(--glow-magenta);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <div class="top-bar">
+      <a href="./" class="back">&lt; GAME LAB</a>
+      <h1>NEON GOLF</h1>
+    </div>
+    <div class="hud">
+      <div>HOLE <span id="holeNum">1</span> / <span id="holeTotal">9</span></div>
+      <div>PAR <span class="par" id="parNum">3</span></div>
+      <div>STROKES <span id="strokeNum">0</span></div>
+      <div>TOTAL <span class="total" id="totalNum">0</span></div>
+    </div>
+    <canvas id="gameCanvas" width="600" height="500"></canvas>
+    <div id="message"></div>
+    <div class="controls">
+      <kbd>CLICK + DRAG</kbd> from ball to aim and set power. Release to shoot. Sink the ball in the hole.
+    </div>
+    <div id="scorecard"></div>
+    <button id="restart-btn" onclick="restartGame()">PLAY AGAIN</button>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const msgEl = document.getElementById('message');
+
+    // Colors
+    const VOID = '#0a0a0f';
+    const MAGENTA = '#ff2d7b';
+    const CYAN = '#00f0ff';
+    const GREEN = '#39ff14';
+    const PURPLE = '#9d4edd';
+    const WHITE = '#e0e0e8';
+    const DIM = '#7a7a90';
+    const PANEL = '#121218';
+
+    // Game state
+    let W = 600, H = 500;
+    let scale = 1;
+    let ball = { x: 0, y: 0, vx: 0, vy: 0, r: 7 };
+    let dragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let dragEnd = { x: 0, y: 0 };
+    let rolling = false;
+    let sunk = false;
+    let holeIndex = 0;
+    let strokes = 0;
+    let totalStrokes = 0;
+    let scores = [];
+    let gameOver = false;
+    let sunkTimer = 0;
+    let trailPoints = [];
+
+    // Hole definition: walls, obstacles, hole position, ball start, par
+    const holes = [
+      { // 1: Straight shot
+        par: 2,
+        ball: { x: 100, y: 400 },
+        hole: { x: 500, y: 100, r: 14 },
+        walls: [
+          { x1: 50, y1: 50, x2: 550, y2: 50 },
+          { x1: 550, y1: 50, x2: 550, y2: 450 },
+          { x1: 550, y1: 450, x2: 50, y2: 450 },
+          { x1: 50, y1: 450, x2: 50, y2: 50 },
+        ],
+        bumpers: []
+      },
+      { // 2: L-shape
+        par: 3,
+        ball: { x: 100, y: 400 },
+        hole: { x: 500, y: 400, r: 14 },
+        walls: [
+          { x1: 50, y1: 50, x2: 300, y2: 50 },
+          { x1: 300, y1: 50, x2: 300, y2: 250 },
+          { x1: 300, y1: 250, x2: 550, y2: 250 },
+          { x1: 550, y1: 250, x2: 550, y2: 450 },
+          { x1: 550, y1: 450, x2: 50, y2: 450 },
+          { x1: 50, y1: 450, x2: 50, y2: 50 },
+        ],
+        bumpers: []
+      },
+      { // 3: Bumper alley
+        par: 3,
+        ball: { x: 100, y: 250 },
+        hole: { x: 500, y: 250, r: 14 },
+        walls: [
+          { x1: 50, y1: 100, x2: 550, y2: 100 },
+          { x1: 550, y1: 100, x2: 550, y2: 400 },
+          { x1: 550, y1: 400, x2: 50, y2: 400 },
+          { x1: 50, y1: 400, x2: 50, y2: 100 },
+        ],
+        bumpers: [
+          { x: 250, y: 200, r: 20 },
+          { x: 350, y: 300, r: 20 },
+          { x: 250, y: 350, r: 15 },
+          { x: 400, y: 180, r: 15 },
+        ]
+      },
+      { // 4: Narrow corridor
+        par: 3,
+        ball: { x: 100, y: 250 },
+        hole: { x: 500, y: 250, r: 14 },
+        walls: [
+          { x1: 50, y1: 50, x2: 550, y2: 50 },
+          { x1: 550, y1: 50, x2: 550, y2: 450 },
+          { x1: 550, y1: 450, x2: 50, y2: 450 },
+          { x1: 50, y1: 450, x2: 50, y2: 50 },
+          // Inner walls creating a narrow path
+          { x1: 200, y1: 50, x2: 200, y2: 200 },
+          { x1: 200, y1: 300, x2: 200, y2: 450 },
+          { x1: 400, y1: 50, x2: 400, y2: 200 },
+          { x1: 400, y1: 300, x2: 400, y2: 450 },
+        ],
+        bumpers: []
+      },
+      { // 5: Zigzag
+        par: 4,
+        ball: { x: 100, y: 400 },
+        hole: { x: 500, y: 100, r: 14 },
+        walls: [
+          { x1: 50, y1: 50, x2: 550, y2: 50 },
+          { x1: 550, y1: 50, x2: 550, y2: 450 },
+          { x1: 550, y1: 450, x2: 50, y2: 450 },
+          { x1: 50, y1: 450, x2: 50, y2: 50 },
+          // Zigzag barriers
+          { x1: 180, y1: 450, x2: 180, y2: 200 },
+          { x1: 340, y1: 50, x2: 340, y2: 300 },
+        ],
+        bumpers: []
+      },
+      { // 6: Bumper madness
+        par: 4,
+        ball: { x: 100, y: 400 },
+        hole: { x: 500, y: 100, r: 14 },
+        walls: [
+          { x1: 50, y1: 50, x2: 550, y2: 50 },
+          { x1: 550, y1: 50, x2: 550, y2: 450 },
+          { x1: 550, y1: 450, x2: 50, y2: 450 },
+          { x1: 50, y1: 450, x2: 50, y2: 50 },
+        ],
+        bumpers: [
+          { x: 200, y: 150, r: 22 },
+          { x: 300, y: 250, r: 25 },
+          { x: 400, y: 150, r: 18 },
+          { x: 200, y: 350, r: 18 },
+          { x: 400, y: 350, r: 22 },
+          { x: 300, y: 120, r: 15 },
+          { x: 300, y: 380, r: 15 },
+        ]
+      },
+      { // 7: U-turn
+        par: 3,
+        ball: { x: 150, y: 120 },
+        hole: { x: 150, y: 380, r: 14 },
+        walls: [
+          { x1: 50, y1: 50, x2: 550, y2: 50 },
+          { x1: 550, y1: 50, x2: 550, y2: 450 },
+          { x1: 550, y1: 450, x2: 50, y2: 450 },
+          { x1: 50, y1: 450, x2: 50, y2: 50 },
+          // Inner block forcing U-turn
+          { x1: 50, y1: 200, x2: 400, y2: 200 },
+          { x1: 400, y1: 200, x2: 400, y2: 300 },
+          { x1: 400, y1: 300, x2: 50, y2: 300 },
+        ],
+        bumpers: []
+      },
+      { // 8: Pinball bounce
+        par: 4,
+        ball: { x: 300, y: 420 },
+        hole: { x: 300, y: 80, r: 14 },
+        walls: [
+          { x1: 50, y1: 50, x2: 550, y2: 50 },
+          { x1: 550, y1: 50, x2: 550, y2: 450 },
+          { x1: 550, y1: 450, x2: 50, y2: 450 },
+          { x1: 50, y1: 450, x2: 50, y2: 50 },
+          // Angled deflectors
+          { x1: 150, y1: 350, x2: 250, y2: 280 },
+          { x1: 350, y1: 280, x2: 450, y2: 350 },
+          { x1: 180, y1: 180, x2: 260, y2: 130 },
+          { x1: 340, y1: 130, x2: 420, y2: 180 },
+        ],
+        bumpers: [
+          { x: 300, y: 200, r: 18 },
+          { x: 150, y: 250, r: 12 },
+          { x: 450, y: 250, r: 12 },
+        ]
+      },
+      { // 9: The gauntlet
+        par: 5,
+        ball: { x: 80, y: 420 },
+        hole: { x: 520, y: 80, r: 14 },
+        walls: [
+          { x1: 50, y1: 50, x2: 550, y2: 50 },
+          { x1: 550, y1: 50, x2: 550, y2: 450 },
+          { x1: 550, y1: 450, x2: 50, y2: 450 },
+          { x1: 50, y1: 450, x2: 50, y2: 50 },
+          // Maze walls
+          { x1: 150, y1: 450, x2: 150, y2: 300 },
+          { x1: 250, y1: 50, x2: 250, y2: 200 },
+          { x1: 250, y1: 280, x2: 250, y2: 370 },
+          { x1: 380, y1: 130, x2: 380, y2: 450 },
+          { x1: 480, y1: 50, x2: 480, y2: 280 },
+        ],
+        bumpers: [
+          { x: 200, y: 250, r: 15 },
+          { x: 320, y: 350, r: 18 },
+          { x: 440, y: 380, r: 14 },
+        ]
+      },
+    ];
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const w = Math.min(rect.width, 640);
+      scale = w / W;
+      canvas.style.width = w + 'px';
+      canvas.style.height = (H * scale) + 'px';
+    }
+
+    function getMousePos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: (clientX - rect.left) / scale,
+        y: (clientY - rect.top) / scale
+      };
+    }
+
+    function distPt(a, b) {
+      return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+    }
+
+    function loadHole(idx) {
+      const h = holes[idx];
+      ball.x = h.ball.x;
+      ball.y = h.ball.y;
+      ball.vx = 0;
+      ball.vy = 0;
+      strokes = 0;
+      sunk = false;
+      sunkTimer = 0;
+      rolling = false;
+      dragging = false;
+      trailPoints = [];
+      updateHUD();
+      msgEl.textContent = '';
+    }
+
+    function updateHUD() {
+      document.getElementById('holeNum').textContent = holeIndex + 1;
+      document.getElementById('holeTotal').textContent = holes.length;
+      document.getElementById('parNum').textContent = holes[holeIndex].par;
+      document.getElementById('strokeNum').textContent = strokes;
+      document.getElementById('totalNum').textContent = totalStrokes + strokes;
+    }
+
+    // Physics: line segment reflection
+    function reflectBallOffWall(wall) {
+      const dx = wall.x2 - wall.x1;
+      const dy = wall.y2 - wall.y1;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len === 0) return false;
+
+      const nx = -dy / len;
+      const ny = dx / len;
+
+      // Distance from ball center to line
+      const t = ((ball.x - wall.x1) * nx + (ball.y - wall.y1) * ny);
+
+      if (Math.abs(t) > ball.r) return false;
+
+      // Project ball onto line segment
+      const ex = dx / len;
+      const ey = dy / len;
+      const proj = (ball.x - wall.x1) * ex + (ball.y - wall.y1) * ey;
+
+      if (proj < -ball.r || proj > len + ball.r) return false;
+
+      // Push ball out
+      const pen = ball.r - Math.abs(t);
+      const sign = t < 0 ? -1 : 1;
+      ball.x += nx * pen * sign;
+      ball.y += ny * pen * sign;
+
+      // Reflect velocity
+      const dot = ball.vx * nx * sign + ball.vy * ny * sign;
+      if (dot < 0) {
+        ball.vx -= 2 * dot * nx * sign;
+        ball.vy -= 2 * dot * ny * sign;
+        // Dampen on bounce
+        ball.vx *= 0.85;
+        ball.vy *= 0.85;
+        return true;
+      }
+      return false;
+    }
+
+    function reflectBallOffBumper(b) {
+      const dx = ball.x - b.x;
+      const dy = ball.y - b.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const minD = ball.r + b.r;
+
+      if (dist < minD && dist > 0) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        // Push out
+        ball.x = b.x + nx * minD;
+        ball.y = b.y + ny * minD;
+        // Reflect
+        const dot = ball.vx * nx + ball.vy * ny;
+        if (dot < 0) {
+          ball.vx -= 2 * dot * nx;
+          ball.vy -= 2 * dot * ny;
+          ball.vx *= 0.9;
+          ball.vy *= 0.9;
+        }
+        return true;
+      }
+      return false;
+    }
+
+    function checkHole() {
+      const h = holes[holeIndex].hole;
+      const d = distPt(ball, h);
+      const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+
+      if (d < h.r - 2 && speed < 8) {
+        sunk = true;
+        ball.vx = 0;
+        ball.vy = 0;
+        ball.x = h.x;
+        ball.y = h.y;
+
+        const diff = strokes - holes[holeIndex].par;
+        let label = '';
+        if (strokes === 1) label = 'HOLE IN ONE!';
+        else if (diff <= -2) label = 'EAGLE!';
+        else if (diff === -1) label = 'BIRDIE!';
+        else if (diff === 0) label = 'PAR';
+        else if (diff === 1) label = 'BOGEY';
+        else label = '+' + diff;
+
+        msgEl.textContent = label;
+        msgEl.style.color = diff <= 0 ? GREEN : (diff === 1 ? WHITE : MAGENTA);
+        sunkTimer = 90;
+      }
+    }
+
+    function update() {
+      if (gameOver) return;
+
+      if (sunk) {
+        sunkTimer--;
+        if (sunkTimer <= 0) {
+          totalStrokes += strokes;
+          scores.push(strokes);
+          holeIndex++;
+          if (holeIndex >= holes.length) {
+            endGame();
+            return;
+          }
+          loadHole(holeIndex);
+        }
+        return;
+      }
+
+      if (!rolling) return;
+
+      const friction = 0.985;
+      ball.vx *= friction;
+      ball.vy *= friction;
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      // Trail
+      trailPoints.push({ x: ball.x, y: ball.y, age: 0 });
+      if (trailPoints.length > 60) trailPoints.shift();
+      trailPoints.forEach(p => p.age++);
+
+      // Wall collisions
+      const h = holes[holeIndex];
+      for (const w of h.walls) {
+        reflectBallOffWall(w);
+      }
+
+      // Bumper collisions
+      for (const b of h.bumpers) {
+        reflectBallOffBumper(b);
+      }
+
+      // Check sunk
+      checkHole();
+
+      // Stop rolling if slow enough
+      const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+      if (speed < 0.15) {
+        ball.vx = 0;
+        ball.vy = 0;
+        rolling = false;
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = VOID;
+      ctx.fillRect(0, 0, W, H);
+
+      const h = holes[holeIndex];
+
+      // Draw green (playing surface)
+      ctx.fillStyle = '#0d1a0d';
+      ctx.beginPath();
+      ctx.moveTo(h.walls[0].x1, h.walls[0].y1);
+      for (const w of h.walls) {
+        ctx.lineTo(w.x2, w.y2);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw hole (target)
+      const hole = h.hole;
+      ctx.beginPath();
+      ctx.arc(hole.x, hole.y, hole.r, 0, Math.PI * 2);
+      ctx.fillStyle = '#050505';
+      ctx.fill();
+      ctx.strokeStyle = GREEN;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Glow
+      ctx.beginPath();
+      ctx.arc(hole.x, hole.y, hole.r + 4, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(57, 255, 20, 0.2)';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // Draw flag
+      ctx.fillStyle = GREEN;
+      ctx.fillRect(hole.x + 2, hole.y - 22, 1, 18);
+      ctx.beginPath();
+      ctx.moveTo(hole.x + 3, hole.y - 22);
+      ctx.lineTo(hole.x + 14, hole.y - 17);
+      ctx.lineTo(hole.x + 3, hole.y - 12);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw walls
+      ctx.strokeStyle = CYAN;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = 'rgba(0, 240, 255, 0.4)';
+      ctx.shadowBlur = 8;
+      for (const w of h.walls) {
+        ctx.beginPath();
+        ctx.moveTo(w.x1, w.y1);
+        ctx.lineTo(w.x2, w.y2);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+
+      // Draw bumpers
+      for (const b of h.bumpers) {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(157, 78, 221, 0.15)';
+        ctx.fill();
+        ctx.strokeStyle = PURPLE;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = 'rgba(157, 78, 221, 0.5)';
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // Draw trail
+      for (let i = 0; i < trailPoints.length; i++) {
+        const p = trailPoints[i];
+        const alpha = Math.max(0, 1 - p.age / 60) * 0.5;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(0, 240, 255, ${alpha})`;
+        ctx.fill();
+      }
+
+      // Draw aiming line
+      if (dragging && !rolling && !sunk) {
+        const dx = dragStart.x - dragEnd.x;
+        const dy = dragStart.y - dragEnd.y;
+        const power = Math.min(Math.sqrt(dx * dx + dy * dy), 200);
+        const angle = Math.atan2(dy, dx);
+
+        // Power line
+        const lineLen = power * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(ball.x, ball.y);
+        ctx.lineTo(ball.x + Math.cos(angle) * lineLen, ball.y + Math.sin(angle) * lineLen);
+        ctx.strokeStyle = `rgba(255, 45, 123, ${0.4 + power / 400})`;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Arrow head
+        const ax = ball.x + Math.cos(angle) * lineLen;
+        const ay = ball.y + Math.sin(angle) * lineLen;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(ax - Math.cos(angle - 0.3) * 8, ay - Math.sin(angle - 0.3) * 8);
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(ax - Math.cos(angle + 0.3) * 8, ay - Math.sin(angle + 0.3) * 8);
+        ctx.strokeStyle = MAGENTA;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Power indicator
+        const pct = Math.round(power / 200 * 100);
+        ctx.fillStyle = MAGENTA;
+        ctx.font = '10px JetBrains Mono';
+        ctx.textAlign = 'center';
+        ctx.fillText(pct + '%', ball.x, ball.y - 18);
+      }
+
+      // Draw ball
+      if (!sunk || sunkTimer > 0) {
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+        ctx.fillStyle = WHITE;
+        ctx.fill();
+        ctx.shadowColor = 'rgba(224, 224, 232, 0.6)';
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        // Inner dot
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = CYAN;
+        ctx.fill();
+      }
+
+      // Hole number watermark
+      ctx.fillStyle = 'rgba(255, 45, 123, 0.06)';
+      ctx.font = '120px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(holeIndex + 1, W / 2, H / 2);
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function endGame() {
+      gameOver = true;
+      msgEl.textContent = '';
+
+      const sc = document.getElementById('scorecard');
+      sc.style.display = 'block';
+
+      let html = '<h2>SCORECARD</h2>';
+      let totalPar = 0;
+      for (let i = 0; i < holes.length; i++) {
+        const par = holes[i].par;
+        const s = scores[i];
+        const diff = s - par;
+        totalPar += par;
+        let diffStr = diff === 0 ? 'E' : (diff > 0 ? '+' + diff : diff);
+        let diffClass = diff < 0 ? 'under' : (diff > 0 ? 'over' : 'even');
+        html += `<div class="sc-row">
+          <span class="sc-hole">HOLE ${i + 1}</span>
+          <span class="sc-par">PAR ${par}</span>
+          <span class="sc-strokes">${s}</span>
+          <span class="sc-diff ${diffClass}">${diffStr}</span>
+        </div>`;
+      }
+      const totalDiff = totalStrokes - totalPar;
+      let totalDiffStr = totalDiff === 0 ? 'EVEN' : (totalDiff > 0 ? '+' + totalDiff : totalDiff);
+      html += `<div class="sc-total">
+        <span class="label">TOTAL</span>
+        <span class="val">${totalStrokes} (${totalDiffStr})</span>
+      </div>`;
+      sc.innerHTML = html;
+
+      document.getElementById('restart-btn').style.display = 'inline-block';
+    }
+
+    function restartGame() {
+      holeIndex = 0;
+      totalStrokes = 0;
+      scores = [];
+      gameOver = false;
+      document.getElementById('scorecard').style.display = 'none';
+      document.getElementById('restart-btn').style.display = 'none';
+      loadHole(0);
+    }
+
+    // Input
+    function onDown(e) {
+      e.preventDefault();
+      if (rolling || sunk || gameOver) return;
+      const pos = getMousePos(e);
+      if (distPt(pos, ball) < 40) {
+        dragging = true;
+        dragStart = { x: pos.x, y: pos.y };
+        dragEnd = { x: pos.x, y: pos.y };
+      }
+    }
+
+    function onMove(e) {
+      e.preventDefault();
+      if (!dragging) return;
+      dragEnd = getMousePos(e);
+    }
+
+    function onUp(e) {
+      e.preventDefault();
+      if (!dragging) return;
+      dragging = false;
+
+      const dx = dragStart.x - dragEnd.x;
+      const dy = dragStart.y - dragEnd.y;
+      const power = Math.min(Math.sqrt(dx * dx + dy * dy), 200);
+
+      if (power < 5) return;
+
+      const angle = Math.atan2(dy, dx);
+      const speed = power * 0.06;
+      ball.vx = Math.cos(angle) * speed;
+      ball.vy = Math.sin(angle) * speed;
+      rolling = true;
+      strokes++;
+      trailPoints = [];
+      updateHUD();
+    }
+
+    canvas.addEventListener('mousedown', onDown);
+    canvas.addEventListener('mousemove', onMove);
+    canvas.addEventListener('mouseup', onUp);
+    canvas.addEventListener('touchstart', onDown, { passive: false });
+    canvas.addEventListener('touchmove', onMove, { passive: false });
+    canvas.addEventListener('touchend', onUp, { passive: false });
+
+    // Init
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    loadHole(0);
+    gameLoop();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

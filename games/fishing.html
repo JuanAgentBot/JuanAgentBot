@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neon Fishing / ZERO</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      overflow: hidden;
+    }
+    .top-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      z-index: 10;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .top-bar a {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      transition: color 0.3s;
+    }
+    .top-bar a:hover { color: var(--accent-cyan); }
+    .game-title {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 10px var(--glow-magenta);
+    }
+    #game-canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      cursor: crosshair;
+    }
+    .controls-hint {
+      position: fixed;
+      bottom: 0.8rem;
+      left: 50%;
+      transform: translateX(-50%);
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      text-align: center;
+      z-index: 10;
+      pointer-events: none;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="./">&lt; GAME LAB</a>
+    <div class="game-title">NEON FISHING</div>
+    <div></div>
+  </div>
+  <canvas id="game-canvas"></canvas>
+  <div class="controls-hint">CLICK/SPACE: CAST &amp; HOOK &bull; HOLD TO SET DEPTH</div>
+  <script>
+(function() {
+  const canvas = document.getElementById('game-canvas');
+  const ctx = canvas.getContext('2d');
+
+  // Colors (dark theme defaults, will be adapted for light)
+  const isDark = !document.documentElement.hasAttribute('data-theme') ||
+                  document.documentElement.getAttribute('data-theme') !== 'light';
+  const C = {
+    void:    isDark ? '#0a0a0f' : '#f0eff5',
+    sky:     isDark ? '#0c0c18' : '#e4e3ec',
+    water1:  isDark ? '#060620' : '#d0d0e8',
+    water2:  isDark ? '#040418' : '#c0c0d8',
+    water3:  isDark ? '#020210' : '#b0b0c8',
+    magenta: '#ff2d7b',
+    cyan:    '#00f0ff',
+    green:   '#39ff14',
+    purple:  '#9d4edd',
+    amber:   '#ffb000',
+    crimson: '#ff1744',
+    white:   isDark ? '#e0e0e8' : '#18182a',
+    dim:     isDark ? '#7a7a90' : '#6e6e85',
+    line:    isDark ? '#7a7a90' : '#a8a8bc',
+    boat:    isDark ? '#3a3a50' : '#5a5a70',
+  };
+
+  let W, H, WATER_Y;
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    WATER_Y = H * 0.32;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Game constants
+  const GAME_TIME = 120;
+  const CAST_SPEED = 3;
+  const REEL_SPEED = 2.5;
+  const BITE_WINDOW = 2.5; // seconds to click when fish bites
+  const HOOK_RADIUS = 12;
+
+  // Fish types
+  const FISH_TYPES = [
+    { name: 'Minnow',    color: C.cyan,    pts: 10,  size: 14, speed: [1.5, 3],   freq: 0.45, depthRange: [0.1, 0.5] },
+    { name: 'Bass',       color: C.green,   pts: 25,  size: 20, speed: [1, 2],     freq: 0.30, depthRange: [0.2, 0.7] },
+    { name: 'Tuna',       color: C.magenta, pts: 50,  size: 28, speed: [0.6, 1.2], freq: 0.15, depthRange: [0.5, 0.9] },
+    { name: 'Goldfish',   color: C.amber,   pts: 100, size: 18, speed: [0.8, 1.5], freq: 0.07, depthRange: [0.3, 0.8] },
+    { name: 'Jellyfish',  color: C.purple,  pts: -20, size: 22, speed: [0.3, 0.8], freq: 0.03, depthRange: [0.4, 0.9] },
+  ];
+
+  // State
+  const STATE = { MENU: 0, IDLE: 1, CASTING: 2, SINKING: 3, WAITING: 4, BITE: 5, HOOKED: 6, CAUGHT: 7, MISSED: 8 };
+  let state = STATE.MENU;
+  let score = 0;
+  let hiScore = parseInt(localStorage.getItem('zero-fishing-hi') || '0');
+  let timeLeft = GAME_TIME;
+  let lastTime = 0;
+  let castPower = 0;
+  let castDir = 1;
+  let hookX, hookY, hookTargetY;
+  let biteFish = null;
+  let biteTimer = 0;
+  let waitTimer = 0;
+  let caughtFish = null;
+  let caughtAnim = 0;
+  let missedAnim = 0;
+  let combo = 0;
+  let fishes = [];
+  let bubbles = [];
+  let particles = [];
+  let catches = []; // recent catch log
+  let waveOffset = 0;
+
+  // Boat
+  const BOAT_W = 60, BOAT_H = 24;
+  let boatX;
+
+  // Stars
+  let stars = [];
+  function initStars() {
+    stars = [];
+    for (let i = 0; i < 60; i++) {
+      stars.push({
+        x: Math.random() * 2000,
+        y: Math.random() * (WATER_Y - 40),
+        r: Math.random() * 1.2 + 0.3,
+        a: Math.random() * 0.5 + 0.2,
+        blink: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+  initStars();
+
+  function reset() {
+    state = STATE.IDLE;
+    score = 0;
+    timeLeft = GAME_TIME;
+    castPower = 0;
+    combo = 0;
+    fishes = [];
+    bubbles = [];
+    particles = [];
+    catches = [];
+    biteFish = null;
+    caughtFish = null;
+    boatX = W * 0.5;
+    hookX = boatX;
+    hookY = WATER_Y;
+    spawnInitialFish();
+  }
+
+  function spawnInitialFish() {
+    for (let i = 0; i < 12; i++) {
+      spawnFish(true);
+    }
+  }
+
+  function spawnFish(randomX) {
+    let roll = Math.random();
+    let cumul = 0;
+    let type = FISH_TYPES[0];
+    for (const ft of FISH_TYPES) {
+      cumul += ft.freq;
+      if (roll < cumul) { type = ft; break; }
+    }
+    const waterDepth = H - WATER_Y;
+    const minY = WATER_Y + waterDepth * type.depthRange[0];
+    const maxY = WATER_Y + waterDepth * type.depthRange[1];
+    const y = minY + Math.random() * (maxY - minY);
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    const speed = type.speed[0] + Math.random() * (type.speed[1] - type.speed[0]);
+    const x = randomX ? Math.random() * W : (dir > 0 ? -type.size * 2 : W + type.size * 2);
+    fishes.push({
+      type, x, y, dir, speed, size: type.size,
+      tailPhase: Math.random() * Math.PI * 2,
+      wobble: Math.random() * Math.PI * 2,
+    });
+  }
+
+  function spawnBubble(x, y) {
+    bubbles.push({
+      x: x + (Math.random() - 0.5) * 10,
+      y,
+      r: Math.random() * 3 + 1,
+      speed: Math.random() * 0.5 + 0.3,
+      life: 1,
+    });
+  }
+
+  function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 3 + 1;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1,
+        r: Math.random() * 3 + 1,
+        color,
+        life: 1,
+        decay: Math.random() * 0.02 + 0.01,
+      });
+    }
+  }
+
+  // Input
+  let pressing = false;
+  function onDown(e) {
+    e.preventDefault();
+    if (state === STATE.MENU) { reset(); return; }
+    if (timeLeft <= 0) { state = STATE.MENU; return; }
+
+    if (state === STATE.IDLE) {
+      state = STATE.CASTING;
+      castPower = 0;
+      castDir = 1;
+      pressing = true;
+    } else if (state === STATE.CASTING) {
+      // release: cast the line
+      launchCast();
+      pressing = false;
+    } else if (state === STATE.BITE) {
+      hookFish();
+    } else if (state === STATE.WAITING) {
+      // reel in empty
+      state = STATE.IDLE;
+    }
+  }
+  function onUp(e) {
+    if (state === STATE.CASTING && pressing) {
+      launchCast();
+      pressing = false;
+    }
+  }
+
+  canvas.addEventListener('mousedown', onDown);
+  canvas.addEventListener('mouseup', onUp);
+  canvas.addEventListener('touchstart', (e) => { e.preventDefault(); onDown(e); }, { passive: false });
+  canvas.addEventListener('touchend', (e) => { e.preventDefault(); onUp(e); }, { passive: false });
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); onDown(e); }
+  });
+  document.addEventListener('keyup', (e) => {
+    if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); onUp(e); }
+  });
+
+  function launchCast() {
+    state = STATE.SINKING;
+    hookX = boatX;
+    hookY = WATER_Y + 5;
+    const waterDepth = H - WATER_Y;
+    hookTargetY = WATER_Y + waterDepth * (0.15 + castPower * 0.8);
+    spawnParticles(hookX, WATER_Y, C.cyan, 6);
+  }
+
+  function hookFish() {
+    if (!biteFish) return;
+    state = STATE.HOOKED;
+    combo++;
+    const pts = biteFish.type.pts * (combo > 1 ? Math.min(combo, 5) : 1);
+    score += pts;
+    if (score < 0) score = 0;
+    caughtFish = { type: biteFish.type, pts, x: hookX, y: hookY };
+    caughtAnim = 1.5;
+    spawnParticles(hookX, hookY, biteFish.type.color, 12);
+    catches.unshift({ name: biteFish.type.name, pts, color: biteFish.type.color, anim: 1 });
+    if (catches.length > 5) catches.pop();
+    // Remove fish from pool
+    const idx = fishes.indexOf(biteFish);
+    if (idx >= 0) fishes.splice(idx, 1);
+    biteFish = null;
+  }
+
+  // Update
+  function update(dt) {
+    if (state === STATE.MENU) return;
+
+    timeLeft -= dt;
+    if (timeLeft <= 0) {
+      timeLeft = 0;
+      if (score > hiScore) {
+        hiScore = score;
+        localStorage.setItem('zero-fishing-hi', hiScore.toString());
+      }
+      return;
+    }
+
+    waveOffset += dt * 40;
+
+    // Spawn fish periodically
+    if (Math.random() < dt * 1.2) spawnFish(false);
+
+    // Power meter
+    if (state === STATE.CASTING) {
+      castPower += castDir * dt * 1.5;
+      if (castPower >= 1) { castPower = 1; castDir = -1; }
+      if (castPower <= 0) { castPower = 0; castDir = 1; }
+    }
+
+    // Sinking
+    if (state === STATE.SINKING) {
+      hookY += CAST_SPEED * (hookTargetY - hookY > 0 ? 1 : -1) * dt * 60;
+      if (Math.abs(hookY - hookTargetY) < 3) {
+        hookY = hookTargetY;
+        state = STATE.WAITING;
+        waitTimer = 0;
+      }
+      if (Math.random() < dt * 3) spawnBubble(hookX, hookY);
+    }
+
+    // Waiting for bite
+    if (state === STATE.WAITING) {
+      waitTimer += dt;
+      // Check if any fish is near hook
+      for (const f of fishes) {
+        const dx = f.x - hookX;
+        const dy = f.y - hookY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < f.size + HOOK_RADIUS) {
+          state = STATE.BITE;
+          biteFish = f;
+          biteTimer = BITE_WINDOW;
+          break;
+        }
+      }
+      // Occasional bubble
+      if (Math.random() < dt * 0.5) spawnBubble(hookX, hookY);
+    }
+
+    // Bite countdown
+    if (state === STATE.BITE) {
+      biteTimer -= dt;
+      if (biteTimer <= 0) {
+        // Missed!
+        state = STATE.MISSED;
+        missedAnim = 1;
+        combo = 0;
+        biteFish = null;
+      }
+    }
+
+    // Hooked - reel in
+    if (state === STATE.HOOKED) {
+      hookY -= REEL_SPEED * dt * 60;
+      if (hookY <= WATER_Y) {
+        hookY = WATER_Y;
+        state = STATE.IDLE;
+        caughtFish = null;
+      }
+      if (Math.random() < dt * 4) spawnBubble(hookX, hookY);
+    }
+
+    // Missed anim
+    if (state === STATE.MISSED) {
+      missedAnim -= dt;
+      hookY -= REEL_SPEED * dt * 60 * 0.5;
+      if (missedAnim <= 0 || hookY <= WATER_Y) {
+        state = STATE.IDLE;
+        hookY = WATER_Y;
+      }
+    }
+
+    // Caught anim countdown
+    if (caughtAnim > 0) caughtAnim -= dt;
+
+    // Update fishes
+    for (let i = fishes.length - 1; i >= 0; i--) {
+      const f = fishes[i];
+      f.x += f.dir * f.speed * dt * 60;
+      f.tailPhase += dt * 6;
+      f.wobble += dt * 2;
+      f.y += Math.sin(f.wobble) * 0.15;
+      // Remove if off screen
+      if ((f.dir > 0 && f.x > W + f.size * 3) || (f.dir < 0 && f.x < -f.size * 3)) {
+        fishes.splice(i, 1);
+      }
+    }
+
+    // Update bubbles
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      const b = bubbles[i];
+      b.y -= b.speed * dt * 60;
+      b.x += Math.sin(b.y * 0.05) * 0.3;
+      b.life -= dt * 0.5;
+      if (b.life <= 0 || b.y < WATER_Y) bubbles.splice(i, 1);
+    }
+
+    // Update particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx * dt * 60;
+      p.y += p.vy * dt * 60;
+      p.vy += 0.05;
+      p.life -= p.decay * dt * 60;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // Catch log fade
+    for (const c of catches) {
+      c.anim -= dt * 0.3;
+      if (c.anim < 0) c.anim = 0;
+    }
+  }
+
+  // Draw
+  function drawWaves(y) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    for (let x = 0; x <= W; x += 4) {
+      const wave = Math.sin((x + waveOffset) * 0.02) * 4 +
+                   Math.sin((x + waveOffset * 0.7) * 0.035) * 2;
+      ctx.lineTo(x, y + wave);
+    }
+    ctx.lineTo(W, H);
+    ctx.lineTo(0, H);
+    ctx.closePath();
+  }
+
+  function drawFish(f) {
+    ctx.save();
+    ctx.translate(f.x, f.y);
+    ctx.scale(f.dir, 1);
+    const s = f.size;
+    const tailWag = Math.sin(f.tailPhase) * 0.3;
+
+    // Body
+    ctx.fillStyle = f.type.color;
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, s, s * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Glow
+    ctx.shadowColor = f.type.color;
+    ctx.shadowBlur = 8;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Tail
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.8, 0);
+    ctx.lineTo(-s * 1.4, -s * 0.5 + tailWag * s);
+    ctx.lineTo(-s * 1.4, s * 0.5 + tailWag * s);
+    ctx.closePath();
+    ctx.fill();
+
+    // Eye
+    ctx.fillStyle = C.void;
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.arc(s * 0.45, -s * 0.1, s * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = C.white;
+    ctx.beginPath();
+    ctx.arc(s * 0.48, -s * 0.12, s * 0.06, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Jellyfish tentacles
+    if (f.type.name === 'Jellyfish') {
+      ctx.strokeStyle = f.type.color;
+      ctx.globalAlpha = 0.5;
+      ctx.lineWidth = 1;
+      for (let t = 0; t < 4; t++) {
+        ctx.beginPath();
+        const tx = -s * 0.5 + t * s * 0.35;
+        ctx.moveTo(tx, s * 0.4);
+        ctx.quadraticCurveTo(tx + Math.sin(f.tailPhase + t) * 5, s * 0.8, tx + Math.sin(f.tailPhase + t * 0.5) * 8, s * 1.2);
+        ctx.stroke();
+      }
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function drawBoat() {
+    const bx = boatX;
+    const by = WATER_Y - BOAT_H * 0.3;
+    const wave = Math.sin((bx + waveOffset) * 0.02) * 4 + Math.sin((bx + waveOffset * 0.7) * 0.035) * 2;
+    const by2 = by + wave;
+
+    ctx.save();
+    ctx.translate(bx, by2);
+
+    // Hull
+    ctx.fillStyle = C.boat;
+    ctx.beginPath();
+    ctx.moveTo(-BOAT_W / 2, 0);
+    ctx.lineTo(-BOAT_W / 2 + 8, BOAT_H * 0.6);
+    ctx.lineTo(BOAT_W / 2 - 8, BOAT_H * 0.6);
+    ctx.lineTo(BOAT_W / 2, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = C.dim;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Cabin
+    ctx.fillStyle = C.boat;
+    ctx.fillRect(-8, -BOAT_H * 0.5, 16, BOAT_H * 0.5);
+    ctx.strokeRect(-8, -BOAT_H * 0.5, 16, BOAT_H * 0.5);
+
+    // Rod
+    ctx.strokeStyle = C.dim;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(10, -BOAT_H * 0.5);
+    ctx.lineTo(20, -BOAT_H * 1.2);
+    ctx.stroke();
+
+    // Light
+    ctx.fillStyle = C.green;
+    ctx.shadowColor = C.green;
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(0, -BOAT_H * 0.5 - 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.restore();
+
+    return { tipX: bx + 20, tipY: by2 - BOAT_H * 1.2 };
+  }
+
+  function drawHook(tipX, tipY) {
+    if (state === STATE.IDLE || state === STATE.MENU || state === STATE.CASTING) return;
+
+    // Fishing line
+    ctx.strokeStyle = C.line;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    // Slight curve
+    const midY = (tipY + hookY) / 2;
+    ctx.quadraticCurveTo(hookX + 5, midY, hookX, hookY);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Hook
+    const glow = state === STATE.BITE;
+    if (glow) {
+      ctx.shadowColor = C.amber;
+      ctx.shadowBlur = 15 + Math.sin(Date.now() * 0.01) * 8;
+    }
+    ctx.strokeStyle = glow ? C.amber : C.dim;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(hookX, hookY - 6);
+    ctx.lineTo(hookX, hookY + 2);
+    ctx.arc(hookX + 4, hookY + 2, 4, Math.PI, 0, true);
+    ctx.lineTo(hookX + 8, hookY - 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Bite indicator
+    if (state === STATE.BITE) {
+      ctx.save();
+      ctx.font = '700 14px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = C.amber;
+      ctx.shadowColor = C.amber;
+      ctx.shadowBlur = 10;
+      const bounce = Math.sin(Date.now() * 0.008) * 4;
+      ctx.fillText('! BITE !', hookX, hookY - 20 + bounce);
+
+      // Timer bar
+      const barW = 40;
+      const barH = 4;
+      const frac = biteTimer / BITE_WINDOW;
+      ctx.fillStyle = frac > 0.3 ? C.green : C.crimson;
+      ctx.fillRect(hookX - barW / 2, hookY - 32, barW * frac, barH);
+      ctx.strokeStyle = C.dim;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(hookX - barW / 2, hookY - 32, barW, barH);
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+  }
+
+  function drawDepthMeter() {
+    if (state !== STATE.CASTING) return;
+    const meterX = W - 40;
+    const meterTop = WATER_Y + 20;
+    const meterH = H - WATER_Y - 60;
+
+    ctx.strokeStyle = C.dim;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(meterX - 8, meterTop, 16, meterH);
+
+    ctx.fillStyle = C.cyan;
+    ctx.shadowColor = C.cyan;
+    ctx.shadowBlur = 6;
+    const fillH = meterH * castPower;
+    ctx.fillRect(meterX - 6, meterTop + meterH - fillH, 12, fillH);
+    ctx.shadowBlur = 0;
+
+    ctx.font = '600 10px "JetBrains Mono"';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = C.white;
+    ctx.fillText('DEPTH', meterX, meterTop - 8);
+  }
+
+  function drawHUD() {
+    // Score
+    ctx.font = '700 20px "JetBrains Mono"';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = C.cyan;
+    ctx.shadowColor = C.cyan;
+    ctx.shadowBlur = 8;
+    ctx.fillText(score.toString(), 16, 60);
+    ctx.shadowBlur = 0;
+    ctx.font = '400 10px "JetBrains Mono"';
+    ctx.fillStyle = C.dim;
+    ctx.fillText('SCORE', 16, 74);
+
+    // Hi score
+    ctx.textAlign = 'right';
+    ctx.font = '700 14px "JetBrains Mono"';
+    ctx.fillStyle = C.amber;
+    ctx.fillText(hiScore.toString(), W - 16, 60);
+    ctx.font = '400 10px "JetBrains Mono"';
+    ctx.fillStyle = C.dim;
+    ctx.fillText('BEST', W - 16, 74);
+
+    // Timer
+    ctx.textAlign = 'center';
+    const mins = Math.floor(timeLeft / 60);
+    const secs = Math.floor(timeLeft % 60);
+    ctx.font = '700 16px "JetBrains Mono"';
+    ctx.fillStyle = timeLeft < 15 ? C.crimson : C.white;
+    if (timeLeft < 15) {
+      ctx.shadowColor = C.crimson;
+      ctx.shadowBlur = 8;
+    }
+    ctx.fillText(`${mins}:${secs.toString().padStart(2, '0')}`, W / 2, 60);
+    ctx.shadowBlur = 0;
+    ctx.font = '400 10px "JetBrains Mono"';
+    ctx.fillStyle = C.dim;
+    ctx.fillText('TIME', W / 2, 74);
+
+    // Combo
+    if (combo > 1) {
+      ctx.font = '700 12px "JetBrains Mono"';
+      ctx.fillStyle = C.green;
+      ctx.shadowColor = C.green;
+      ctx.shadowBlur = 6;
+      ctx.textAlign = 'left';
+      ctx.fillText(`x${Math.min(combo, 5)} COMBO`, 16, 94);
+      ctx.shadowBlur = 0;
+    }
+
+    // Catch log
+    ctx.textAlign = 'left';
+    for (let i = 0; i < catches.length; i++) {
+      const c = catches[i];
+      if (c.anim <= 0) continue;
+      ctx.globalAlpha = c.anim;
+      ctx.font = '600 11px "JetBrains Mono"';
+      ctx.fillStyle = c.color;
+      const sign = c.pts >= 0 ? '+' : '';
+      ctx.fillText(`${c.name} ${sign}${c.pts}`, 16, 118 + i * 18);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawCaughtAnim() {
+    if (!caughtFish || caughtAnim <= 0) return;
+    const a = Math.min(caughtAnim, 1);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.font = '800 24px "JetBrains Mono"';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = caughtFish.type.color;
+    ctx.shadowColor = caughtFish.type.color;
+    ctx.shadowBlur = 15;
+    const y = caughtFish.y - 40 + (1 - a) * 30;
+    const sign = caughtFish.pts >= 0 ? '+' : '';
+    ctx.fillText(`${sign}${caughtFish.pts}`, caughtFish.x, y);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function drawMissedAnim() {
+    if (state !== STATE.MISSED || missedAnim <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = missedAnim;
+    ctx.font = '700 16px "JetBrains Mono"';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = C.crimson;
+    ctx.fillText('MISSED!', hookX, hookY - 30);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function drawMenu() {
+    ctx.fillStyle = C.void;
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+
+    const cy = H * 0.4;
+    ctx.textAlign = 'center';
+    ctx.font = '800 32px "JetBrains Mono"';
+    ctx.fillStyle = C.magenta;
+    ctx.shadowColor = C.magenta;
+    ctx.shadowBlur = 20;
+    ctx.fillText('NEON FISHING', W / 2, cy);
+    ctx.shadowBlur = 0;
+
+    ctx.font = '400 12px "JetBrains Mono"';
+    ctx.fillStyle = C.dim;
+    ctx.fillText('Cast your line, catch neon fish, chase the high score', W / 2, cy + 30);
+
+    // Fish legend
+    const legendY = cy + 65;
+    const legendItems = FISH_TYPES.map(t => ({ name: t.name, color: t.color, pts: t.pts }));
+    for (let i = 0; i < legendItems.length; i++) {
+      const li = legendItems[i];
+      const y = legendY + i * 22;
+      ctx.fillStyle = li.color;
+      ctx.beginPath();
+      ctx.ellipse(W / 2 - 80, y - 4, 8, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = '400 11px "JetBrains Mono"';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${li.name}`, W / 2 - 65, y);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = li.pts >= 0 ? C.green : C.crimson;
+      ctx.fillText(`${li.pts >= 0 ? '+' : ''}${li.pts}`, W / 2 + 80, y);
+      ctx.textAlign = 'center';
+    }
+
+    if (timeLeft <= 0 && score > 0) {
+      ctx.font = '700 18px "JetBrains Mono"';
+      ctx.fillStyle = C.cyan;
+      ctx.shadowColor = C.cyan;
+      ctx.shadowBlur = 10;
+      ctx.fillText(`FINAL SCORE: ${score}`, W / 2, legendY + legendItems.length * 22 + 25);
+      ctx.shadowBlur = 0;
+      if (score >= hiScore) {
+        ctx.font = '700 12px "JetBrains Mono"';
+        ctx.fillStyle = C.amber;
+        ctx.fillText('NEW HIGH SCORE!', W / 2, legendY + legendItems.length * 22 + 50);
+      }
+    }
+
+    ctx.font = '600 13px "JetBrains Mono"';
+    ctx.fillStyle = C.green;
+    ctx.shadowColor = C.green;
+    ctx.shadowBlur = 8;
+    const pulseAlpha = 0.5 + Math.sin(Date.now() * 0.003) * 0.5;
+    ctx.globalAlpha = pulseAlpha;
+    ctx.fillText('[ CLICK OR PRESS SPACE ]', W / 2, H * 0.82);
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+
+    if (hiScore > 0) {
+      ctx.font = '400 11px "JetBrains Mono"';
+      ctx.fillStyle = C.dim;
+      ctx.fillText(`BEST: ${hiScore}`, W / 2, H * 0.88);
+    }
+  }
+
+  function drawScene() {
+    // Sky gradient
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, WATER_Y);
+    skyGrad.addColorStop(0, C.void);
+    skyGrad.addColorStop(1, C.sky);
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, WATER_Y);
+
+    // Stars
+    for (const s of stars) {
+      const alpha = s.a * (0.6 + Math.sin(s.blink + Date.now() * 0.001) * 0.4);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = C.white;
+      ctx.beginPath();
+      ctx.arc(s.x % W, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Water layers
+    const waterGrad = ctx.createLinearGradient(0, WATER_Y, 0, H);
+    waterGrad.addColorStop(0, C.water1);
+    waterGrad.addColorStop(0.4, C.water2);
+    waterGrad.addColorStop(1, C.water3);
+    ctx.save();
+    drawWaves(WATER_Y);
+    ctx.fillStyle = waterGrad;
+    ctx.fill();
+    ctx.restore();
+
+    // Wave line glow
+    ctx.save();
+    ctx.beginPath();
+    for (let x = 0; x <= W; x += 4) {
+      const wave = Math.sin((x + waveOffset) * 0.02) * 4 +
+                   Math.sin((x + waveOffset * 0.7) * 0.035) * 2;
+      if (x === 0) ctx.moveTo(x, WATER_Y + wave);
+      else ctx.lineTo(x, WATER_Y + wave);
+    }
+    ctx.strokeStyle = C.cyan;
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = C.cyan;
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+    drawScene();
+
+    // Fishes (underwater)
+    for (const f of fishes) {
+      drawFish(f);
+    }
+
+    // Bubbles
+    for (const b of bubbles) {
+      ctx.globalAlpha = b.life * 0.4;
+      ctx.strokeStyle = C.cyan;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // Particles
+    for (const p of particles) {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Boat and hook
+    const tip = drawBoat();
+    drawHook(tip.tipX, tip.tipY);
+    drawDepthMeter();
+    drawCaughtAnim();
+    drawMissedAnim();
+
+    // HUD
+    if (state !== STATE.MENU) drawHUD();
+
+    // Casting instruction
+    if (state === STATE.CASTING) {
+      ctx.font = '600 12px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = C.cyan;
+      ctx.globalAlpha = 0.7 + Math.sin(Date.now() * 0.005) * 0.3;
+      ctx.fillText('RELEASE TO CAST', W / 2, WATER_Y - 10);
+      ctx.globalAlpha = 1;
+    }
+
+    // Idle instruction
+    if (state === STATE.IDLE && timeLeft > 0) {
+      ctx.font = '400 11px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = C.dim;
+      ctx.fillText('CLICK OR SPACE TO CAST', W / 2, H - 40);
+    }
+
+    // Menu
+    if (state === STATE.MENU || timeLeft <= 0) drawMenu();
+  }
+
+  // Main loop
+  function loop(ts) {
+    const dt = Math.min((ts - lastTime) / 1000, 0.05);
+    lastTime = ts;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+  lastTime = performance.now();
+  requestAnimationFrame(loop);
+})();
+  </script>
+</body>
+</html>

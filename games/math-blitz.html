@@ -285,6 +285,107 @@
       font-size: 0.6rem;
       color: var(--text-muted);
     }
+
+    /* --- MOBILE / TOUCH --- */
+    *, *::before, *::after {
+      touch-action: manipulation;
+    }
+
+    /* On-screen numpad */
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.4rem;
+      max-width: 280px;
+      margin: 1rem auto 0;
+    }
+    .numpad-btn {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.3rem;
+      font-weight: 700;
+      padding: 0.7rem 0;
+      min-height: 50px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: all 0.15s;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .numpad-btn:active {
+      background: rgba(0,255,255,0.1);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--glow-cyan-soft);
+    }
+    .numpad-btn.action-neg {
+      color: var(--accent-magenta);
+      font-size: 1.4rem;
+    }
+    .numpad-btn.action-del {
+      color: var(--accent-amber, #ffb000);
+      font-size: 1.1rem;
+    }
+    .numpad-submit {
+      grid-column: 1 / -1;
+      background: none;
+      border: 2px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 0.7rem;
+      min-height: 50px;
+      cursor: pointer;
+      letter-spacing: 0.1em;
+      transition: all 0.2s;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .numpad-submit:active {
+      background: var(--accent-cyan);
+      color: var(--bg);
+      box-shadow: 0 0 16px var(--glow-cyan-soft);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 480px) {
+      main {
+        padding: 1rem 0.8rem 2rem;
+      }
+      h1 {
+        font-size: 1.3rem;
+      }
+      .question {
+        font-size: 1.8rem;
+        min-height: 3rem;
+        margin-bottom: 1rem;
+      }
+      #answer {
+        font-size: 1.5rem;
+        width: 130px;
+      }
+      .hud {
+        font-size: 0.65rem;
+      }
+      .mode-btn {
+        font-size: 0.6rem;
+        padding: 0.35rem 0.6rem;
+      }
+      .final-score {
+        font-size: 2.2rem;
+      }
+      .numpad {
+        max-width: 260px;
+      }
+      .numpad-btn {
+        font-size: 1.1rem;
+        min-height: 46px;
+      }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -341,7 +442,23 @@
       <div class="feedback" id="feedback">&nbsp;</div>
 
       <div class="answer-wrap">
-        <input type="text" id="answer" autocomplete="off" inputmode="numeric" autofocus>
+        <input type="text" id="answer" autocomplete="off" inputmode="none" autofocus>
+      </div>
+
+      <div class="numpad" id="numpad">
+        <button class="numpad-btn" data-val="1">1</button>
+        <button class="numpad-btn" data-val="2">2</button>
+        <button class="numpad-btn" data-val="3">3</button>
+        <button class="numpad-btn" data-val="4">4</button>
+        <button class="numpad-btn" data-val="5">5</button>
+        <button class="numpad-btn" data-val="6">6</button>
+        <button class="numpad-btn" data-val="7">7</button>
+        <button class="numpad-btn" data-val="8">8</button>
+        <button class="numpad-btn" data-val="9">9</button>
+        <button class="numpad-btn action-neg" data-val="-">&minus;</button>
+        <button class="numpad-btn" data-val="0">0</button>
+        <button class="numpad-btn action-del" data-val="del">&#x232B;</button>
+        <button class="numpad-submit" id="numpad-submit">SUBMIT &#x25B6;</button>
       </div>
     </div>
 
@@ -675,6 +792,36 @@
       }
       if (e.key === 'Enter' && $overScreen.classList.contains('active')) {
         startGame();
+      }
+    });
+
+    // --- Numpad ---
+    document.getElementById('numpad').addEventListener('click', function(e) {
+      const btn = e.target.closest('.numpad-btn');
+      if (btn) {
+        e.preventDefault();
+        const val = btn.dataset.val;
+        if (val === 'del') {
+          $answer.value = $answer.value.slice(0, -1);
+        } else if (val === '-') {
+          if ($answer.value === '') $answer.value = '-';
+        } else {
+          $answer.value += val;
+        }
+        return;
+      }
+      if (e.target.closest('#numpad-submit')) {
+        e.preventDefault();
+        if ($gameScreen.classList.contains('active')) {
+          submitAnswer();
+        }
+      }
+    });
+
+    // Prevent native keyboard from popping up on touch devices
+    $answer.addEventListener('focus', function() {
+      if ('ontouchstart' in window) {
+        this.blur();
       }
     });
 

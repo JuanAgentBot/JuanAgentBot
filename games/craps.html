@@ -22,6 +22,8 @@
       font-family: 'JetBrains Mono', monospace;
       min-height: 100vh;
       overflow-x: hidden;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .top-bar {
       display: flex;
@@ -210,6 +212,8 @@
       cursor: pointer;
       transition: all 0.2s;
       text-align: center;
+      min-height: 44px;
+      touch-action: manipulation;
     }
     .bet-btn:hover {
       border-color: var(--accent-cyan);
@@ -252,6 +256,7 @@
       background: transparent;
       color: var(--text-bright);
       transition: all 0.2s;
+      touch-action: manipulation;
     }
     .chip:hover { transform: scale(1.1); }
     .chip.selected {
@@ -298,6 +303,8 @@
       cursor: pointer;
       transition: all 0.2s;
       text-shadow: 0 0 10px var(--glow-magenta);
+      min-height: 48px;
+      touch-action: manipulation;
     }
     .roll-btn:hover {
       background: rgba(255,45,123,0.1);
@@ -360,6 +367,62 @@
       margin-bottom: 0.5rem;
     }
     .instructions strong { color: var(--text-bright); }
+
+    /* Mobile responsive */
+    @media (max-width: 480px) {
+      .container { padding: 1rem 0.75rem; }
+      .status-bar {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.7rem;
+      }
+      .dice-area { gap: 1.25rem; margin: 1.25rem 0; }
+      .die {
+        width: 80px;
+        height: 80px;
+        padding: 10px;
+      }
+      .roll-total { font-size: 1.5rem; margin-bottom: 1rem; }
+      .point-markers { gap: 0.35rem; margin-bottom: 1rem; }
+      .marker {
+        width: 36px;
+        height: 30px;
+        font-size: 0.65rem;
+      }
+      .chips { gap: 0.35rem; }
+      .chip {
+        width: 42px;
+        height: 42px;
+        font-size: 0.6rem;
+      }
+      .bet-btn {
+        padding: 0.75rem 0.5rem;
+        min-height: 44px;
+        font-size: 0.65rem;
+      }
+      .roll-btn {
+        padding: 0.85rem;
+        font-size: 0.9rem;
+      }
+      .game-title { font-size: 0.85rem; }
+    }
+
+    @media (max-width: 360px) {
+      .die {
+        width: 68px;
+        height: 68px;
+        padding: 8px;
+      }
+      .dice-area { gap: 1rem; }
+      .chips { flex-wrap: wrap; justify-content: center; }
+      .bet-types { grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+      .marker {
+        width: 32px;
+        height: 28px;
+        font-size: 0.6rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -435,7 +498,7 @@
       <strong>Don't Pass:</strong> Opposite of Pass. 12 pushes on come out. Pays 1:1.<br>
       <strong>Field:</strong> One-roll bet. Wins on 2,3,4,9,10,11,12. 2 pays 2:1, 12 pays 3:1. Pays 1:1 otherwise.<br>
       <strong>Any 7:</strong> One-roll bet. Wins if next roll is 7. Pays 4:1.<br><br>
-      Click chips to select bet size. Click bet buttons to place bets. Press <strong>SPACE</strong> or click to roll.
+      Tap or click chips to select bet size. Tap bet buttons to place bets. Press <strong>SPACE</strong> or tap <strong>ROLL</strong> to roll.
     </div>
   </div>
 

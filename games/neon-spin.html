@@ -13,6 +13,16 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
+    }
+
     main {
       max-width: 520px;
       margin: 0 auto;
@@ -53,15 +63,16 @@
 
     .wheel-container {
       position: relative;
-      width: 360px;
-      height: 360px;
+      width: min(360px, calc(100vw - 3rem));
+      height: min(360px, calc(100vw - 3rem));
       margin: 0 auto 1.5rem;
+      touch-action: manipulation;
     }
 
     canvas {
       display: block;
-      width: 360px;
-      height: 360px;
+      width: 100%;
+      height: 100%;
     }
 
     .pointer {
@@ -131,6 +142,8 @@
     .btn {
       display: inline-block;
       padding: 0.8rem 2rem;
+      min-height: 44px;
+      min-width: 44px;
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.85rem;
       font-weight: 700;
@@ -140,6 +153,8 @@
       cursor: pointer;
       transition: all 0.25s;
       margin: 0 0.3rem;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .btn-spin {
@@ -205,10 +220,43 @@
       margin-top: 1rem;
     }
 
+    .touch-hint {
+      display: none;
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      .controls-hint:not(.touch-hint) {
+        display: none;
+      }
+      .touch-hint {
+        display: block;
+      }
+    }
+
     @media (max-width: 400px) {
-      .wheel-container, canvas {
-        width: 280px;
-        height: 280px;
+      main {
+        padding: 1.2rem 1rem 3rem;
+      }
+
+      h1 {
+        font-size: 1.3rem;
+      }
+
+      .score-panel {
+        gap: 1rem;
+      }
+
+      .score-value {
+        font-size: 1.1rem;
+      }
+
+      .btn {
+        padding: 0.7rem 1.4rem;
+        font-size: 0.78rem;
+      }
+
+      .controls-hint {
+        display: none;
       }
     }
   </style>
@@ -254,6 +302,7 @@
     </div>
 
     <div class="controls-hint">SPACE = SPIN &middot; B = BANK &middot; N = NEW GAME</div>
+    <div class="controls-hint touch-hint">TAP THE BUTTONS TO PLAY</div>
   </main>
 
   <script>

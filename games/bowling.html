@@ -49,6 +49,9 @@
       margin: 0 auto 1rem;
       border: 1px solid var(--border);
       cursor: crosshair;
+      max-width: 100%;
+      height: auto;
+      touch-action: manipulation;
     }
     .controls {
       color: var(--text-dim);
@@ -59,7 +62,7 @@
     }
     .controls span { color: var(--accent-cyan); }
     #scoreboard {
-      margin: 0 auto 1rem;
+      margin: 0 auto;
       border-collapse: collapse;
       font-size: 0.6rem;
       letter-spacing: 0.04em;
@@ -102,10 +105,59 @@
       letter-spacing: 0.08em;
       cursor: pointer;
       transition: background 0.2s, color 0.2s;
+      touch-action: manipulation;
     }
     #restart-btn:hover {
       background: var(--accent-magenta);
       color: var(--bg);
+    }
+    /* Mobile touch controls */
+    .touch-controls {
+      display: none;
+      gap: 0.6rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .touch-btn {
+      min-width: 48px;
+      min-height: 48px;
+      padding: 0.5rem 1rem;
+      background: transparent;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    .touch-btn:active {
+      background: var(--accent-cyan);
+      color: var(--bg);
+    }
+    .touch-btn.accent {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+    }
+    .touch-btn.accent:active {
+      background: var(--accent-magenta);
+      color: var(--bg);
+    }
+    @media (hover: none) and (pointer: coarse) {
+      .touch-controls { display: flex; }
+      .controls { display: none; }
+    }
+    @media (max-width: 480px) {
+      h1 { font-size: 1.2rem; }
+      #scoreboard td, #scoreboard th {
+        font-size: 0.55rem;
+        padding: 2px 3px;
+      }
+      main { padding: 1rem 0.75rem 3rem; }
     }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
@@ -121,7 +173,15 @@
     <div class="controls">
       <span>MOUSE</span> AIM &middot; <span>CLICK</span> SET POWER &amp; THROW &middot; <span>R</span> RESTART
     </div>
-    <table id="scoreboard"></table>
+    <div class="touch-controls" id="touch-controls">
+      <button class="touch-btn" id="touch-left">&larr;</button>
+      <button class="touch-btn accent" id="touch-action">TAP TO AIM</button>
+      <button class="touch-btn" id="touch-right">&rarr;</button>
+      <button class="touch-btn accent" id="touch-restart" style="margin-left:0.5rem">↺</button>
+    </div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:1rem">
+      <table id="scoreboard"></table>
+    </div>
     <button id="restart-btn" onclick="initGame()">PLAY AGAIN</button>
   </main>
 
@@ -171,7 +231,9 @@ for (let r = 0; r < rows.length; r++) {
 const BALL_RADIUS = 10;
 
 // Game state
-let game, mouseX, mouseY, animFrame;
+let game, animFrame;
+let mouseX = LANE_CENTER;
+let mouseY = BALL_START_Y - 100;
 
 function initGame() {
   if (animFrame) cancelAnimationFrame(animFrame);
@@ -202,6 +264,7 @@ function initGame() {
   document.getElementById('restart-btn').style.display = 'none';
   document.getElementById('status').textContent = 'FRAME 1 \u2022 AIM WITH MOUSE \u2022 CLICK TO THROW';
   game.phase = 'aim';
+  updateTouchLabel();
   loop();
 }
 
@@ -583,6 +646,7 @@ function updateStatusText() {
   const r = game.rollInFrame + 1;
   document.getElementById('status').textContent =
     'FRAME ' + f + ' \u2022 ROLL ' + r + ' \u2022 ' + (game.message || 'AIM & CLICK');
+  updateTouchLabel();
 }
 
 // Drawing
@@ -807,10 +871,124 @@ canvas.addEventListener('click', () => {
     game.phase = 'power';
     game.powerLevel = 0;
     game.powerDir = 1;
+    updateTouchLabel();
   } else if (game.phase === 'power') {
     throwBall();
+    updateTouchLabel();
   }
 });
+
+// Touch support on canvas
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const scaleY = H / rect.height;
+  mouseX = (touch.clientX - rect.left) * scaleX;
+  mouseY = (touch.clientY - rect.top) * scaleY;
+  if (game.phase === 'aim') {
+    game.aimX = Math.max(LANE_LEFT + GUTTER_W + BALL_RADIUS, Math.min(LANE_RIGHT - GUTTER_W - BALL_RADIUS, mouseX));
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const scaleY = H / rect.height;
+  mouseX = (touch.clientX - rect.left) * scaleX;
+  mouseY = (touch.clientY - rect.top) * scaleY;
+  if (game.phase === 'aim') {
+    game.aimX = Math.max(LANE_LEFT + GUTTER_W + BALL_RADIUS, Math.min(LANE_RIGHT - GUTTER_W - BALL_RADIUS, mouseX));
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (game.phase === 'aim') {
+    game.phase = 'power';
+    game.powerLevel = 0;
+    game.powerDir = 1;
+    updateTouchLabel();
+  } else if (game.phase === 'power') {
+    throwBall();
+    updateTouchLabel();
+  }
+});
+
+// Touch button controls (for fine-tuning aim on mobile)
+function updateTouchLabel() {
+  const btn = document.getElementById('touch-action');
+  if (!btn) return;
+  if (game.phase === 'aim') btn.textContent = 'TAP TO AIM';
+  else if (game.phase === 'power') btn.textContent = 'TAP TO THROW';
+  else if (game.phase === 'done') btn.textContent = 'GAME OVER';
+  else btn.textContent = '...';
+}
+
+const touchLeft = document.getElementById('touch-left');
+const touchRight = document.getElementById('touch-right');
+const touchAction = document.getElementById('touch-action');
+const touchRestart = document.getElementById('touch-restart');
+
+let nudgeInterval = null;
+function startNudge(dir) {
+  if (game.phase !== 'aim') return;
+  const step = 3;
+  game.aimX = Math.max(LANE_LEFT + GUTTER_W + BALL_RADIUS, Math.min(LANE_RIGHT - GUTTER_W - BALL_RADIUS, game.aimX + dir * step));
+  nudgeInterval = setInterval(() => {
+    if (game.phase !== 'aim') { clearInterval(nudgeInterval); return; }
+    game.aimX = Math.max(LANE_LEFT + GUTTER_W + BALL_RADIUS, Math.min(LANE_RIGHT - GUTTER_W - BALL_RADIUS, game.aimX + dir * step));
+  }, 60);
+}
+function stopNudge() { if (nudgeInterval) { clearInterval(nudgeInterval); nudgeInterval = null; } }
+
+touchLeft.addEventListener('touchstart', e => { e.preventDefault(); startNudge(-1); });
+touchLeft.addEventListener('touchend', e => { e.preventDefault(); stopNudge(); });
+touchLeft.addEventListener('touchcancel', stopNudge);
+touchRight.addEventListener('touchstart', e => { e.preventDefault(); startNudge(1); });
+touchRight.addEventListener('touchend', e => { e.preventDefault(); stopNudge(); });
+touchRight.addEventListener('touchcancel', stopNudge);
+
+touchAction.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (game.phase === 'aim') {
+    game.phase = 'power';
+    game.powerLevel = 0;
+    game.powerDir = 1;
+    updateTouchLabel();
+  } else if (game.phase === 'power') {
+    throwBall();
+    updateTouchLabel();
+  }
+});
+
+touchRestart.addEventListener('touchend', e => {
+  e.preventDefault();
+  initGame();
+});
+
+// Also support mouse clicks on touch buttons
+touchLeft.addEventListener('mousedown', () => startNudge(-1));
+touchLeft.addEventListener('mouseup', stopNudge);
+touchLeft.addEventListener('mouseleave', stopNudge);
+touchRight.addEventListener('mousedown', () => startNudge(1));
+touchRight.addEventListener('mouseup', stopNudge);
+touchRight.addEventListener('mouseleave', stopNudge);
+touchAction.addEventListener('click', () => {
+  if (game.phase === 'aim') {
+    game.phase = 'power';
+    game.powerLevel = 0;
+    game.powerDir = 1;
+    updateTouchLabel();
+  } else if (game.phase === 'power') {
+    throwBall();
+    updateTouchLabel();
+  }
+});
+touchRestart.addEventListener('click', () => initGame());
 
 document.addEventListener('keydown', e => {
   if (e.key === 'r' || e.key === 'R') {

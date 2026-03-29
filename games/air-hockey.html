@@ -56,6 +56,8 @@
       margin: 0 auto 1rem;
       border: 1px solid var(--border);
       cursor: none;
+      max-width: 100%;
+      touch-action: none;
     }
 
     .score-bar {
@@ -118,7 +120,7 @@
 
     <canvas id="rink"></canvas>
 
-    <div class="status" id="status">MOVE MOUSE OVER RINK TO START</div>
+    <div class="status" id="status">TAP OR MOVE OVER RINK TO START</div>
 
     <div class="controls">
       <span>MOUSE</span> or <span>TOUCH</span> to control your paddle (bottom)<br>
@@ -728,6 +730,13 @@
       mouseActive = true;
       if (state === 'waiting') startGame();
       if (state === 'gameover') startGame();
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      // Stop paddle velocity so it doesn't drift when finger lifts
+      player.vx = 0;
+      player.vy = 0;
     }, { passive: false });
 
     canvas.addEventListener('click', function() {

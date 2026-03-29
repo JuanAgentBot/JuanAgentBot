@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Number Rush / ZERO</title>
+  <meta name="description" content="Click numbers 1-25 in order as fast as you can. Neon speed challenge.">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg, #0a0a0f);
+      color: var(--text-bright, #e0e0e8);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--border, #7a7a90);
+    }
+
+    .back {
+      color: var(--text-dim, #7a7a90);
+      text-decoration: none;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      transition: color 0.2s;
+    }
+
+    .back:hover { color: var(--accent-cyan, #00f0ff); }
+
+    .title {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--accent-magenta, #ff2d7b);
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 10px rgba(255,45,123,0.5);
+    }
+
+    .stats {
+      font-size: 0.7rem;
+      color: var(--text-dim, #7a7a90);
+      letter-spacing: 0.04em;
+    }
+
+    #game-area {
+      position: relative;
+      width: 100vw;
+      height: calc(100vh - 42px - 60px);
+      overflow: hidden;
+    }
+
+    .number-tile {
+      position: absolute;
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: 1px solid var(--border, #7a7a90);
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.15s, border-color 0.2s, box-shadow 0.2s;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .number-tile.next {
+      border-color: var(--accent-cyan, #00f0ff);
+      color: var(--accent-cyan, #00f0ff);
+      text-shadow: 0 0 8px rgba(0,240,255,0.4);
+      box-shadow: 0 0 12px rgba(0,240,255,0.15);
+    }
+
+    .number-tile.waiting {
+      color: var(--text-dim, #7a7a90);
+      border-color: rgba(122,122,144,0.3);
+    }
+
+    .number-tile.done {
+      opacity: 0;
+      transform: scale(0.5);
+      pointer-events: none;
+    }
+
+    .number-tile.wrong {
+      border-color: #ff1744;
+      box-shadow: 0 0 16px rgba(255,23,68,0.4);
+      animation: shake 0.3s;
+    }
+
+    .number-tile:hover:not(.done) {
+      border-color: var(--accent-magenta, #ff2d7b);
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+
+    #bottom-bar {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      border-top: 1px solid var(--border, #7a7a90);
+      padding: 0 1rem;
+    }
+
+    .info-item {
+      text-align: center;
+    }
+
+    .info-label {
+      font-size: 0.55rem;
+      color: var(--text-dim, #7a7a90);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .info-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .timer-val { color: var(--accent-cyan, #00f0ff); text-shadow: 0 0 8px rgba(0,240,255,0.3); }
+    .next-val { color: var(--accent-green, #39ff14); text-shadow: 0 0 8px rgba(57,255,20,0.3); }
+    .best-val { color: var(--accent-purple, #9d4edd); text-shadow: 0 0 8px rgba(157,78,221,0.3); }
+
+    /* Overlays */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10,10,15,0.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .overlay.hidden { display: none; }
+
+    .panel {
+      text-align: center;
+      max-width: 360px;
+      padding: 2rem;
+      border: 1px solid var(--border, #7a7a90);
+    }
+
+    .panel h2 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--accent-magenta, #ff2d7b);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.8rem;
+      text-shadow: 0 0 15px rgba(255,45,123,0.5);
+    }
+
+    .panel p {
+      font-size: 0.75rem;
+      color: var(--text-muted, #a0a0b0);
+      line-height: 1.6;
+      margin-bottom: 0.5rem;
+    }
+
+    .panel .result-time {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--accent-cyan, #00f0ff);
+      text-shadow: 0 0 20px rgba(0,240,255,0.5);
+      margin: 1rem 0;
+    }
+
+    .panel .new-best {
+      font-size: 0.7rem;
+      color: var(--accent-green, #39ff14);
+      text-shadow: 0 0 8px rgba(57,255,20,0.4);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    .mode-buttons {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin: 1rem 0;
+    }
+
+    .mode-btn {
+      background: none;
+      border: 1px solid var(--border, #7a7a90);
+      color: var(--text-dim, #7a7a90);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mode-btn:hover {
+      border-color: var(--accent-cyan, #00f0ff);
+      color: var(--accent-cyan, #00f0ff);
+    }
+
+    .mode-btn.active {
+      border-color: var(--accent-magenta, #ff2d7b);
+      color: var(--accent-magenta, #ff2d7b);
+      box-shadow: 0 0 12px rgba(255,45,123,0.2);
+    }
+
+    .btn {
+      background: none;
+      border: 1px solid var(--accent-cyan, #00f0ff);
+      color: var(--accent-cyan, #00f0ff);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0.6rem 1.6rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 0.8rem;
+    }
+
+    .btn:hover {
+      background: rgba(0,240,255,0.1);
+      box-shadow: 0 0 16px rgba(0,240,255,0.3);
+    }
+
+    .history {
+      margin-top: 1rem;
+      font-size: 0.65rem;
+      color: var(--text-dim, #7a7a90);
+    }
+
+    .history span {
+      color: var(--text-muted, #a0a0b0);
+    }
+
+    .controls-hint {
+      font-size: 0.6rem;
+      color: var(--text-dim, #7a7a90);
+      margin-top: 0.5rem;
+      letter-spacing: 0.04em;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <div class="title">NUMBER RUSH</div>
+    <div class="stats" id="mode-label">25 TILES</div>
+  </div>
+
+  <div id="game-area"></div>
+
+  <div id="bottom-bar">
+    <div class="info-item">
+      <div class="info-label">TIME</div>
+      <div class="info-value timer-val" id="timer">0.00</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">NEXT</div>
+      <div class="info-value next-val" id="next-num">1</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">BEST</div>
+      <div class="info-value best-val" id="best-time">--</div>
+    </div>
+  </div>
+
+  <!-- Start overlay -->
+  <div class="overlay" id="start-overlay">
+    <div class="panel">
+      <h2>NUMBER RUSH</h2>
+      <p>Click the numbers in order, 1 to N, as fast as you can.</p>
+      <p>Wrong clicks cost you time. Beat your best.</p>
+      <div class="mode-buttons">
+        <button class="mode-btn active" data-count="16">4x4</button>
+        <button class="mode-btn" data-count="25">5x5</button>
+        <button class="mode-btn" data-count="36">6x6</button>
+      </div>
+      <button class="btn" id="start-btn">START</button>
+      <div class="controls-hint">CLICK / TAP to select numbers</div>
+    </div>
+  </div>
+
+  <!-- Result overlay -->
+  <div class="overlay hidden" id="result-overlay">
+    <div class="panel">
+      <h2>COMPLETE</h2>
+      <div class="result-time" id="result-time">0.00s</div>
+      <div class="new-best hidden" id="new-best-label">NEW BEST!</div>
+      <div class="history" id="history"></div>
+      <button class="btn" id="again-btn">AGAIN</button>
+    </div>
+  </div>
+
+<script>
+(function() {
+  const gameArea = document.getElementById('game-area');
+  const timerEl = document.getElementById('timer');
+  const nextNumEl = document.getElementById('next-num');
+  const bestTimeEl = document.getElementById('best-time');
+  const modeLabelEl = document.getElementById('mode-label');
+  const startOverlay = document.getElementById('start-overlay');
+  const resultOverlay = document.getElementById('result-overlay');
+  const resultTimeEl = document.getElementById('result-time');
+  const newBestLabel = document.getElementById('new-best-label');
+  const historyEl = document.getElementById('history');
+  const startBtn = document.getElementById('start-btn');
+  const againBtn = document.getElementById('again-btn');
+  const modeButtons = document.querySelectorAll('.mode-btn');
+
+  let tileCount = 25;
+  let currentNext = 1;
+  let startTime = 0;
+  let timerInterval = null;
+  let running = false;
+  let tiles = [];
+  let penalty = 0;
+
+  const PENALTY_MS = 500;
+  const TILE_SIZE = 56;
+  const TILE_GAP = 6;
+
+  const colors = ['#00f0ff', '#ff2d7b', '#39ff14', '#9d4edd'];
+
+  // Best times per mode
+  function getBest(count) {
+    const v = localStorage.getItem('number-rush-best-' + count);
+    return v ? parseFloat(v) : null;
+  }
+  function setBest(count, time) {
+    localStorage.setItem('number-rush-best-' + count, time.toFixed(2));
+  }
+  function getHistory(count) {
+    const v = localStorage.getItem('number-rush-history-' + count);
+    return v ? JSON.parse(v) : [];
+  }
+  function addHistory(count, time) {
+    const h = getHistory(count);
+    h.unshift(time);
+    if (h.length > 5) h.length = 5;
+    localStorage.setItem('number-rush-history-' + count, JSON.stringify(h));
+  }
+
+  function updateBestDisplay() {
+    const best = getBest(tileCount);
+    bestTimeEl.textContent = best ? best.toFixed(2) : '--';
+  }
+
+  // Mode selection
+  modeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modeButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      tileCount = parseInt(btn.dataset.count);
+      updateBestDisplay();
+    });
+  });
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function placeTiles() {
+    gameArea.innerHTML = '';
+    tiles = [];
+
+    const areaW = gameArea.clientWidth;
+    const areaH = gameArea.clientHeight;
+
+    // Grid-based placement with randomized positions within cells
+    const cols = Math.round(Math.sqrt(tileCount));
+    const rows = Math.ceil(tileCount / cols);
+
+    const cellW = areaW / cols;
+    const cellH = areaH / rows;
+
+    const numbers = shuffle(Array.from({length: tileCount}, (_, i) => i + 1));
+
+    numbers.forEach((num, idx) => {
+      const row = Math.floor(idx / cols);
+      const col = idx % cols;
+
+      // Random offset within cell, keeping tile fully inside
+      const maxOffX = Math.max(0, cellW - TILE_SIZE - TILE_GAP * 2);
+      const maxOffY = Math.max(0, cellH - TILE_SIZE - TILE_GAP * 2);
+      const offX = TILE_GAP + Math.random() * maxOffX;
+      const offY = TILE_GAP + Math.random() * maxOffY;
+
+      const x = col * cellW + offX;
+      const y = row * cellH + offY;
+
+      const tile = document.createElement('div');
+      tile.className = 'number-tile waiting';
+      tile.textContent = num;
+      tile.style.left = x + 'px';
+      tile.style.top = y + 'px';
+      tile.dataset.num = num;
+
+      tile.addEventListener('click', () => onTileClick(tile, num));
+
+      gameArea.appendChild(tile);
+      tiles.push(tile);
+    });
+
+    highlightNext();
+  }
+
+  function highlightNext() {
+    tiles.forEach(t => {
+      const n = parseInt(t.dataset.num);
+      if (n === currentNext) {
+        t.classList.remove('waiting');
+        t.classList.add('next');
+      } else if (n > currentNext) {
+        t.classList.add('waiting');
+        t.classList.remove('next');
+      }
+    });
+  }
+
+  function onTileClick(tile, num) {
+    if (!running) return;
+
+    if (num === currentNext) {
+      // Correct
+      tile.classList.remove('next', 'waiting');
+      tile.classList.add('done');
+      currentNext++;
+      nextNumEl.textContent = currentNext <= tileCount ? currentNext : '✓';
+
+      if (currentNext > tileCount) {
+        finish();
+        return;
+      }
+
+      highlightNext();
+    } else {
+      // Wrong - penalty
+      penalty += PENALTY_MS;
+      tile.classList.add('wrong');
+      setTimeout(() => tile.classList.remove('wrong'), 300);
+    }
+  }
+
+  function startTimer() {
+    startTime = performance.now();
+    penalty = 0;
+    timerInterval = setInterval(() => {
+      const elapsed = (performance.now() - startTime + penalty) / 1000;
+      timerEl.textContent = elapsed.toFixed(2);
+    }, 33);
+  }
+
+  function stopTimer() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+
+  function finish() {
+    running = false;
+    stopTimer();
+
+    const finalTime = (performance.now() - startTime + penalty) / 1000;
+    timerEl.textContent = finalTime.toFixed(2);
+
+    // Check best
+    const best = getBest(tileCount);
+    const isNewBest = !best || finalTime < best;
+    if (isNewBest) setBest(tileCount, finalTime);
+
+    addHistory(tileCount, parseFloat(finalTime.toFixed(2)));
+
+    // Show result
+    resultTimeEl.textContent = finalTime.toFixed(2) + 's';
+    newBestLabel.classList.toggle('hidden', !isNewBest);
+
+    // History
+    const h = getHistory(tileCount);
+    if (h.length > 0) {
+      historyEl.innerHTML = 'RECENT: ' + h.map(t => '<span>' + t.toFixed(2) + 's</span>').join(' · ');
+    } else {
+      historyEl.innerHTML = '';
+    }
+
+    updateBestDisplay();
+    resultOverlay.classList.remove('hidden');
+  }
+
+  function startGame() {
+    currentNext = 1;
+    running = true;
+    nextNumEl.textContent = '1';
+    timerEl.textContent = '0.00';
+
+    const side = Math.round(Math.sqrt(tileCount));
+    modeLabelEl.textContent = side + 'x' + side;
+
+    startOverlay.classList.add('hidden');
+    resultOverlay.classList.add('hidden');
+
+    placeTiles();
+    startTimer();
+  }
+
+  startBtn.addEventListener('click', startGame);
+  againBtn.addEventListener('click', startGame);
+
+  // Keyboard shortcut: Enter to start/restart
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      if (!startOverlay.classList.contains('hidden')) {
+        startGame();
+      } else if (!resultOverlay.classList.contains('hidden')) {
+        startGame();
+      }
+    }
+  });
+
+  updateBestDisplay();
+})();
+</script>
+</body>
+</html>

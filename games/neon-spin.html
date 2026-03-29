@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON SPIN / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .wheel-container {
+      position: relative;
+      width: 360px;
+      height: 360px;
+      margin: 0 auto 1.5rem;
+    }
+
+    canvas {
+      display: block;
+      width: 360px;
+      height: 360px;
+    }
+
+    .pointer {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 14px solid transparent;
+      border-right: 14px solid transparent;
+      border-top: 28px solid #ff2d7b;
+      filter: drop-shadow(0 0 8px rgba(255, 45, 123, 0.6));
+      z-index: 2;
+    }
+
+    .score-panel {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .score-box {
+      text-align: center;
+    }
+
+    .score-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.2rem;
+    }
+
+    .score-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .score-value.current {
+      color: #00f0ff;
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+    }
+
+    .score-value.banked {
+      color: #39ff14;
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+    }
+
+    .score-value.best {
+      color: #9d4edd;
+      text-shadow: 0 0 10px rgba(157, 78, 221, 0.4);
+    }
+
+    .spins-left {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+    }
+
+    .spins-left span {
+      color: #00f0ff;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 0.8rem 2rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      border: 1px solid;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.25s;
+      margin: 0 0.3rem;
+    }
+
+    .btn-spin {
+      color: #00f0ff;
+      border-color: #00f0ff;
+    }
+
+    .btn-spin:hover:not(:disabled) {
+      background: rgba(0, 240, 255, 0.1);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+    }
+
+    .btn-bank {
+      color: #39ff14;
+      border-color: #39ff14;
+    }
+
+    .btn-bank:hover:not(:disabled) {
+      background: rgba(57, 255, 20, 0.1);
+      box-shadow: 0 0 20px rgba(57, 255, 20, 0.3);
+    }
+
+    .btn-new {
+      color: #ff2d7b;
+      border-color: #ff2d7b;
+    }
+
+    .btn-new:hover {
+      background: rgba(255, 45, 123, 0.1);
+      box-shadow: 0 0 20px rgba(255, 45, 123, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    .buttons {
+      margin-bottom: 1rem;
+    }
+
+    .result-msg {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      min-height: 1.4rem;
+      margin-bottom: 0.5rem;
+      transition: opacity 0.3s;
+    }
+
+    .game-over {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #ff2d7b;
+      text-shadow: 0 0 15px rgba(255, 45, 123, 0.5);
+      margin-bottom: 1rem;
+    }
+
+    .controls-hint {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 400px) {
+      .wheel-container, canvas {
+        width: 280px;
+        height: 280px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>NEON SPIN</h1>
+    <div class="subtitle">SPIN THE WHEEL / PUSH YOUR LUCK</div>
+
+    <div class="wheel-container">
+      <div class="pointer"></div>
+      <canvas id="wheel" width="720" height="720"></canvas>
+    </div>
+
+    <div class="score-panel">
+      <div class="score-box">
+        <div class="score-label">ROUND</div>
+        <div class="score-value current" id="current-score">0</div>
+      </div>
+      <div class="score-box">
+        <div class="score-label">BANKED</div>
+        <div class="score-value banked" id="banked-score">0</div>
+      </div>
+      <div class="score-box">
+        <div class="score-label">BEST</div>
+        <div class="score-value best" id="best-score">0</div>
+      </div>
+    </div>
+
+    <div class="spins-left">SPINS LEFT: <span id="spins-left">10</span></div>
+
+    <div class="result-msg" id="result-msg">&nbsp;</div>
+
+    <div class="buttons">
+      <button class="btn btn-spin" id="btn-spin">SPIN</button>
+      <button class="btn btn-bank" id="btn-bank" disabled>BANK</button>
+    </div>
+
+    <div id="game-over-area" style="display:none">
+      <div class="game-over">GAME OVER</div>
+      <button class="btn btn-new" id="btn-new">NEW GAME</button>
+    </div>
+
+    <div class="controls-hint">SPACE = SPIN &middot; B = BANK &middot; N = NEW GAME</div>
+  </main>
+
+  <script>
+    (function() {
+      var canvas = document.getElementById('wheel');
+      var ctx = canvas.getContext('2d');
+      var W = canvas.width;
+      var H = canvas.height;
+      var CX = W / 2;
+      var CY = H / 2;
+      var R = W / 2 - 20;
+
+      // Wedge definitions: value, color, label
+      var wedges = [
+        { value: 100,  color: '#00f0ff', label: '100' },
+        { value: 200,  color: '#9d4edd', label: '200' },
+        { value: 500,  color: '#39ff14', label: '500' },
+        { value: 150,  color: '#00f0ff', label: '150' },
+        { value: -1,   color: '#ff1744', label: 'BUST' },
+        { value: 300,  color: '#9d4edd', label: '300' },
+        { value: 100,  color: '#00f0ff', label: '100' },
+        { value: 1000, color: '#ffb000', label: '1000' },
+        { value: 200,  color: '#39ff14', label: '200' },
+        { value: -2,   color: '#ff2d7b', label: '2X' },
+        { value: 150,  color: '#00f0ff', label: '150' },
+        { value: 500,  color: '#9d4edd', label: '500' },
+        { value: 100,  color: '#39ff14', label: '100' },
+        { value: -1,   color: '#ff1744', label: 'BUST' },
+        { value: 300,  color: '#00f0ff', label: '300' },
+        { value: -3,   color: '#39ff14', label: '+SPIN' },
+        { value: 200,  color: '#9d4edd', label: '200' },
+        { value: 750,  color: '#ffb000', label: '750' },
+      ];
+
+      var N = wedges.length;
+      var ARC = (Math.PI * 2) / N;
+
+      // State
+      var angle = 0;
+      var velocity = 0;
+      var spinning = false;
+      var roundScore = 0;
+      var bankedScore = 0;
+      var spinsLeft = 10;
+      var bestScore = parseInt(localStorage.getItem('neonSpinBest') || '0');
+      var gameActive = true;
+
+      var currentEl = document.getElementById('current-score');
+      var bankedEl = document.getElementById('banked-score');
+      var bestEl = document.getElementById('best-score');
+      var spinsEl = document.getElementById('spins-left');
+      var msgEl = document.getElementById('result-msg');
+      var btnSpin = document.getElementById('btn-spin');
+      var btnBank = document.getElementById('btn-bank');
+      var btnNew = document.getElementById('btn-new');
+      var gameOverArea = document.getElementById('game-over-area');
+
+      bestEl.textContent = bestScore;
+
+      function drawWheel() {
+        ctx.clearRect(0, 0, W, H);
+
+        // Outer glow ring
+        ctx.beginPath();
+        ctx.arc(CX, CY, R + 8, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        for (var i = 0; i < N; i++) {
+          var startAngle = angle + i * ARC;
+          var endAngle = startAngle + ARC;
+          var w = wedges[i];
+
+          // Wedge fill
+          ctx.beginPath();
+          ctx.moveTo(CX, CY);
+          ctx.arc(CX, CY, R, startAngle, endAngle);
+          ctx.closePath();
+
+          // Darker fill
+          var alpha = (w.value === -1) ? 0.25 : (w.value === -2) ? 0.2 : (w.value === -3) ? 0.15 : 0.1;
+          ctx.fillStyle = hexToRgba(w.color, alpha);
+          ctx.fill();
+
+          // Border
+          ctx.strokeStyle = hexToRgba(w.color, 0.4);
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Label
+          ctx.save();
+          var midAngle = startAngle + ARC / 2;
+          var labelR = R * 0.68;
+          ctx.translate(CX + Math.cos(midAngle) * labelR, CY + Math.sin(midAngle) * labelR);
+          ctx.rotate(midAngle + Math.PI / 2);
+          ctx.fillStyle = w.color;
+          ctx.font = (w.value < 0 ? 'bold 22px' : 'bold 26px') + ' "JetBrains Mono", monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.shadowColor = w.color;
+          ctx.shadowBlur = 12;
+          ctx.fillText(w.label, 0, 0);
+          ctx.shadowBlur = 0;
+          ctx.restore();
+        }
+
+        // Center hub
+        ctx.beginPath();
+        ctx.arc(CX, CY, 36, 0, Math.PI * 2);
+        ctx.fillStyle = '#0a0a0f';
+        ctx.fill();
+        ctx.strokeStyle = '#7a7a90';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Center dot
+        ctx.beginPath();
+        ctx.arc(CX, CY, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#ff2d7b';
+        ctx.shadowColor = '#ff2d7b';
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      function hexToRgba(hex, a) {
+        var r = parseInt(hex.slice(1, 3), 16);
+        var g = parseInt(hex.slice(3, 5), 16);
+        var b = parseInt(hex.slice(5, 7), 16);
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+      }
+
+      function getWinningWedge() {
+        // The pointer is at the top (angle = -PI/2 from standard)
+        // We need to find which wedge is at the pointer position
+        var pointerAngle = -Math.PI / 2;
+        var normalizedAngle = ((pointerAngle - angle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+        var index = Math.floor(normalizedAngle / ARC);
+        return index % N;
+      }
+
+      function updateDisplay() {
+        currentEl.textContent = roundScore;
+        bankedEl.textContent = bankedScore;
+        spinsEl.textContent = spinsLeft;
+        if (bankedScore > bestScore) {
+          bestScore = bankedScore;
+          bestEl.textContent = bestScore;
+          localStorage.setItem('neonSpinBest', bestScore.toString());
+        }
+      }
+
+      function showMsg(text, color) {
+        msgEl.textContent = text;
+        msgEl.style.color = color || '#e0e0e8';
+        msgEl.style.textShadow = '0 0 10px ' + (color || '#e0e0e8');
+      }
+
+      function doSpin() {
+        if (spinning || !gameActive || spinsLeft <= 0) return;
+
+        spinning = true;
+        btnSpin.disabled = true;
+        btnBank.disabled = true;
+        msgEl.innerHTML = '&nbsp;';
+
+        // Random velocity: 15-25 radians per second equivalent
+        velocity = 0.15 + Math.random() * 0.12;
+        spinsLeft--;
+        updateDisplay();
+
+        animate();
+      }
+
+      function animate() {
+        if (!spinning) return;
+
+        angle += velocity;
+        angle = angle % (Math.PI * 2);
+
+        // Friction
+        velocity *= 0.985;
+
+        drawWheel();
+
+        if (velocity < 0.001) {
+          velocity = 0;
+          spinning = false;
+          resolveResult();
+        } else {
+          requestAnimationFrame(animate);
+        }
+      }
+
+      function resolveResult() {
+        var idx = getWinningWedge();
+        var w = wedges[idx];
+
+        if (w.value === -1) {
+          // BUST: lose round score
+          showMsg('BUST! Lost ' + roundScore + ' points', '#ff1744');
+          roundScore = 0;
+          flashPointer('#ff1744');
+        } else if (w.value === -2) {
+          // 2X: double round score
+          if (roundScore === 0) {
+            showMsg('2X ... but nothing to double!', '#ff2d7b');
+          } else {
+            roundScore *= 2;
+            showMsg('2X! Round score doubled to ' + roundScore, '#ff2d7b');
+            flashPointer('#ff2d7b');
+          }
+        } else if (w.value === -3) {
+          // +SPIN: bonus spin
+          spinsLeft++;
+          showMsg('+1 BONUS SPIN!', '#39ff14');
+          flashPointer('#39ff14');
+        } else {
+          // Points
+          roundScore += w.value;
+          showMsg('+' + w.value + ' points!', w.color);
+          flashPointer(w.color);
+        }
+
+        updateDisplay();
+
+        if (spinsLeft <= 0) {
+          endGame();
+        } else {
+          btnSpin.disabled = false;
+          btnBank.disabled = roundScore <= 0;
+        }
+      }
+
+      function flashPointer(color) {
+        var pointer = document.querySelector('.pointer');
+        pointer.style.borderTopColor = color;
+        pointer.style.filter = 'drop-shadow(0 0 12px ' + color + ')';
+        setTimeout(function() {
+          pointer.style.borderTopColor = '#ff2d7b';
+          pointer.style.filter = 'drop-shadow(0 0 8px rgba(255, 45, 123, 0.6))';
+        }, 800);
+      }
+
+      function doBank() {
+        if (spinning || roundScore <= 0) return;
+        bankedScore += roundScore;
+        showMsg('Banked ' + roundScore + ' points!', '#39ff14');
+        roundScore = 0;
+        btnBank.disabled = true;
+        updateDisplay();
+
+        if (spinsLeft <= 0) {
+          endGame();
+        }
+      }
+
+      function endGame() {
+        gameActive = false;
+        // Auto-bank remaining
+        if (roundScore > 0) {
+          bankedScore += roundScore;
+          roundScore = 0;
+          updateDisplay();
+        }
+        btnSpin.disabled = true;
+        btnBank.disabled = true;
+
+        if (bankedScore > bestScore) {
+          bestScore = bankedScore;
+          bestEl.textContent = bestScore;
+          localStorage.setItem('neonSpinBest', bestScore.toString());
+        }
+
+        gameOverArea.style.display = 'block';
+        showMsg('Final score: ' + bankedScore, '#ff2d7b');
+      }
+
+      function newGame() {
+        roundScore = 0;
+        bankedScore = 0;
+        spinsLeft = 10;
+        gameActive = true;
+        spinning = false;
+        velocity = 0;
+        gameOverArea.style.display = 'none';
+        btnSpin.disabled = false;
+        btnBank.disabled = true;
+        msgEl.innerHTML = '&nbsp;';
+        updateDisplay();
+        drawWheel();
+      }
+
+      // Events
+      btnSpin.addEventListener('click', doSpin);
+      btnBank.addEventListener('click', doBank);
+      btnNew.addEventListener('click', newGame);
+
+      document.addEventListener('keydown', function(e) {
+        if (e.code === 'Space' || e.key === ' ') {
+          e.preventDefault();
+          doSpin();
+        } else if (e.key === 'b' || e.key === 'B') {
+          doBank();
+        } else if (e.key === 'n' || e.key === 'N') {
+          if (!gameActive) newGame();
+        }
+      });
+
+      // Init
+      updateDisplay();
+      drawWheel();
+    })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

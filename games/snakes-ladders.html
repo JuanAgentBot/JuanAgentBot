@@ -18,6 +18,7 @@
       margin: 0 auto;
       padding: 2rem 1.5rem 4rem;
       text-align: center;
+      touch-action: manipulation;
     }
 
     .back {
@@ -54,6 +55,8 @@
       margin: 0 auto 1rem;
       border: 1px solid var(--border);
       cursor: pointer;
+      max-width: 100%;
+      touch-action: manipulation;
     }
 
     .info-bar {
@@ -82,17 +85,23 @@
       text-shadow: 0 0 12px var(--glow-cyan-soft);
     }
 
-    .roll-btn {
+    .roll-btn, .newgame-btn {
       background: none;
-      border: 1px solid var(--accent-cyan);
-      color: var(--accent-cyan);
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.85rem;
       font-weight: 700;
-      padding: 0.6rem 2rem;
+      padding: 0.75rem 2rem;
+      min-height: 48px;
       letter-spacing: 0.08em;
       cursor: pointer;
       transition: all 0.25s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .roll-btn {
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
       text-shadow: 0 0 8px var(--glow-cyan-soft);
     }
     .roll-btn:hover:not(:disabled) {
@@ -104,6 +113,20 @@
     .roll-btn:disabled {
       opacity: 0.3;
       cursor: default;
+    }
+
+    .newgame-btn {
+      border: 1px solid var(--accent-magenta);
+      color: var(--accent-magenta);
+      text-shadow: 0 0 8px var(--glow-magenta);
+      display: none;
+      margin-top: 0.5rem;
+    }
+    .newgame-btn:hover {
+      background: var(--accent-magenta);
+      color: var(--bg);
+      box-shadow: 0 0 16px var(--glow-magenta);
+      text-shadow: none;
     }
 
     .status {
@@ -152,15 +175,16 @@
 
     <div class="dice-display" id="dice-display">&#9858;</div>
 
-    <button class="roll-btn" id="roll-btn" onclick="rollDice()">ROLL DICE [SPACE]</button>
+    <button class="roll-btn" id="roll-btn" onclick="rollDice()">ROLL DICE</button>
+    <button class="newgame-btn" id="newgame-btn" onclick="newGame()">NEW GAME</button>
 
-    <div class="status" id="status">Click roll or press space to start</div>
+    <div class="status" id="status">Tap roll to start</div>
     <div class="score-row">
       <span class="player-cyan">WINS: <span id="p1-wins">0</span></span>
       <span class="player-magenta">CPU WINS: <span id="p2-wins">0</span></span>
     </div>
 
-    <div class="controls-hint">SPACE = ROLL &middot; R = NEW GAME</div>
+    <div class="controls-hint">TAP ROLL OR PRESS SPACE &middot; R = NEW GAME</div>
   </main>
 
   <script>
@@ -601,6 +625,7 @@
         setStatus(name + ' Reached square 100!', 'msg-win');
         updateInfo();
         document.getElementById('roll-btn').disabled = true;
+        document.getElementById('newgame-btn').style.display = 'inline-block';
         return;
       }
 
@@ -629,6 +654,7 @@
           setStatus(name + ' Reached square 100!', 'msg-win');
           updateInfo();
           document.getElementById('roll-btn').disabled = true;
+          document.getElementById('newgame-btn').style.display = 'inline-block';
           return;
         }
       }
@@ -647,7 +673,8 @@
       lastDice = 0;
       document.getElementById('dice-display').textContent = '⚅';
       document.getElementById('roll-btn').disabled = false;
-      setStatus('Click roll or press space to start');
+      document.getElementById('newgame-btn').style.display = 'none';
+      setStatus('Tap roll to start');
       updateInfo();
       drawBoard();
     }

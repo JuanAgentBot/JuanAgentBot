@@ -189,13 +189,13 @@
     }
 
     .spin-btn {
-      width: 28px;
-      height: 28px;
+      width: 36px;
+      height: 36px;
       background: transparent;
       border: 1px solid var(--border);
       color: var(--text-muted);
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.9rem;
+      font-size: 1rem;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -208,8 +208,8 @@
     }
 
     .spin-val {
-      width: 36px;
-      height: 28px;
+      width: 40px;
+      height: 36px;
       background: transparent;
       border: 1px solid var(--accent-cyan);
       color: var(--accent-cyan);
@@ -238,16 +238,20 @@
     }
 
     .btn {
-      padding: 0.5rem 1.2rem;
+      padding: 0.6rem 1.4rem;
       background: transparent;
       border: 1px solid var(--accent-cyan);
       color: var(--accent-cyan);
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
+      font-size: 0.8rem;
       font-weight: 700;
       letter-spacing: 0.08em;
       cursor: pointer;
       transition: all 0.2s;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     .btn:hover:not(:disabled) {
       background: var(--accent-cyan);
@@ -442,6 +446,37 @@
     .setting-btn:hover {
       border-color: var(--accent-cyan);
       color: var(--accent-cyan);
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 480px) {
+      main { padding: 1rem 0.75rem 3rem; }
+      h1 { font-size: 1.3rem; }
+      .game-area { padding: 1rem 0.75rem; min-height: 280px; }
+      .player-section { padding: 0.6rem; }
+      .die { width: 40px; height: 40px; font-size: 1.1rem; }
+      .dice-row { gap: 0.4rem; }
+      .bid-area { padding: 0.75rem; }
+      .spin-btn { width: 44px; height: 44px; font-size: 1.1rem; }
+      .spin-val { width: 44px; height: 44px; font-size: 1.1rem; }
+      .btn { padding: 0.7rem 1.4rem; font-size: 0.8rem; min-height: 44px; }
+      .setting-btn { padding: 0.5rem 1rem; font-size: 0.7rem; min-height: 44px; }
+      .reveal-dice .die { width: 36px; height: 36px; font-size: 1rem; }
+      .score-bar { padding: 0.5rem 0.6rem; flex-wrap: wrap; gap: 0.3rem; }
+      .score-item { font-size: 0.65rem; }
+      .log { max-height: 120px; }
+      .bid-controls { gap: 0.4rem; }
+    }
+
+    /* Touch-friendly defaults */
+    *, *::before, *::after {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .spin-btn, .btn, .setting-btn {
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     /* Animations */

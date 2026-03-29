@@ -60,6 +60,9 @@
       margin: 0 auto;
       border: 1px solid var(--border);
       cursor: crosshair;
+      max-width: 100%;
+      height: auto;
+      touch-action: manipulation;
     }
     .controls {
       margin-top: 1rem;
@@ -72,6 +75,39 @@
       color: var(--accent-cyan);
       border: 1px solid var(--border);
       padding: 0.1em 0.4em;
+    }
+    .touch-controls {
+      display: none;
+      margin-top: 1rem;
+      justify-content: center;
+      gap: 1rem;
+    }
+    .touch-btn {
+      font-family: 'JetBrains Mono', monospace;
+      background: transparent;
+      color: var(--accent-cyan);
+      border: 1px solid var(--accent-cyan);
+      padding: 0.7rem 1.5rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      min-width: 44px;
+      min-height: 44px;
+      touch-action: manipulation;
+      transition: all 0.2s;
+    }
+    .touch-btn:active {
+      background: var(--accent-cyan);
+      color: var(--bg);
+    }
+    @media (hover: none) and (pointer: coarse) {
+      .touch-controls { display: flex; }
+      .controls { display: none; }
+    }
+    @media (max-width: 440px) {
+      main { padding: 1rem 0.5rem 3rem; }
+      h1 { font-size: 1.3rem; }
+      .stats { gap: 1rem; font-size: 0.7rem; }
     }
     .game-over-overlay {
       display: none;
@@ -137,6 +173,12 @@
     <div class="controls">
       <kbd>MOUSE</kbd> aim &amp; click to shoot &nbsp;|&nbsp;
       <kbd>R</kbd> restart
+    </div>
+    <div class="touch-controls" id="touch-controls">
+      <button class="touch-btn" id="touch-restart">↻ RESTART</button>
+    </div>
+    <div class="touch-controls" id="touch-hint" style="display: none; margin-top: 0.5rem;">
+      <span style="color: var(--text-dim); font-size: 0.65rem; letter-spacing: 0.06em;">DRAG TO AIM · RELEASE TO SHOOT</span>
     </div>
   </main>
 
@@ -753,11 +795,9 @@
       shoot();
     });
 
-    // Touch support
-    canvas.addEventListener('touchstart', function(e) {
-      e.preventDefault();
+    // Touch support — drag to aim, release to shoot
+    function updateAimFromTouch(touch) {
       let rect = canvas.getBoundingClientRect();
-      let touch = e.touches[0];
       let mx = (touch.clientX - rect.left) * (W / rect.width);
       let my = (touch.clientY - rect.top) * (H / rect.height);
       let dx = mx - W / 2;
@@ -766,6 +806,16 @@
       if (angle > -0.15) angle = -0.15;
       if (angle < -Math.PI + 0.15) angle = -Math.PI + 0.15;
       aimAngle = angle;
+    }
+
+    canvas.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      updateAimFromTouch(e.touches[0]);
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      updateAimFromTouch(e.touches[0]);
     }, { passive: false });
 
     canvas.addEventListener('touchend', function(e) {
@@ -784,8 +834,33 @@
       init();
     });
 
+    document.getElementById('touch-restart').addEventListener('click', function() {
+      init();
+    });
+
+    // Show touch hint on touch devices
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      let hint = document.getElementById('touch-hint');
+      if (hint) hint.style.display = 'flex';
+    }
+
+    // Responsive canvas sizing
+    function resizeCanvas() {
+      let main = canvas.parentElement;
+      let maxW = main.clientWidth;
+      if (maxW < W) {
+        canvas.style.width = maxW + 'px';
+        canvas.style.height = (maxW * H / W) + 'px';
+      } else {
+        canvas.style.width = W + 'px';
+        canvas.style.height = H + 'px';
+      }
+    }
+    window.addEventListener('resize', resizeCanvas);
+
     init();
     ensureGridRows();
+    resizeCanvas();
     loop();
   })();
   </script>

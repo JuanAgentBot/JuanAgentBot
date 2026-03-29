@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHELL GAME / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 2rem;
+    }
+
+    #game-area {
+      position: relative;
+      width: 100%;
+      height: 320px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .cup {
+      position: absolute;
+      width: 80px;
+      cursor: pointer;
+      transition: none;
+      user-select: none;
+    }
+
+    .cup-body {
+      width: 80px;
+      height: 100px;
+      position: relative;
+    }
+
+    .cup-body svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .cup.lifted .cup-body {
+      transform: translateY(-60px);
+    }
+
+    .cup.clickable:hover .cup-body svg .cup-shape {
+      filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.5));
+    }
+
+    .ball {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 12px rgba(57, 255, 20, 0.6), 0 0 4px rgba(57, 255, 20, 0.3);
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+    }
+
+    .ball.visible {
+      opacity: 1;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+    }
+
+    .stat-label {
+      color: var(--text-dim);
+    }
+
+    .stat-val {
+      color: var(--accent-cyan);
+      font-weight: 700;
+    }
+
+    .stat-val.score {
+      color: var(--accent-green);
+      text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+    }
+
+    #message {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      min-height: 1.4em;
+      letter-spacing: 0.04em;
+    }
+
+    #message.correct {
+      color: var(--accent-green);
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+    }
+
+    #message.wrong {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 10px var(--glow-magenta);
+    }
+
+    #start-btn {
+      background: none;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      padding: 0.6rem 2rem;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+
+    #start-btn:hover {
+      background: rgba(0, 240, 255, 0.1);
+      box-shadow: 0 0 16px var(--glow-cyan-soft);
+    }
+
+    #start-btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    .controls {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      margin-top: 2rem;
+      line-height: 1.8;
+    }
+
+    .streak-bonus {
+      position: absolute;
+      color: var(--accent-green);
+      font-size: 1.2rem;
+      font-weight: 800;
+      text-shadow: 0 0 16px rgba(57, 255, 20, 0.6);
+      pointer-events: none;
+      animation: floatUp 1s ease-out forwards;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-60px); }
+    }
+
+    .difficulty-bar {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .diff-pip {
+      width: 8px;
+      height: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .diff-pip.active {
+      background: var(--accent-purple);
+      border-color: var(--accent-purple);
+      box-shadow: 0 0 6px rgba(157, 78, 221, 0.4);
+    }
+
+    .result-flash {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 3rem;
+      font-weight: 800;
+      pointer-events: none;
+      animation: flashIn 0.6s ease-out forwards;
+    }
+
+    .result-flash.correct {
+      color: var(--accent-green);
+      text-shadow: 0 0 30px rgba(57, 255, 20, 0.6);
+    }
+
+    .result-flash.wrong {
+      color: var(--accent-magenta);
+      text-shadow: 0 0 30px var(--glow-magenta);
+    }
+
+    @keyframes flashIn {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+      30% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>SHELL GAME</h1>
+    <p class="subtitle">TRACK THE BALL. DON'T BLINK.</p>
+
+    <div class="stats">
+      <div><span class="stat-label">SCORE </span><span class="stat-val score" id="score">0</span></div>
+      <div><span class="stat-label">STREAK </span><span class="stat-val" id="streak">0</span></div>
+      <div><span class="stat-label">ROUND </span><span class="stat-val" id="round">0</span></div>
+      <div><span class="stat-label">BEST </span><span class="stat-val score" id="best">0</span></div>
+    </div>
+
+    <div class="difficulty-bar" id="diff-bar"></div>
+
+    <div id="game-area"></div>
+
+    <p id="message">Track the glowing ball under the cups.</p>
+
+    <button id="start-btn">START</button>
+
+    <div class="controls">
+      CLICK THE CUP HIDING THE BALL<br>
+      DIFFICULTY ESCALATES EACH ROUND: MORE CUPS, FASTER SHUFFLES<br>
+      STREAK MULTIPLIER: x1 &rarr; x2 &rarr; x3...
+    </div>
+  </main>
+
+  <script>
+    const gameArea = document.getElementById('game-area');
+    const msgEl = document.getElementById('message');
+    const scoreEl = document.getElementById('score');
+    const streakEl = document.getElementById('streak');
+    const roundEl = document.getElementById('round');
+    const bestEl = document.getElementById('best');
+    const startBtn = document.getElementById('start-btn');
+    const diffBar = document.getElementById('diff-bar');
+
+    let score = 0;
+    let streak = 0;
+    let round = 0;
+    let best = parseInt(localStorage.getItem('shell-game-best') || '0');
+    let ballIndex = 0;
+    let cups = [];
+    let cupPositions = [];
+    let shuffling = false;
+    let canPick = false;
+
+    bestEl.textContent = best;
+
+    function getCupCount() {
+      if (round <= 2) return 3;
+      if (round <= 5) return 4;
+      return 5;
+    }
+
+    function getShuffleCount() {
+      return Math.min(3 + round * 2, 20);
+    }
+
+    function getShuffleSpeed() {
+      return Math.max(120, 400 - round * 30);
+    }
+
+    function getDiffLevel() {
+      if (round <= 2) return 1;
+      if (round <= 5) return 2;
+      if (round <= 8) return 3;
+      if (round <= 12) return 4;
+      return 5;
+    }
+
+    function updateDiffBar() {
+      diffBar.innerHTML = '';
+      const level = getDiffLevel();
+      for (let i = 0; i < 5; i++) {
+        const pip = document.createElement('div');
+        pip.className = 'diff-pip' + (i < level ? ' active' : '');
+        diffBar.appendChild(pip);
+      }
+    }
+
+    function createCupSVG() {
+      return `<svg viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="cupGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#9d4edd" stop-opacity="0.9"/>
+            <stop offset="100%" stop-color="#6a2fa0" stop-opacity="0.9"/>
+          </linearGradient>
+        </defs>
+        <path class="cup-shape" d="M10,8 L70,8 L62,92 L18,92 Z" fill="url(#cupGrad)" stroke="#b06eff" stroke-width="1.5"/>
+        <ellipse cx="40" cy="8" rx="30" ry="7" fill="#b06eff" opacity="0.5"/>
+        <line x1="25" y1="20" x2="22" y2="80" stroke="#b06eff" stroke-width="0.5" opacity="0.3"/>
+        <line x1="55" y1="20" x2="58" y2="80" stroke="#b06eff" stroke-width="0.5" opacity="0.3"/>
+      </svg>`;
+    }
+
+    function setupCups() {
+      gameArea.innerHTML = '';
+      cups = [];
+      cupPositions = [];
+
+      const count = getCupCount();
+      const areaWidth = gameArea.offsetWidth;
+      const cupWidth = 80;
+      const spacing = Math.min(120, (areaWidth - cupWidth) / (count - 1));
+      const totalWidth = (count - 1) * spacing + cupWidth;
+      const startX = (areaWidth - totalWidth) / 2;
+
+      for (let i = 0; i < count; i++) {
+        const cup = document.createElement('div');
+        cup.className = 'cup';
+        cup.innerHTML = `<div class="cup-body">${createCupSVG()}</div><div class="ball"></div>`;
+
+        const x = startX + i * spacing;
+        const y = 120;
+        cup.style.left = x + 'px';
+        cup.style.top = y + 'px';
+        cupPositions.push({ x, y });
+
+        cup.addEventListener('click', () => pickCup(i));
+        gameArea.appendChild(cup);
+        cups.push(cup);
+      }
+
+      ballIndex = Math.floor(Math.random() * count);
+    }
+
+    function showBall(index, show) {
+      if (cups[index]) {
+        const ball = cups[index].querySelector('.ball');
+        if (show) ball.classList.add('visible');
+        else ball.classList.remove('visible');
+      }
+    }
+
+    function liftCup(index) {
+      return new Promise(resolve => {
+        cups[index].classList.add('lifted');
+        cups[index].querySelector('.cup-body').style.transition = 'transform 0.3s ease-out';
+        setTimeout(resolve, 350);
+      });
+    }
+
+    function lowerCup(index) {
+      return new Promise(resolve => {
+        cups[index].querySelector('.cup-body').style.transition = 'transform 0.3s ease-in';
+        cups[index].classList.remove('lifted');
+        setTimeout(resolve, 350);
+      });
+    }
+
+    function liftAllCups() {
+      return Promise.all(cups.map((_, i) => liftCup(i)));
+    }
+
+    function lowerAllCups() {
+      return Promise.all(cups.map((_, i) => lowerCup(i)));
+    }
+
+    function swapCups(a, b, duration) {
+      return new Promise(resolve => {
+        const posA = { ...cupPositions[a] };
+        const posB = { ...cupPositions[b] };
+
+        const startTime = performance.now();
+
+        function animate(now) {
+          const elapsed = now - startTime;
+          const t = Math.min(elapsed / duration, 1);
+          const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+          const curAx = posA.x + (posB.x - posA.x) * ease;
+          const curBx = posB.x + (posA.x - posB.x) * ease;
+
+          // Arc: cups pass over each other
+          const arc = Math.sin(t * Math.PI) * 40;
+          const curAy = posA.y - arc;
+          const curBy = posB.y + arc * 0.3;
+
+          cups[a].style.left = curAx + 'px';
+          cups[a].style.top = curAy + 'px';
+          cups[b].style.left = curBx + 'px';
+          cups[b].style.top = curBy + 'px';
+
+          // Z-index: cup going over is on top
+          cups[a].style.zIndex = t < 0.5 ? '10' : '5';
+          cups[b].style.zIndex = t < 0.5 ? '5' : '10';
+
+          if (t < 1) {
+            requestAnimationFrame(animate);
+          } else {
+            cupPositions[a] = posB;
+            cupPositions[b] = posA;
+
+            // Swap in arrays
+            const tempCup = cups[a];
+            cups[a] = cups[b];
+            cups[b] = tempCup;
+
+            const tempPos = cupPositions[a];
+            cupPositions[a] = cupPositions[b];
+            cupPositions[b] = tempPos;
+
+            // Track ball
+            if (ballIndex === a) ballIndex = b;
+            else if (ballIndex === b) ballIndex = a;
+
+            cups[a].style.zIndex = '';
+            cups[b].style.zIndex = '';
+            resolve();
+          }
+        }
+
+        requestAnimationFrame(animate);
+      });
+    }
+
+    async function shuffle() {
+      shuffling = true;
+      const count = cups.length;
+      const numSwaps = getShuffleCount();
+      const speed = getShuffleSpeed();
+
+      for (let i = 0; i < numSwaps; i++) {
+        let a = Math.floor(Math.random() * count);
+        let b;
+        do { b = Math.floor(Math.random() * count); } while (b === a);
+        await swapCups(a, b, speed);
+        await new Promise(r => setTimeout(r, 30));
+      }
+
+      shuffling = false;
+    }
+
+    function showResult(correct, cupIndex) {
+      const flash = document.createElement('div');
+      flash.className = 'result-flash ' + (correct ? 'correct' : 'wrong');
+      flash.textContent = correct ? '✓' : '✗';
+      gameArea.appendChild(flash);
+      setTimeout(() => flash.remove(), 700);
+    }
+
+    function showStreakBonus(points) {
+      const bonus = document.createElement('div');
+      bonus.className = 'streak-bonus';
+      bonus.textContent = '+' + points;
+      bonus.style.left = '50%';
+      bonus.style.top = '40%';
+      bonus.style.transform = 'translateX(-50%)';
+      gameArea.appendChild(bonus);
+      setTimeout(() => bonus.remove(), 1100);
+    }
+
+    async function pickCup(index) {
+      if (!canPick || shuffling) return;
+      canPick = false;
+
+      // Lift the picked cup
+      await liftCup(index);
+      showBall(ballIndex, true);
+
+      if (index === ballIndex) {
+        // Correct
+        streak++;
+        const multiplier = Math.min(streak, 5);
+        const points = 100 * multiplier;
+        score += points;
+
+        msgEl.textContent = `CORRECT! +${points}${multiplier > 1 ? ' (x' + multiplier + ')' : ''}`;
+        msgEl.className = 'correct';
+        showResult(true, index);
+        showStreakBonus(points);
+
+        scoreEl.textContent = score;
+        streakEl.textContent = streak;
+
+        if (score > best) {
+          best = score;
+          bestEl.textContent = best;
+          localStorage.setItem('shell-game-best', best.toString());
+        }
+
+        await new Promise(r => setTimeout(r, 1200));
+
+        // Next round
+        showBall(ballIndex, false);
+        await lowerCup(index);
+        round++;
+        roundEl.textContent = round;
+        updateDiffBar();
+        await startRound();
+      } else {
+        // Wrong
+        msgEl.textContent = 'WRONG! The ball was under cup ' + (ballIndex + 1) + '.';
+        msgEl.className = 'wrong';
+        showResult(false, index);
+
+        // Show all cups lifted to reveal ball
+        await new Promise(r => setTimeout(r, 400));
+        await liftAllCups();
+        await new Promise(r => setTimeout(r, 1500));
+        showBall(ballIndex, false);
+        await lowerAllCups();
+
+        // Game over
+        streak = 0;
+        streakEl.textContent = 0;
+        msgEl.textContent = `GAME OVER. Score: ${score}. Click START to play again.`;
+        msgEl.className = 'wrong';
+        score = 0;
+        round = 0;
+        scoreEl.textContent = 0;
+        roundEl.textContent = 0;
+        updateDiffBar();
+        startBtn.disabled = false;
+        startBtn.style.display = '';
+      }
+    }
+
+    async function startRound() {
+      setupCups();
+      msgEl.textContent = 'Watch carefully...';
+      msgEl.className = '';
+      startBtn.disabled = true;
+
+      // Show the ball
+      await new Promise(r => setTimeout(r, 400));
+      showBall(ballIndex, true);
+      await liftCup(ballIndex);
+      await new Promise(r => setTimeout(r, 1000));
+      await lowerCup(ballIndex);
+      showBall(ballIndex, false);
+      await new Promise(r => setTimeout(r, 300));
+
+      // Shuffle
+      msgEl.textContent = 'Shuffling...';
+      await shuffle();
+
+      // Pick
+      msgEl.textContent = 'Where is the ball?';
+      canPick = true;
+      cups.forEach(c => c.classList.add('clickable'));
+    }
+
+    startBtn.addEventListener('click', async () => {
+      startBtn.style.display = 'none';
+      score = 0;
+      streak = 0;
+      round = 1;
+      scoreEl.textContent = 0;
+      streakEl.textContent = 0;
+      roundEl.textContent = 1;
+      updateDiffBar();
+      await startRound();
+    });
+
+    updateDiffBar();
+  </script>
+</body>
+</html>

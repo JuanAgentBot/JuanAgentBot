@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TETRAVEX / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+      transition: color 0.3s;
+    }
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.4rem 1rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: all 0.2s;
+    }
+    button:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+    button.active {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+      text-shadow: 0 0 10px var(--glow-magenta);
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1rem;
+      font-size: 0.75rem;
+    }
+    .status-bar span {
+      color: var(--text-dim);
+    }
+    .status-bar .val {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 8px var(--glow-cyan-soft);
+    }
+
+    #game-area {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      min-height: 300px;
+      align-items: flex-start;
+    }
+
+    .board-section, .tray-section {
+      position: relative;
+    }
+
+    .section-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto;
+      cursor: pointer;
+    }
+
+    #board-canvas {
+      border: 1px solid var(--border);
+    }
+
+    #tray-canvas {
+      border: 1px solid var(--border);
+    }
+
+    .message {
+      font-size: 0.85rem;
+      color: var(--accent-green);
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+      margin-bottom: 1rem;
+      min-height: 1.2em;
+    }
+
+    .instructions {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      line-height: 1.6;
+      letter-spacing: 0.04em;
+      margin-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+    .instructions kbd {
+      color: var(--accent-cyan);
+      border: 1px solid var(--border);
+      padding: 0.1em 0.4em;
+      font-size: 0.6rem;
+    }
+
+    .best-time {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      margin-bottom: 0.5rem;
+    }
+    .best-time .bt-val {
+      color: var(--accent-green);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&larr; GAME LAB</a>
+    <h1>TETRAVEX</h1>
+    <div class="subtitle">MATCH THE EDGES</div>
+
+    <div class="controls">
+      <button id="btn-3" class="active" onclick="setSize(3)">3&times;3</button>
+      <button id="btn-4" onclick="setSize(4)">4&times;4</button>
+      <button id="btn-5" onclick="setSize(5)">5&times;5</button>
+      <button id="btn-new" onclick="newGame()">NEW GAME</button>
+    </div>
+
+    <div class="best-time" id="best-time"></div>
+
+    <div class="status-bar">
+      <span>TIME <span class="val" id="timer">0:00</span></span>
+      <span>PLACED <span class="val" id="placed">0/9</span></span>
+    </div>
+
+    <div class="message" id="message">&nbsp;</div>
+
+    <div id="game-area">
+      <div class="board-section">
+        <div class="section-label">BOARD</div>
+        <canvas id="board-canvas"></canvas>
+      </div>
+      <div class="tray-section">
+        <div class="section-label">TILES</div>
+        <canvas id="tray-canvas"></canvas>
+      </div>
+    </div>
+
+    <div class="instructions">
+      Click a tile to pick it up, click a board cell to place it.<br>
+      Click a placed tile to return it to the tray.<br>
+      Adjacent edges must show matching numbers.<br>
+      <kbd>N</kbd> new game &nbsp; <kbd>3</kbd> <kbd>4</kbd> <kbd>5</kbd> grid size
+    </div>
+  </main>
+
+  <script>
+    (function() {
+      const COLORS = {
+        bg: '#0a0a0f',
+        border: '#7a7a90',
+        magenta: '#ff2d7b',
+        cyan: '#00f0ff',
+        green: '#39ff14',
+        purple: '#9d4edd',
+        white: '#e0e0e8',
+        dim: '#7a7a90',
+        tileColors: [
+          '#ff2d7b', // 0 - magenta
+          '#00f0ff', // 1 - cyan
+          '#39ff14', // 2 - green
+          '#9d4edd', // 3 - purple
+          '#ffb000', // 4 - amber
+          '#ff6ac1', // 5 - hot pink
+          '#008b8b', // 6 - deep cyan
+          '#33ff33', // 7 - phosphor
+          '#ff1744', // 8 - crimson
+          '#e0e0e8', // 9 - white
+        ]
+      };
+
+      // Detect theme
+      function isDark() {
+        return !document.documentElement.classList.contains('light');
+      }
+      function getBg() {
+        return isDark() ? '#0a0a0f' : '#f0eff5';
+      }
+      function getTileBg() {
+        return isDark() ? '#121218' : '#e4e3ec';
+      }
+      function getTileBorder() {
+        return isDark() ? '#7a7a90' : '#c8c8d6';
+      }
+      function getTextColor() {
+        return isDark() ? '#e0e0e8' : '#18182a';
+      }
+      function getEmptyCellBg() {
+        return isDark() ? '#0d0d14' : '#e8e7f0';
+      }
+      function getHighlightBorder() {
+        return isDark() ? '#00f0ff' : '#00717f';
+      }
+      function getErrorBorder() {
+        return isDark() ? '#ff1744' : '#cc1030';
+      }
+
+      let gridSize = 3;
+      let TILE_SIZE = 80;
+      let TILE_GAP = 4;
+      let tiles = [];       // all tiles
+      let board = [];        // gridSize x gridSize, null or tile index
+      let traySlots = [];    // positions in tray
+      let selectedTile = null;
+      let timerInterval = null;
+      let startTime = 0;
+      let elapsed = 0;
+      let gameWon = false;
+      let bestTimes = {};
+
+      const boardCanvas = document.getElementById('board-canvas');
+      const boardCtx = boardCanvas.getContext('2d');
+      const trayCanvas = document.getElementById('tray-canvas');
+      const trayCtx = trayCanvas.getContext('2d');
+      const timerEl = document.getElementById('timer');
+      const placedEl = document.getElementById('placed');
+      const messageEl = document.getElementById('message');
+      const bestTimeEl = document.getElementById('best-time');
+
+      function loadBestTimes() {
+        try {
+          const d = JSON.parse(localStorage.getItem('tetravex-best') || '{}');
+          bestTimes = d;
+        } catch(e) { bestTimes = {}; }
+      }
+
+      function saveBestTime(size, time) {
+        if (!bestTimes[size] || time < bestTimes[size]) {
+          bestTimes[size] = time;
+          localStorage.setItem('tetravex-best', JSON.stringify(bestTimes));
+        }
+      }
+
+      function showBestTime() {
+        loadBestTimes();
+        const bt = bestTimes[gridSize];
+        if (bt) {
+          bestTimeEl.innerHTML = 'BEST ' + gridSize + '&times;' + gridSize + ': <span class="bt-val">' + formatTime(bt) + '</span>';
+        } else {
+          bestTimeEl.textContent = '';
+        }
+      }
+
+      function formatTime(ms) {
+        const s = Math.floor(ms / 1000);
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return m + ':' + (sec < 10 ? '0' : '') + sec;
+      }
+
+      function calcTileSize() {
+        const maxWidth = Math.min(window.innerWidth - 60, 720);
+        const boardWidth = maxWidth * 0.5;
+        TILE_SIZE = Math.floor((boardWidth - (gridSize + 1) * 4) / gridSize);
+        TILE_SIZE = Math.max(40, Math.min(TILE_SIZE, 90));
+        TILE_GAP = 4;
+      }
+
+      function generatePuzzle() {
+        // Build a solved board first, then scramble
+        const n = gridSize;
+        const solvedBoard = [];
+
+        // Generate tiles that form a valid solution
+        for (let r = 0; r < n; r++) {
+          for (let c = 0; c < n; c++) {
+            const tile = { top: 0, right: 0, bottom: 0, left: 0, id: r * n + c };
+
+            // Top edge: must match bottom of tile above
+            if (r > 0) {
+              tile.top = solvedBoard[(r - 1) * n + c].bottom;
+            } else {
+              tile.top = Math.floor(Math.random() * 10);
+            }
+
+            // Left edge: must match right of tile to the left
+            if (c > 0) {
+              tile.left = solvedBoard[r * n + (c - 1)].right;
+            } else {
+              tile.left = Math.floor(Math.random() * 10);
+            }
+
+            // Right and bottom are free
+            tile.right = Math.floor(Math.random() * 10);
+            tile.bottom = Math.floor(Math.random() * 10);
+
+            solvedBoard.push(tile);
+          }
+        }
+
+        // Shuffle tiles
+        tiles = [...solvedBoard];
+        for (let i = tiles.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+        }
+
+        // Clear board, put all tiles in tray
+        board = new Array(n * n).fill(null);
+        traySlots = tiles.map((_, i) => i); // all in tray
+      }
+
+      function getTrayLayout() {
+        const n = gridSize;
+        const total = n * n;
+        const cols = n;
+        const rows = n;
+        return { cols, rows, total };
+      }
+
+      function resizeCanvases() {
+        const n = gridSize;
+        const dpr = window.devicePixelRatio || 1;
+
+        const boardW = n * TILE_SIZE + (n + 1) * TILE_GAP;
+        const boardH = boardW;
+        boardCanvas.width = boardW * dpr;
+        boardCanvas.height = boardH * dpr;
+        boardCanvas.style.width = boardW + 'px';
+        boardCanvas.style.height = boardH + 'px';
+        boardCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const layout = getTrayLayout();
+        const trayW = layout.cols * TILE_SIZE + (layout.cols + 1) * TILE_GAP;
+        const trayH = layout.rows * TILE_SIZE + (layout.rows + 1) * TILE_GAP;
+        trayCanvas.width = trayW * dpr;
+        trayCanvas.height = trayH * dpr;
+        trayCanvas.style.width = trayW + 'px';
+        trayCanvas.style.height = trayH + 'px';
+        trayCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function drawTile(ctx, x, y, tile, highlight, error) {
+        const s = TILE_SIZE;
+        const half = s / 2;
+
+        // Background
+        ctx.fillStyle = getTileBg();
+        ctx.fillRect(x, y, s, s);
+
+        // Border
+        ctx.strokeStyle = error ? getErrorBorder() : (highlight ? getHighlightBorder() : getTileBorder());
+        ctx.lineWidth = highlight || error ? 2 : 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, s - 1, s - 1);
+
+        if (highlight) {
+          ctx.shadowColor = getHighlightBorder();
+          ctx.shadowBlur = 8;
+          ctx.strokeRect(x + 0.5, y + 0.5, s - 1, s - 1);
+          ctx.shadowBlur = 0;
+        }
+
+        // Draw triangular sections with colored numbers
+        const cx = x + half;
+        const cy = y + half;
+        const fontSize = Math.max(10, Math.floor(s * 0.22));
+        ctx.font = '700 ' + fontSize + 'px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Draw dividing lines (diagonals)
+        ctx.strokeStyle = isDark() ? 'rgba(122,122,144,0.3)' : 'rgba(122,122,144,0.25)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + s, y + s);
+        ctx.moveTo(x + s, y);
+        ctx.lineTo(x, y + s);
+        ctx.stroke();
+
+        // Top number
+        const numOffset = s * 0.28;
+        drawNum(ctx, cx, y + numOffset, tile.top, fontSize);
+
+        // Right number
+        drawNum(ctx, x + s - numOffset, cy, tile.right, fontSize);
+
+        // Bottom number
+        drawNum(ctx, cx, y + s - numOffset, tile.bottom, fontSize);
+
+        // Left number
+        drawNum(ctx, x + numOffset, cy, tile.left, fontSize);
+      }
+
+      function drawNum(ctx, x, y, num, fontSize) {
+        const color = COLORS.tileColors[num];
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 6;
+        ctx.fillText(num.toString(), x, y);
+        ctx.shadowBlur = 0;
+      }
+
+      function drawBoard() {
+        const n = gridSize;
+        const w = n * TILE_SIZE + (n + 1) * TILE_GAP;
+        const h = w;
+
+        boardCtx.fillStyle = getBg();
+        boardCtx.fillRect(0, 0, w, h);
+
+        for (let r = 0; r < n; r++) {
+          for (let c = 0; c < n; c++) {
+            const x = TILE_GAP + c * (TILE_SIZE + TILE_GAP);
+            const y = TILE_GAP + r * (TILE_SIZE + TILE_GAP);
+            const idx = r * n + c;
+            const tileIdx = board[idx];
+
+            if (tileIdx !== null) {
+              const tile = tiles[tileIdx];
+              const isSelected = selectedTile !== null && selectedTile.source === 'board' && selectedTile.index === idx;
+              const hasError = checkCellError(r, c);
+              drawTile(boardCtx, x, y, tile, isSelected, hasError);
+            } else {
+              // Empty cell
+              boardCtx.fillStyle = getEmptyCellBg();
+              boardCtx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+              boardCtx.strokeStyle = isDark() ? 'rgba(122,122,144,0.2)' : 'rgba(122,122,144,0.15)';
+              boardCtx.lineWidth = 1;
+              boardCtx.setLineDash([3, 3]);
+              boardCtx.strokeRect(x + 0.5, y + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+              boardCtx.setLineDash([]);
+            }
+          }
+        }
+      }
+
+      function drawTray() {
+        const layout = getTrayLayout();
+        const w = layout.cols * TILE_SIZE + (layout.cols + 1) * TILE_GAP;
+        const h = layout.rows * TILE_SIZE + (layout.rows + 1) * TILE_GAP;
+
+        trayCtx.fillStyle = getBg();
+        trayCtx.fillRect(0, 0, w, h);
+
+        // Find tiles not on the board
+        const boardTileSet = new Set(board.filter(t => t !== null));
+        const trayTiles = tiles.map((t, i) => i).filter(i => !boardTileSet.has(i));
+
+        // Draw tray tiles in grid layout
+        for (let i = 0; i < trayTiles.length; i++) {
+          const r = Math.floor(i / layout.cols);
+          const c = i % layout.cols;
+          const x = TILE_GAP + c * (TILE_SIZE + TILE_GAP);
+          const y = TILE_GAP + r * (TILE_SIZE + TILE_GAP);
+          const tileIdx = trayTiles[i];
+          const isSelected = selectedTile !== null && selectedTile.source === 'tray' && selectedTile.tileIndex === tileIdx;
+          drawTile(trayCtx, x, y, tiles[tileIdx], isSelected, false);
+        }
+
+        // Fill empty slots
+        for (let i = trayTiles.length; i < layout.total; i++) {
+          const r = Math.floor(i / layout.cols);
+          const c = i % layout.cols;
+          const x = TILE_GAP + c * (TILE_SIZE + TILE_GAP);
+          const y = TILE_GAP + r * (TILE_SIZE + TILE_GAP);
+          trayCtx.fillStyle = getEmptyCellBg();
+          trayCtx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+        }
+      }
+
+      function checkCellError(r, c) {
+        const n = gridSize;
+        const idx = r * n + c;
+        const tileIdx = board[idx];
+        if (tileIdx === null) return false;
+        const tile = tiles[tileIdx];
+
+        // Check top neighbor
+        if (r > 0) {
+          const aboveIdx = board[(r - 1) * n + c];
+          if (aboveIdx !== null && tiles[aboveIdx].bottom !== tile.top) return true;
+        }
+        // Check left neighbor
+        if (c > 0) {
+          const leftIdx = board[r * n + (c - 1)];
+          if (leftIdx !== null && tiles[leftIdx].right !== tile.left) return true;
+        }
+        // Check bottom neighbor
+        if (r < n - 1) {
+          const belowIdx = board[(r + 1) * n + c];
+          if (belowIdx !== null && tiles[belowIdx].top !== tile.bottom) return true;
+        }
+        // Check right neighbor
+        if (c < n - 1) {
+          const rightIdx = board[r * n + (c + 1)];
+          if (rightIdx !== null && tiles[rightIdx].left !== tile.right) return true;
+        }
+        return false;
+      }
+
+      function draw() {
+        drawBoard();
+        drawTray();
+      }
+
+      function getPlacedCount() {
+        return board.filter(t => t !== null).length;
+      }
+
+      function checkWin() {
+        const n = gridSize;
+        if (getPlacedCount() !== n * n) return false;
+
+        // Verify all edges match
+        for (let r = 0; r < n; r++) {
+          for (let c = 0; c < n; c++) {
+            if (checkCellError(r, c)) return false;
+          }
+        }
+        return true;
+      }
+
+      function updateStatus() {
+        const total = gridSize * gridSize;
+        const count = getPlacedCount();
+        placedEl.textContent = count + '/' + total;
+      }
+
+      function startTimer() {
+        if (timerInterval) return;
+        startTime = Date.now() - elapsed;
+        timerInterval = setInterval(function() {
+          elapsed = Date.now() - startTime;
+          timerEl.textContent = formatTime(elapsed);
+        }, 200);
+      }
+
+      function stopTimer() {
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+      }
+
+      function handleBoardClick(e) {
+        if (gameWon) return;
+        const rect = boardCanvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        const n = gridSize;
+        const c = Math.floor((mx - TILE_GAP) / (TILE_SIZE + TILE_GAP));
+        const r = Math.floor((my - TILE_GAP) / (TILE_SIZE + TILE_GAP));
+
+        if (r < 0 || r >= n || c < 0 || c >= n) return;
+        const idx = r * n + c;
+
+        // Check click is within the tile area (not gap)
+        const cellX = TILE_GAP + c * (TILE_SIZE + TILE_GAP);
+        const cellY = TILE_GAP + r * (TILE_SIZE + TILE_GAP);
+        if (mx < cellX || mx > cellX + TILE_SIZE || my < cellY || my > cellY + TILE_SIZE) return;
+
+        if (selectedTile !== null) {
+          if (selectedTile.source === 'board' && selectedTile.index === idx) {
+            // Deselect
+            selectedTile = null;
+          } else if (selectedTile.source === 'tray') {
+            // Place tile from tray to board
+            if (board[idx] === null) {
+              board[idx] = selectedTile.tileIndex;
+              selectedTile = null;
+              startTimer();
+              messageEl.innerHTML = '&nbsp;';
+            } else {
+              // Swap: put board tile back, place tray tile
+              const oldTile = board[idx];
+              board[idx] = selectedTile.tileIndex;
+              selectedTile = null;
+              startTimer();
+              messageEl.innerHTML = '&nbsp;';
+            }
+          } else if (selectedTile.source === 'board') {
+            // Move tile from one board cell to another
+            if (board[idx] === null) {
+              board[idx] = board[selectedTile.index];
+              board[selectedTile.index] = null;
+              selectedTile = null;
+            } else {
+              // Swap two board tiles
+              const temp = board[idx];
+              board[idx] = board[selectedTile.index];
+              board[selectedTile.index] = temp;
+              selectedTile = null;
+            }
+          }
+        } else {
+          // Select tile from board (to move or return to tray)
+          if (board[idx] !== null) {
+            selectedTile = { source: 'board', index: idx, tileIndex: board[idx] };
+          }
+        }
+
+        updateStatus();
+        draw();
+
+        if (checkWin()) {
+          gameWon = true;
+          stopTimer();
+          saveBestTime(gridSize, elapsed);
+          showBestTime();
+          messageEl.textContent = 'SOLVED in ' + formatTime(elapsed) + '!';
+        }
+      }
+
+      function handleTrayClick(e) {
+        if (gameWon) return;
+        const rect = trayCanvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        const layout = getTrayLayout();
+        const c = Math.floor((mx - TILE_GAP) / (TILE_SIZE + TILE_GAP));
+        const r = Math.floor((my - TILE_GAP) / (TILE_SIZE + TILE_GAP));
+
+        if (r < 0 || c < 0 || c >= layout.cols) return;
+
+        // Find tiles in tray
+        const boardTileSet = new Set(board.filter(t => t !== null));
+        const trayTiles = tiles.map((t, i) => i).filter(i => !boardTileSet.has(i));
+
+        const slotIdx = r * layout.cols + c;
+        if (slotIdx >= trayTiles.length) {
+          // Clicked empty slot - if we have a board tile selected, return it
+          if (selectedTile !== null && selectedTile.source === 'board') {
+            board[selectedTile.index] = null;
+            selectedTile = null;
+            updateStatus();
+            draw();
+          }
+          return;
+        }
+
+        const tileIdx = trayTiles[slotIdx];
+
+        // Check click is within tile area
+        const cellX = TILE_GAP + c * (TILE_SIZE + TILE_GAP);
+        const cellY = TILE_GAP + r * (TILE_SIZE + TILE_GAP);
+        if (mx < cellX || mx > cellX + TILE_SIZE || my < cellY || my > cellY + TILE_SIZE) return;
+
+        if (selectedTile !== null) {
+          if (selectedTile.source === 'tray' && selectedTile.tileIndex === tileIdx) {
+            // Deselect
+            selectedTile = null;
+          } else if (selectedTile.source === 'board') {
+            // Return board tile to tray
+            board[selectedTile.index] = null;
+            selectedTile = null;
+          } else {
+            // Switch selection
+            selectedTile = { source: 'tray', tileIndex: tileIdx };
+          }
+        } else {
+          selectedTile = { source: 'tray', tileIndex: tileIdx };
+        }
+
+        updateStatus();
+        draw();
+      }
+
+      boardCanvas.addEventListener('click', handleBoardClick);
+      trayCanvas.addEventListener('click', handleTrayClick);
+
+      function setSize(n) {
+        gridSize = n;
+        document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-' + n).classList.add('active');
+        newGame();
+      }
+
+      function newGame() {
+        stopTimer();
+        elapsed = 0;
+        timerEl.textContent = '0:00';
+        gameWon = false;
+        selectedTile = null;
+        messageEl.innerHTML = '&nbsp;';
+        calcTileSize();
+        generatePuzzle();
+        resizeCanvases();
+        updateStatus();
+        showBestTime();
+        draw();
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'n' || e.key === 'N') { newGame(); }
+        if (e.key === '3') { setSize(3); }
+        if (e.key === '4') { setSize(4); }
+        if (e.key === '5') { setSize(5); }
+        if (e.key === 'Escape') {
+          selectedTile = null;
+          draw();
+        }
+      });
+
+      // Handle window resize
+      window.addEventListener('resize', function() {
+        calcTileSize();
+        resizeCanvases();
+        draw();
+      });
+
+      // Watch for theme changes
+      const observer = new MutationObserver(function() { draw(); });
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+      loadBestTimes();
+      newGame();
+    })();
+  </script>
+  <script src="../theme-toggle.js"></script>
+</body>
+</html>

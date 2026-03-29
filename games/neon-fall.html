@@ -57,6 +57,7 @@
       border: 1px solid var(--border);
       max-width: 100%;
       image-rendering: pixelated;
+      touch-action: manipulation;
     }
 
     .hud {
@@ -168,6 +169,47 @@
       font-weight: 700;
       text-shadow: 0 0 8px rgba(157, 78, 221, 0.3);
     }
+
+    /* Touch Controls */
+    .touch-controls {
+      display: none;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 0.5rem;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .touch-btn {
+      width: 72px;
+      height: 56px;
+      background: rgba(0, 240, 255, 0.06);
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+      text-shadow: 0 0 8px var(--glow-cyan-soft);
+    }
+
+    .touch-btn:active, .touch-btn.active {
+      background: rgba(0, 240, 255, 0.18);
+      box-shadow: 0 0 16px var(--glow-cyan-soft);
+    }
+
+    @media (pointer: coarse), (max-width: 600px) {
+      .touch-controls { display: flex; }
+      .controls { display: none; }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -194,6 +236,10 @@
       </div>
     </div>
 
+    <div class="touch-controls" id="touchControls">
+      <button class="touch-btn" id="btnLeft" aria-label="Move left">◀</button>
+      <button class="touch-btn" id="btnRight" aria-label="Move right">▶</button>
+    </div>
     <p class="controls"><span>← →</span> or <span>A D</span> to move &nbsp;|&nbsp; <span>SPACE</span> to start</p>
   </main>
 
@@ -678,6 +724,41 @@
   });
 
   document.getElementById('startBtn').addEventListener('click', startGame);
+
+  // Touch button controls
+  function bindTouchBtn(btnId, keyCode) {
+    var btn = document.getElementById(btnId);
+    btn.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      keys[keyCode] = true;
+      btn.classList.add('active');
+    });
+    btn.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      keys[keyCode] = false;
+      btn.classList.remove('active');
+    });
+    btn.addEventListener('touchcancel', function(e) {
+      keys[keyCode] = false;
+      btn.classList.remove('active');
+    });
+    // Mouse fallback for testing
+    btn.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      keys[keyCode] = true;
+      btn.classList.add('active');
+    });
+    btn.addEventListener('mouseup', function(e) {
+      keys[keyCode] = false;
+      btn.classList.remove('active');
+    });
+    btn.addEventListener('mouseleave', function(e) {
+      keys[keyCode] = false;
+      btn.classList.remove('active');
+    });
+  }
+  bindTouchBtn('btnLeft', 'ArrowLeft');
+  bindTouchBtn('btnRight', 'ArrowRight');
 
   // Initial draw
   running = false;

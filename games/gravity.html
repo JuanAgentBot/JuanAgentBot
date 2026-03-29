@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neon Gravity / ZERO</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg, #0a0a0f);
+      color: var(--text-bright, #e0e0e8);
+      font-family: 'JetBrains Mono', monospace;
+      overflow: hidden;
+      height: 100vh;
+    }
+    .top-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      z-index: 100;
+      background: linear-gradient(to bottom, rgba(10,10,15,0.9), transparent);
+    }
+    .top-bar a {
+      color: var(--text-dim, #7a7a90);
+      text-decoration: none;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      transition: color 0.3s;
+    }
+    .top-bar a:hover { color: var(--accent-cyan, #00f0ff); }
+    .game-title {
+      color: var(--accent-magenta, #ff2d7b);
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 10px rgba(255,45,123,0.5);
+    }
+    #hud {
+      position: fixed;
+      top: 2.2rem; left: 0; right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      color: var(--text-dim, #7a7a90);
+      z-index: 100;
+    }
+    #hud span { color: var(--accent-cyan, #00f0ff); }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+    #overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      background: rgba(10,10,15,0.85);
+    }
+    #overlay.hidden { display: none; }
+    #overlay h2 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta, #ff2d7b);
+      letter-spacing: 0.12em;
+      text-shadow: 0 0 20px rgba(255,45,123,0.5);
+      margin-bottom: 0.8rem;
+    }
+    #overlay .info {
+      color: var(--text-dim, #7a7a90);
+      font-size: 0.75rem;
+      margin-bottom: 0.3rem;
+      letter-spacing: 0.05em;
+    }
+    #overlay .info span { color: var(--accent-cyan, #00f0ff); }
+    #overlay .info.green span { color: var(--accent-green, #39ff14); }
+    #overlay .prompt {
+      margin-top: 1.5rem;
+      color: var(--accent-green, #39ff14);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    #overlay .controls {
+      margin-top: 1.8rem;
+      color: var(--text-dim, #7a7a90);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      text-align: center;
+      line-height: 1.8;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    #death-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      background: rgba(10,10,15,0.85);
+    }
+    #death-overlay.hidden { display: none; }
+    #death-overlay h2 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--accent-magenta, #ff2d7b);
+      letter-spacing: 0.12em;
+      text-shadow: 0 0 20px rgba(255,45,123,0.6);
+      margin-bottom: 1rem;
+    }
+    #death-overlay .info {
+      color: var(--text-dim, #7a7a90);
+      font-size: 0.75rem;
+      margin-bottom: 0.3rem;
+      letter-spacing: 0.05em;
+    }
+    #death-overlay .info span { color: var(--accent-cyan, #00f0ff); }
+    #death-overlay .info.best span { color: var(--accent-green, #39ff14); }
+    #death-overlay .prompt {
+      margin-top: 1.5rem;
+      color: var(--accent-green, #39ff14);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="./">&lt; GAME LAB</a>
+    <div class="game-title">NEON GRAVITY</div>
+  </div>
+  <div id="hud">
+    <div>DIST <span id="hud-dist">0</span>m</div>
+    <div>ORBS <span id="hud-orbs">0</span></div>
+    <div>SCORE <span id="hud-score">0</span></div>
+  </div>
+
+  <div id="overlay">
+    <h2>NEON GRAVITY</h2>
+    <div class="info">Flip gravity to navigate neon corridors</div>
+    <div class="info">Collect <span>orbs</span> for bonus points</div>
+    <div class="prompt">[ SPACE / CLICK / TAP TO START ]</div>
+    <div class="controls">
+      SPACE / CLICK / TAP &mdash; flip gravity<br>
+      Speed increases over time. Survive the run.
+    </div>
+  </div>
+
+  <div id="death-overlay" class="hidden">
+    <h2>CRASHED</h2>
+    <div class="info">Distance: <span id="d-dist">0</span>m</div>
+    <div class="info">Orbs: <span id="d-orbs">0</span></div>
+    <div class="info">Score: <span id="d-score">0</span></div>
+    <div class="info best">Best: <span id="d-best">0</span></div>
+    <div class="prompt">[ SPACE / CLICK / TAP TO RETRY ]</div>
+  </div>
+
+  <canvas id="c"></canvas>
+
+  <script>
+  (function() {
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+
+    // Colors
+    const VOID = '#0a0a0f';
+    const MAGENTA = '#ff2d7b';
+    const CYAN = '#00f0ff';
+    const GREEN = '#39ff14';
+    const PURPLE = '#9d4edd';
+    const WHITE = '#e0e0e8';
+    const DIM = '#7a7a90';
+    const DARK_BG = '#121218';
+
+    // Game constants
+    const CORRIDOR_TOP = 60;
+    const PLAYER_X = 120;
+    const PLAYER_SIZE = 14;
+    const GRAVITY = 1800;
+    const FLIP_IMPULSE = -600;
+    const BASE_SPEED = 180;
+    const MAX_SPEED = 520;
+    const SPEED_RAMP = 3;
+    const ORB_RADIUS = 8;
+
+    // State
+    let W, H, corridorH, corridorBottom;
+    let state = 'menu'; // menu, playing, dead
+    let player, obstacles, orbs, particles, bgLines;
+    let scrollX, speed, dist, orbCount, score, bestScore;
+    let lastTime;
+    let flipCooldown;
+    let gravDir; // 1 = down, -1 = up
+    let shakeTimer, shakeIntensity;
+    let nextObstacleX, nextOrbX;
+
+    bestScore = parseInt(localStorage.getItem('zero-gravity-best') || '0');
+
+    function resize() {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W;
+      canvas.height = H;
+      corridorH = Math.min(H - 120, 500);
+      corridorBottom = CORRIDOR_TOP + corridorH;
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    function init() {
+      gravDir = 1;
+      player = {
+        x: PLAYER_X,
+        y: CORRIDOR_TOP + corridorH * 0.4,
+        vy: 0,
+        trail: []
+      };
+      obstacles = [];
+      orbs = [];
+      particles = [];
+      bgLines = [];
+      scrollX = 0;
+      speed = BASE_SPEED;
+      dist = 0;
+      orbCount = 0;
+      score = 0;
+      flipCooldown = 0;
+      shakeTimer = 0;
+      shakeIntensity = 0;
+      nextObstacleX = W + 200;
+      nextOrbX = W + 300;
+
+      // Generate initial bg lines
+      for (let i = 0; i < 30; i++) {
+        bgLines.push({
+          x: Math.random() * W,
+          y: CORRIDOR_TOP + Math.random() * corridorH,
+          len: 20 + Math.random() * 60,
+          speed: 0.3 + Math.random() * 0.5,
+          alpha: 0.03 + Math.random() * 0.06
+        });
+      }
+    }
+
+    function flipGravity() {
+      if (flipCooldown > 0) return;
+      gravDir *= -1;
+      player.vy = FLIP_IMPULSE * gravDir;
+      flipCooldown = 0.12;
+
+      // Flip particles
+      for (let i = 0; i < 6; i++) {
+        particles.push({
+          x: player.x,
+          y: player.y,
+          vx: -30 - Math.random() * 60,
+          vy: (Math.random() - 0.5) * 200,
+          life: 0.3 + Math.random() * 0.2,
+          maxLife: 0.3 + Math.random() * 0.2,
+          color: CYAN,
+          size: 2 + Math.random() * 3
+        });
+      }
+    }
+
+    function spawnObstacle() {
+      let type = Math.random();
+      let gapSize = Math.max(corridorH * 0.28, corridorH * 0.45 - dist * 0.0003);
+      gapSize = Math.max(gapSize, PLAYER_SIZE * 3.5);
+
+      if (type < 0.4) {
+        // Pillar from top
+        let h = corridorH * (0.25 + Math.random() * 0.35);
+        obstacles.push({
+          x: nextObstacleX,
+          y: CORRIDOR_TOP,
+          w: 20 + Math.random() * 15,
+          h: h,
+          color: MAGENTA
+        });
+      } else if (type < 0.7) {
+        // Pillar from bottom
+        let h = corridorH * (0.25 + Math.random() * 0.35);
+        obstacles.push({
+          x: nextObstacleX,
+          y: corridorBottom - h,
+          w: 20 + Math.random() * 15,
+          h: h,
+          color: MAGENTA
+        });
+      } else if (type < 0.85) {
+        // Gap in middle - two pillars leaving a gap
+        let gapY = CORRIDOR_TOP + corridorH * 0.25 + Math.random() * corridorH * 0.5;
+        let half = gapSize / 2;
+        let w = 18 + Math.random() * 12;
+        obstacles.push({
+          x: nextObstacleX,
+          y: CORRIDOR_TOP,
+          w: w,
+          h: gapY - half - CORRIDOR_TOP,
+          color: PURPLE
+        });
+        obstacles.push({
+          x: nextObstacleX,
+          y: gapY + half,
+          w: w,
+          h: corridorBottom - (gapY + half),
+          color: PURPLE
+        });
+      } else {
+        // Floating block
+        let bw = 25 + Math.random() * 20;
+        let bh = 15 + Math.random() * 25;
+        let by = CORRIDOR_TOP + corridorH * 0.2 + Math.random() * corridorH * 0.6;
+        obstacles.push({
+          x: nextObstacleX,
+          y: by - bh / 2,
+          w: bw,
+          h: bh,
+          color: MAGENTA
+        });
+      }
+
+      let spacing = Math.max(140, 280 - dist * 0.01);
+      spacing += Math.random() * 80;
+      nextObstacleX += spacing;
+    }
+
+    function spawnOrb() {
+      let oy = CORRIDOR_TOP + 30 + Math.random() * (corridorH - 60);
+      // Check no overlap with obstacles
+      let ox = nextOrbX;
+      let safe = true;
+      for (let obs of obstacles) {
+        if (ox > obs.x - 20 && ox < obs.x + obs.w + 20 &&
+            oy > obs.y - 15 && oy < obs.y + obs.h + 15) {
+          safe = false;
+          break;
+        }
+      }
+      if (safe) {
+        orbs.push({ x: ox, y: oy, collected: false, pulse: Math.random() * Math.PI * 2 });
+      }
+      nextOrbX += 150 + Math.random() * 200;
+    }
+
+    function collectOrb(orb) {
+      orb.collected = true;
+      orbCount++;
+      score += 50;
+      // Burst particles
+      for (let i = 0; i < 10; i++) {
+        let angle = (i / 10) * Math.PI * 2;
+        particles.push({
+          x: orb.x,
+          y: orb.y,
+          vx: Math.cos(angle) * (80 + Math.random() * 60),
+          vy: Math.sin(angle) * (80 + Math.random() * 60),
+          life: 0.4 + Math.random() * 0.2,
+          maxLife: 0.4 + Math.random() * 0.2,
+          color: GREEN,
+          size: 2 + Math.random() * 2
+        });
+      }
+    }
+
+    function die() {
+      state = 'dead';
+      shakeTimer = 0.4;
+      shakeIntensity = 12;
+
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem('zero-gravity-best', bestScore.toString());
+      }
+
+      // Death particles
+      for (let i = 0; i < 20; i++) {
+        let angle = Math.random() * Math.PI * 2;
+        let spd = 60 + Math.random() * 200;
+        particles.push({
+          x: player.x,
+          y: player.y,
+          vx: Math.cos(angle) * spd,
+          vy: Math.sin(angle) * spd,
+          life: 0.5 + Math.random() * 0.4,
+          maxLife: 0.5 + Math.random() * 0.4,
+          color: Math.random() > 0.5 ? MAGENTA : CYAN,
+          size: 2 + Math.random() * 4
+        });
+      }
+
+      document.getElementById('d-dist').textContent = Math.floor(dist);
+      document.getElementById('d-orbs').textContent = orbCount;
+      document.getElementById('d-score').textContent = score;
+      document.getElementById('d-best').textContent = bestScore;
+      document.getElementById('death-overlay').classList.remove('hidden');
+    }
+
+    function update(dt) {
+      if (state !== 'playing') return;
+
+      // Speed ramp
+      speed = Math.min(MAX_SPEED, BASE_SPEED + dist * SPEED_RAMP * 0.01);
+      dist += speed * dt;
+      score = Math.floor(dist / 10) + orbCount * 50;
+      scrollX += speed * dt;
+
+      // Flip cooldown
+      if (flipCooldown > 0) flipCooldown -= dt;
+
+      // Player physics
+      player.vy += GRAVITY * gravDir * dt;
+      let maxVy = 800;
+      player.vy = Math.max(-maxVy, Math.min(maxVy, player.vy));
+      player.y += player.vy * dt;
+
+      // Corridor bounds collision
+      let half = PLAYER_SIZE / 2;
+      if (player.y - half < CORRIDOR_TOP) {
+        player.y = CORRIDOR_TOP + half;
+        if (gravDir === -1) player.vy = 0;
+      }
+      if (player.y + half > corridorBottom) {
+        player.y = corridorBottom - half;
+        if (gravDir === 1) player.vy = 0;
+      }
+
+      // Trail
+      player.trail.push({ x: player.x, y: player.y, age: 0 });
+      if (player.trail.length > 30) player.trail.shift();
+      for (let t of player.trail) t.age += dt;
+
+      // Move obstacles
+      for (let obs of obstacles) {
+        obs.x -= speed * dt;
+      }
+      obstacles = obstacles.filter(o => o.x + o.w > -50);
+
+      // Move orbs
+      for (let orb of orbs) {
+        orb.x -= speed * dt;
+        orb.pulse += dt * 3;
+      }
+      orbs = orbs.filter(o => o.x > -50 && !o.collected);
+
+      // Spawn obstacles
+      while (nextObstacleX < scrollX + W + 200) {
+        spawnObstacle();
+      }
+      // Offset obstacle spawn tracking
+      // (nextObstacleX is absolute, obstacles are shifted by scrollX)
+
+      // Spawn orbs
+      while (nextOrbX < scrollX + W + 200) {
+        spawnOrb();
+      }
+
+      // Collision with obstacles
+      let px1 = player.x - half;
+      let px2 = player.x + half;
+      let py1 = player.y - half;
+      let py2 = player.y + half;
+      for (let obs of obstacles) {
+        if (px2 > obs.x && px1 < obs.x + obs.w &&
+            py2 > obs.y && py1 < obs.y + obs.h) {
+          die();
+          return;
+        }
+      }
+
+      // Collect orbs
+      for (let orb of orbs) {
+        if (orb.collected) continue;
+        let dx = player.x - orb.x;
+        let dy = player.y - orb.y;
+        if (Math.sqrt(dx * dx + dy * dy) < half + ORB_RADIUS) {
+          collectOrb(orb);
+        }
+      }
+
+      // Particles
+      for (let p of particles) {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        p.vx *= 0.98;
+        p.vy *= 0.98;
+      }
+      particles = particles.filter(p => p.life > 0);
+
+      // BG lines
+      for (let line of bgLines) {
+        line.x -= speed * dt * line.speed;
+        if (line.x + line.len < 0) {
+          line.x = W + Math.random() * 100;
+          line.y = CORRIDOR_TOP + Math.random() * corridorH;
+        }
+      }
+
+      // Shake
+      if (shakeTimer > 0) shakeTimer -= dt;
+
+      // HUD
+      document.getElementById('hud-dist').textContent = Math.floor(dist);
+      document.getElementById('hud-orbs').textContent = orbCount;
+      document.getElementById('hud-score').textContent = score;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+
+      // Shake offset
+      let sx = 0, sy = 0;
+      if (shakeTimer > 0) {
+        sx = (Math.random() - 0.5) * shakeIntensity;
+        sy = (Math.random() - 0.5) * shakeIntensity;
+      }
+      ctx.save();
+      ctx.translate(sx, sy);
+
+      // Background
+      ctx.fillStyle = VOID;
+      ctx.fillRect(0, 0, W, H);
+
+      // Corridor background
+      ctx.fillStyle = DARK_BG;
+      ctx.fillRect(0, CORRIDOR_TOP, W, corridorH);
+
+      // BG lines (parallax streaks)
+      for (let line of bgLines) {
+        ctx.globalAlpha = line.alpha;
+        ctx.strokeStyle = CYAN;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(line.x, line.y);
+        ctx.lineTo(line.x + line.len, line.y);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      // Corridor borders
+      ctx.strokeStyle = DIM;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, CORRIDOR_TOP);
+      ctx.lineTo(W, CORRIDOR_TOP);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, corridorBottom);
+      ctx.lineTo(W, corridorBottom);
+      ctx.stroke();
+
+      // Corridor border glow
+      let grad1 = ctx.createLinearGradient(0, CORRIDOR_TOP - 8, 0, CORRIDOR_TOP + 4);
+      grad1.addColorStop(0, 'transparent');
+      grad1.addColorStop(1, 'rgba(0,240,255,0.05)');
+      ctx.fillStyle = grad1;
+      ctx.fillRect(0, CORRIDOR_TOP - 8, W, 12);
+
+      let grad2 = ctx.createLinearGradient(0, corridorBottom - 4, 0, corridorBottom + 8);
+      grad2.addColorStop(0, 'rgba(0,240,255,0.05)');
+      grad2.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad2;
+      ctx.fillRect(0, corridorBottom - 4, W, 12);
+
+      // Grid lines on walls (subtle)
+      ctx.globalAlpha = 0.04;
+      ctx.strokeStyle = CYAN;
+      ctx.lineWidth = 1;
+      let gridSpacing = 40;
+      let gridOffset = -(scrollX % gridSpacing);
+      for (let gx = gridOffset; gx < W; gx += gridSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(gx, CORRIDOR_TOP);
+        ctx.lineTo(gx, corridorBottom);
+        ctx.stroke();
+      }
+      for (let gy = CORRIDOR_TOP; gy <= corridorBottom; gy += gridSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(0, gy);
+        ctx.lineTo(W, gy);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      // Obstacles
+      for (let obs of obstacles) {
+        // Glow
+        ctx.shadowColor = obs.color === PURPLE ? PURPLE : MAGENTA;
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = obs.color;
+        ctx.globalAlpha = 0.15;
+        ctx.fillRect(obs.x - 2, obs.y - 2, obs.w + 4, obs.h + 4);
+        ctx.globalAlpha = 1;
+
+        // Body
+        ctx.fillStyle = obs.color;
+        ctx.globalAlpha = 0.6;
+        ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+        ctx.globalAlpha = 1;
+
+        // Border
+        ctx.strokeStyle = obs.color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+
+        ctx.shadowBlur = 0;
+      }
+
+      // Orbs
+      for (let orb of orbs) {
+        if (orb.collected) continue;
+        let pulseR = ORB_RADIUS + Math.sin(orb.pulse) * 2;
+
+        // Glow
+        ctx.shadowColor = GREEN;
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(orb.x, orb.y, pulseR, 0, Math.PI * 2);
+        ctx.fillStyle = GREEN;
+        ctx.globalAlpha = 0.3;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Core
+        ctx.beginPath();
+        ctx.arc(orb.x, orb.y, pulseR * 0.6, 0, Math.PI * 2);
+        ctx.fillStyle = GREEN;
+        ctx.fill();
+
+        // Ring
+        ctx.beginPath();
+        ctx.arc(orb.x, orb.y, pulseR, 0, Math.PI * 2);
+        ctx.strokeStyle = GREEN;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+      }
+
+      // Player trail
+      for (let i = 0; i < player.trail.length; i++) {
+        let t = player.trail[i];
+        let alpha = (1 - t.age / 0.5) * 0.4;
+        if (alpha <= 0) continue;
+        let size = PLAYER_SIZE * (1 - t.age / 0.5) * 0.6;
+        if (size <= 0) continue;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = CYAN;
+        ctx.fillRect(t.x - size / 2, t.y - size / 2, size, size);
+      }
+      ctx.globalAlpha = 1;
+
+      // Player
+      if (state !== 'dead' || shakeTimer > 0) {
+        let half = PLAYER_SIZE / 2;
+
+        // Glow
+        ctx.shadowColor = CYAN;
+        ctx.shadowBlur = 18;
+        ctx.fillStyle = CYAN;
+        ctx.fillRect(player.x - half, player.y - half, PLAYER_SIZE, PLAYER_SIZE);
+        ctx.shadowBlur = 0;
+
+        // Inner bright core
+        let coreSize = PLAYER_SIZE * 0.5;
+        ctx.fillStyle = WHITE;
+        ctx.globalAlpha = 0.7;
+        ctx.fillRect(player.x - coreSize / 2, player.y - coreSize / 2, coreSize, coreSize);
+        ctx.globalAlpha = 1;
+
+        // Gravity indicator (small arrow)
+        ctx.fillStyle = gravDir === 1 ? MAGENTA : GREEN;
+        ctx.globalAlpha = 0.6;
+        let arrowY = player.y + gravDir * (half + 5);
+        ctx.beginPath();
+        ctx.moveTo(player.x, arrowY + gravDir * 5);
+        ctx.lineTo(player.x - 4, arrowY);
+        ctx.lineTo(player.x + 4, arrowY);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      // Particles
+      for (let p of particles) {
+        let alpha = p.life / p.maxLife;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      }
+      ctx.globalAlpha = 1;
+
+      // Vignette on corridor edges (outside = darker)
+      ctx.fillStyle = VOID;
+      ctx.globalAlpha = 0.7;
+      ctx.fillRect(0, 0, W, CORRIDOR_TOP);
+      ctx.fillRect(0, corridorBottom, W, H - corridorBottom);
+      ctx.globalAlpha = 1;
+
+      // Speed indicator at bottom
+      let speedPct = (speed - BASE_SPEED) / (MAX_SPEED - BASE_SPEED);
+      let barW = W * 0.3;
+      let barX = (W - barW) / 2;
+      let barY = H - 16;
+      ctx.fillStyle = DIM;
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(barX, barY, barW, 3);
+      ctx.globalAlpha = 1;
+      let fillColor = speedPct < 0.5 ? CYAN : speedPct < 0.8 ? PURPLE : MAGENTA;
+      ctx.fillStyle = fillColor;
+      ctx.fillRect(barX, barY, barW * speedPct, 3);
+
+      ctx.restore();
+    }
+
+    function gameLoop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      let dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+      lastTime = timestamp;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function handleInput() {
+      if (state === 'menu') {
+        state = 'playing';
+        document.getElementById('overlay').classList.add('hidden');
+        init();
+        return;
+      }
+      if (state === 'dead') {
+        document.getElementById('death-overlay').classList.add('hidden');
+        state = 'playing';
+        init();
+        return;
+      }
+      if (state === 'playing') {
+        flipGravity();
+      }
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.code === 'Space' || e.key === ' ') {
+        e.preventDefault();
+        handleInput();
+      }
+    });
+
+    canvas.addEventListener('click', function(e) {
+      e.preventDefault();
+      handleInput();
+    });
+
+    canvas.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      handleInput();
+    }, { passive: false });
+
+    // Initialize for menu display
+    init();
+    requestAnimationFrame(gameLoop);
+  })();
+  </script>
+</body>
+</html>

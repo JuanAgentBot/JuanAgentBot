@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON FALL / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+
+    .back:hover {
+      color: var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto 1rem;
+      border: 1px solid var(--border);
+      max-width: 100%;
+      image-rendering: pixelated;
+    }
+
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 0 0.25rem;
+    }
+
+    .hud-item {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+    }
+
+    .hud-val {
+      color: var(--accent-cyan);
+      font-weight: 700;
+      text-shadow: 0 0 8px var(--glow-cyan-soft);
+    }
+
+    .hud-score .hud-val {
+      color: var(--accent-green);
+      text-shadow: 0 0 8px rgba(57, 255, 20, 0.3);
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 15, 0.85);
+      z-index: 10;
+    }
+
+    .overlay-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .overlay-sub {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      margin-bottom: 1.5rem;
+    }
+
+    .overlay-score {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 0.4rem;
+      text-shadow: 0 0 10px var(--glow-cyan-soft);
+    }
+
+    .overlay-best {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-bottom: 1.5rem;
+    }
+
+    .overlay-best span {
+      color: var(--accent-green);
+    }
+
+    .btn {
+      background: none;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      padding: 0.6rem 2rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--accent-cyan);
+      color: var(--bg-primary);
+      box-shadow: 0 0 16px var(--glow-cyan-soft);
+    }
+
+    .canvas-wrap {
+      position: relative;
+      display: inline-block;
+    }
+
+    .controls {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      margin-top: 0.5rem;
+    }
+
+    .controls span {
+      color: var(--accent-cyan);
+    }
+
+    .level-label {
+      color: var(--accent-purple);
+      font-weight: 700;
+      text-shadow: 0 0 8px rgba(157, 78, 221, 0.3);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>NEON FALL</h1>
+    <p class="subtitle">FALL THROUGH THE GAPS. DON'T GET PUSHED OUT.</p>
+
+    <div class="hud">
+      <div class="hud-item hud-score">SCORE <span class="hud-val" id="score">0</span></div>
+      <div class="hud-item">LEVEL <span class="hud-val level-label" id="level">1</span></div>
+      <div class="hud-item">BEST <span class="hud-val" id="best">0</span></div>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="game" width="400" height="560"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="overlay-title" id="overlay-title">NEON FALL</div>
+        <div class="overlay-sub" id="overlay-sub">Fall through rising platforms</div>
+        <div class="overlay-score" id="overlay-score" style="display:none"></div>
+        <div class="overlay-best" id="overlay-best" style="display:none"></div>
+        <button class="btn" id="startBtn">START</button>
+      </div>
+    </div>
+
+    <p class="controls"><span>← →</span> or <span>A D</span> to move &nbsp;|&nbsp; <span>SPACE</span> to start</p>
+  </main>
+
+<script>
+(function() {
+  'use strict';
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // Brand colors
+  const MAGENTA = '#ff2d7b';
+  const CYAN = '#00f0ff';
+  const GREEN = '#39ff14';
+  const PURPLE = '#9d4edd';
+  const VOID = '#0a0a0f';
+  const CRT_WHITE = '#e0e0e8';
+  const DIM = '#7a7a90';
+
+  // Game constants
+  const BALL_R = 8;
+  const GRAVITY = 0.25;
+  const MOVE_SPEED = 4.5;
+  const PLAT_HEIGHT = 12;
+  const GAP_MIN = 60;
+  const GAP_MAX = 100;
+  const PLAT_SPACING = 100;
+  const INITIAL_RISE_SPEED = 0.8;
+  const ORB_R = 6;
+  const ORB_CHANCE = 0.3;
+
+  // State
+  let ball, platforms, orbs, score, level, riseSpeed, gameOver, running, bestScore;
+  let keys = {};
+  let particles = [];
+  let frameCount = 0;
+  let lastTime = 0;
+
+  bestScore = parseInt(localStorage.getItem('neonfall-best') || '0');
+  document.getElementById('best').textContent = bestScore;
+
+  // Platform colors cycle
+  const PLAT_COLORS = [CYAN, MAGENTA, GREEN, PURPLE];
+
+  function init() {
+    ball = { x: W / 2, y: 60, vx: 0, vy: 0 };
+    platforms = [];
+    orbs = [];
+    particles = [];
+    score = 0;
+    level = 1;
+    riseSpeed = INITIAL_RISE_SPEED;
+    gameOver = false;
+    running = true;
+    frameCount = 0;
+
+    // Generate initial platforms
+    for (let y = 150; y < H + PLAT_SPACING; y += PLAT_SPACING) {
+      platforms.push(makePlatform(y));
+    }
+
+    updateHUD();
+  }
+
+  function makePlatform(y) {
+    // Gap width decreases slightly with level, but stays playable
+    const gapW = Math.max(GAP_MIN, GAP_MAX - (level - 1) * 4);
+    const gapX = Math.random() * (W - gapW - 20) + 10;
+    const colorIdx = Math.floor(Math.random() * PLAT_COLORS.length);
+
+    const plat = {
+      y: y,
+      gapX: gapX,
+      gapW: gapW,
+      color: PLAT_COLORS[colorIdx],
+      scored: false
+    };
+
+    // Maybe add an orb in the gap
+    if (Math.random() < ORB_CHANCE) {
+      orbs.push({
+        x: gapX + gapW / 2,
+        y: y - 20,
+        alive: true,
+        pulse: Math.random() * Math.PI * 2
+      });
+    }
+
+    return plat;
+  }
+
+  function updateHUD() {
+    document.getElementById('score').textContent = score;
+    document.getElementById('level').textContent = level;
+    document.getElementById('best').textContent = bestScore;
+  }
+
+  function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 3 + 1;
+      particles.push({
+        x: x,
+        y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        color: color,
+        size: Math.random() * 3 + 1
+      });
+    }
+  }
+
+  function update() {
+    if (!running || gameOver) return;
+
+    frameCount++;
+
+    // Level up every 500 points
+    const newLevel = Math.floor(score / 500) + 1;
+    if (newLevel > level) {
+      level = newLevel;
+      riseSpeed = INITIAL_RISE_SPEED + (level - 1) * 0.15;
+      spawnParticles(W / 2, H / 2, PURPLE, 20);
+    }
+
+    // Input
+    let moveDir = 0;
+    if (keys['ArrowLeft'] || keys['KeyA']) moveDir = -1;
+    if (keys['ArrowRight'] || keys['KeyD']) moveDir = 1;
+
+    // Ball physics
+    ball.vx = moveDir * MOVE_SPEED;
+    ball.vy += GRAVITY;
+
+    // Terminal velocity
+    if (ball.vy > 8) ball.vy = 8;
+
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    // Wrap horizontally
+    if (ball.x < -BALL_R) ball.x = W + BALL_R;
+    if (ball.x > W + BALL_R) ball.x = -BALL_R;
+
+    // Rise platforms
+    for (let p of platforms) {
+      p.y -= riseSpeed;
+    }
+    for (let o of orbs) {
+      o.y -= riseSpeed;
+    }
+    // Ball also pushed up by rising
+    ball.y -= riseSpeed;
+
+    // Collision with platforms
+    for (let p of platforms) {
+      // Check if ball is at platform height
+      if (ball.vy >= 0 &&
+          ball.y + BALL_R >= p.y &&
+          ball.y + BALL_R <= p.y + PLAT_HEIGHT + ball.vy + 2) {
+        // Check if ball is in the gap
+        const bx = ball.x;
+        if (bx - BALL_R + 4 > p.gapX && bx + BALL_R - 4 < p.gapX + p.gapW) {
+          // Fall through the gap - score!
+          if (!p.scored) {
+            p.scored = true;
+            score += 10;
+            spawnParticles(ball.x, ball.y, GREEN, 5);
+          }
+        } else {
+          // Land on platform
+          ball.y = p.y - BALL_R;
+          ball.vy = 0;
+        }
+      }
+
+      // Push up if ball is inside platform (from below due to rising)
+      if (ball.y + BALL_R > p.y &&
+          ball.y - BALL_R < p.y + PLAT_HEIGHT &&
+          ball.vy <= 0) {
+        const bx = ball.x;
+        if (!(bx - BALL_R + 4 > p.gapX && bx + BALL_R - 4 < p.gapX + p.gapW)) {
+          ball.y = p.y - BALL_R;
+          ball.vy = 0;
+        }
+      }
+    }
+
+    // Floor collision
+    if (ball.y + BALL_R > H) {
+      ball.y = H - BALL_R;
+      ball.vy = -ball.vy * 0.3;
+    }
+
+    // Check if pushed above screen
+    if (ball.y - BALL_R < -10) {
+      gameOver = true;
+      endGame();
+      return;
+    }
+
+    // Orb collection
+    for (let o of orbs) {
+      if (!o.alive) continue;
+      const dx = ball.x - o.x;
+      const dy = ball.y - o.y;
+      if (dx * dx + dy * dy < (BALL_R + ORB_R) * (BALL_R + ORB_R)) {
+        o.alive = false;
+        score += 50;
+        spawnParticles(o.x, o.y, CYAN, 12);
+      }
+    }
+
+    // Remove off-screen platforms and add new ones
+    platforms = platforms.filter(p => p.y > -PLAT_HEIGHT - 10);
+    orbs = orbs.filter(o => o.y > -20 && o.alive !== false);
+
+    // Add new platforms from below
+    let maxY = 0;
+    for (let p of platforms) {
+      if (p.y > maxY) maxY = p.y;
+    }
+    while (maxY < H + PLAT_SPACING) {
+      maxY += PLAT_SPACING;
+      platforms.push(makePlatform(maxY));
+    }
+
+    // Update particles
+    particles = particles.filter(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 0.03;
+      return p.life > 0;
+    });
+
+    updateHUD();
+  }
+
+  function draw() {
+    // Background
+    ctx.fillStyle = VOID;
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle grid
+    ctx.strokeStyle = 'rgba(122, 122, 144, 0.06)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 20) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let y = 0; y < H; y += 20) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+
+    // Draw platforms
+    for (let p of platforms) {
+      const alpha = 0.85;
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = alpha;
+
+      // Left segment
+      if (p.gapX > 0) {
+        ctx.fillRect(0, p.y, p.gapX, PLAT_HEIGHT);
+        // Glow
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 6;
+        ctx.fillRect(0, p.y, p.gapX, PLAT_HEIGHT);
+        ctx.shadowBlur = 0;
+      }
+
+      // Right segment
+      const rightStart = p.gapX + p.gapW;
+      if (rightStart < W) {
+        ctx.fillRect(rightStart, p.y, W - rightStart, PLAT_HEIGHT);
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 6;
+        ctx.fillRect(rightStart, p.y, W - rightStart, PLAT_HEIGHT);
+        ctx.shadowBlur = 0;
+      }
+
+      ctx.globalAlpha = 1;
+
+      // Gap indicators - small arrows pointing down
+      ctx.fillStyle = DIM;
+      ctx.globalAlpha = 0.3;
+      const gapCenterX = p.gapX + p.gapW / 2;
+      ctx.beginPath();
+      ctx.moveTo(gapCenterX - 4, p.y + 2);
+      ctx.lineTo(gapCenterX + 4, p.y + 2);
+      ctx.lineTo(gapCenterX, p.y + PLAT_HEIGHT - 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // Draw orbs
+    for (let o of orbs) {
+      if (!o.alive) continue;
+      o.pulse += 0.05;
+      const pulseScale = 1 + Math.sin(o.pulse) * 0.2;
+      const r = ORB_R * pulseScale;
+
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = CYAN;
+      ctx.shadowColor = CYAN;
+      ctx.shadowBlur = 12;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Inner highlight
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, r * 0.4, 0, Math.PI * 2);
+      ctx.fillStyle = CRT_WHITE;
+      ctx.fill();
+    }
+
+    // Draw ball
+    if (!gameOver) {
+      // Trail
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, BALL_R + 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.1)';
+      ctx.fill();
+
+      // Ball
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
+      ctx.fillStyle = CYAN;
+      ctx.shadowColor = CYAN;
+      ctx.shadowBlur = 16;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Inner bright core
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, BALL_R * 0.45, 0, Math.PI * 2);
+      ctx.fillStyle = CRT_WHITE;
+      ctx.fill();
+    }
+
+    // Draw particles
+    for (let p of particles) {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+
+    // Danger zone indicator at top
+    if (!gameOver && ball.y - BALL_R < 40) {
+      const dangerAlpha = (1 - (ball.y - BALL_R) / 40) * 0.4;
+      ctx.fillStyle = `rgba(255, 45, 123, ${dangerAlpha})`;
+      ctx.fillRect(0, 0, W, 4);
+    }
+
+    // Scanline effect
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
+    for (let y = 0; y < H; y += 3) {
+      ctx.fillRect(0, y, W, 1);
+    }
+  }
+
+  function endGame() {
+    if (score > bestScore) {
+      bestScore = score;
+      localStorage.setItem('neonfall-best', bestScore.toString());
+    }
+    updateHUD();
+    showOverlay(true);
+  }
+
+  function showOverlay(isGameOver) {
+    const overlay = document.getElementById('overlay');
+    const title = document.getElementById('overlay-title');
+    const sub = document.getElementById('overlay-sub');
+    const scoreEl = document.getElementById('overlay-score');
+    const bestEl = document.getElementById('overlay-best');
+    const btn = document.getElementById('startBtn');
+
+    overlay.style.display = 'flex';
+
+    if (isGameOver) {
+      title.textContent = 'GAME OVER';
+      sub.textContent = 'Pushed out of the void';
+      scoreEl.style.display = 'block';
+      scoreEl.textContent = 'SCORE: ' + score;
+      bestEl.style.display = 'block';
+      bestEl.innerHTML = 'BEST: <span>' + bestScore + '</span>';
+      btn.textContent = 'RETRY';
+    } else {
+      title.textContent = 'NEON FALL';
+      sub.textContent = 'Fall through rising platforms';
+      scoreEl.style.display = 'none';
+      bestEl.style.display = 'none';
+      btn.textContent = 'START';
+    }
+  }
+
+  function hideOverlay() {
+    document.getElementById('overlay').style.display = 'none';
+  }
+
+  function startGame() {
+    init();
+    hideOverlay();
+    requestAnimationFrame(loop);
+  }
+
+  function loop(ts) {
+    if (!running && gameOver) return;
+
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Input
+  document.addEventListener('keydown', function(e) {
+    keys[e.code] = true;
+
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (gameOver || !running) {
+        startGame();
+      }
+    }
+  });
+
+  document.addEventListener('keyup', function(e) {
+    keys[e.code] = false;
+  });
+
+  // Touch controls
+  let touchX = null;
+  canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    if (gameOver || !running) {
+      startGame();
+      return;
+    }
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    touchX = touch.clientX - rect.left;
+    const mid = rect.width / 2;
+    if (touchX < mid) {
+      keys['ArrowLeft'] = true;
+      keys['ArrowRight'] = false;
+    } else {
+      keys['ArrowRight'] = true;
+      keys['ArrowLeft'] = false;
+    }
+  });
+
+  canvas.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    touchX = touch.clientX - rect.left;
+    const mid = rect.width / 2;
+    if (touchX < mid) {
+      keys['ArrowLeft'] = true;
+      keys['ArrowRight'] = false;
+    } else {
+      keys['ArrowRight'] = true;
+      keys['ArrowLeft'] = false;
+    }
+  });
+
+  canvas.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    keys['ArrowLeft'] = false;
+    keys['ArrowRight'] = false;
+    touchX = null;
+  });
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+
+  // Initial draw
+  running = false;
+  gameOver = true;
+
+  // Draw initial background
+  ctx.fillStyle = VOID;
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw some demo platforms
+  const demoColors = [CYAN, MAGENTA, GREEN, PURPLE];
+  for (let i = 0; i < 5; i++) {
+    const y = 120 + i * PLAT_SPACING;
+    const gapX = Math.random() * (W - 80 - 20) + 10;
+    const gapW = 80;
+    const c = demoColors[i % 4];
+    ctx.fillStyle = c;
+    ctx.globalAlpha = 0.3;
+    if (gapX > 0) ctx.fillRect(0, y, gapX, PLAT_HEIGHT);
+    if (gapX + gapW < W) ctx.fillRect(gapX + gapW, y, W - gapX - gapW, PLAT_HEIGHT);
+  }
+  ctx.globalAlpha = 1;
+
+  // Scanlines on demo
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
+  for (let y = 0; y < H; y += 3) {
+    ctx.fillRect(0, y, W, 1);
+  }
+
+  showOverlay(false);
+})();
+</script>
+</body>
+</html>

@@ -61,6 +61,9 @@
       margin: 0 auto;
       border: 1px solid var(--border);
       cursor: pointer;
+      max-width: 100%;
+      height: auto;
+      touch-action: manipulation;
     }
     .controls {
       color: var(--text-dim);
@@ -76,6 +79,69 @@
       font-size: 0.65rem;
       color: var(--text-muted);
       margin: 0 0.1em;
+    }
+    .touch-controls {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+    .touch-btn {
+      background: none;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      min-width: 54px;
+      min-height: 54px;
+      padding: 0.4em 0.8em;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    .touch-btn:active {
+      background: var(--accent-cyan);
+      color: var(--bg-primary);
+    }
+    .touch-btn.drop-btn {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+      min-width: 90px;
+      font-size: 0.85rem;
+      text-shadow: 0 0 8px var(--glow-magenta);
+    }
+    .touch-btn.drop-btn:active {
+      background: var(--accent-magenta);
+      color: var(--bg-primary);
+      text-shadow: none;
+    }
+    .touch-btn.reset-btn {
+      border-color: var(--text-dim);
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      min-width: 54px;
+      min-height: 44px;
+    }
+    .touch-btn.reset-btn:active {
+      background: var(--text-dim);
+      color: var(--bg-primary);
+    }
+    @media (max-width: 600px) {
+      main { padding: 1rem 0.5rem 2rem; }
+      h1 { font-size: 1.3rem; }
+      .hud { gap: 1rem; font-size: 0.7rem; }
+      .controls { display: none; }
+      .touch-controls { display: flex; }
+    }
+    @media (pointer: coarse) {
+      .controls { display: none; }
+      .touch-controls { display: flex; }
     }
     .popup {
       display: none;
@@ -146,6 +212,13 @@
       <span class="key">←</span><span class="key">→</span> move drop position
       &nbsp;·&nbsp;
       <span class="key">R</span> reset
+    </div>
+
+    <div class="touch-controls" id="touch-controls">
+      <button class="touch-btn" id="touch-left">◀</button>
+      <button class="touch-btn drop-btn" id="touch-drop">DROP</button>
+      <button class="touch-btn" id="touch-right">▶</button>
+      <button class="touch-btn reset-btn" id="touch-reset">RST</button>
     </div>
 
     <div class="popup" id="popup">
@@ -547,6 +620,62 @@
   });
 
   replayBtn.addEventListener('click', reset);
+
+  // Touch support on canvas: tap to set position and drop
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    dropX = (touch.clientX - rect.left) * (W / rect.width);
+    dropX = Math.max(BUCKETS_START + BUCKET_W, Math.min(BUCKETS_START + (BUCKET_COUNT - 1) * BUCKET_W, dropX));
+    dropBall();
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    dropX = (touch.clientX - rect.left) * (W / rect.width);
+    dropX = Math.max(BUCKETS_START + BUCKET_W, Math.min(BUCKETS_START + (BUCKET_COUNT - 1) * BUCKET_W, dropX));
+  }, { passive: false });
+
+  // On-screen touch controls
+  const touchLeft = document.getElementById('touch-left');
+  const touchRight = document.getElementById('touch-right');
+  const touchDrop = document.getElementById('touch-drop');
+  const touchReset = document.getElementById('touch-reset');
+
+  let moveInterval = null;
+  function startMove(dir) {
+    const step = 10;
+    const move = () => {
+      dropX = dir === -1
+        ? Math.max(BUCKETS_START + BUCKET_W, dropX - step)
+        : Math.min(BUCKETS_START + (BUCKET_COUNT - 1) * BUCKET_W, dropX + step);
+    };
+    move();
+    moveInterval = setInterval(move, 80);
+  }
+  function stopMove() {
+    if (moveInterval) { clearInterval(moveInterval); moveInterval = null; }
+  }
+
+  touchLeft.addEventListener('touchstart', (e) => { e.preventDefault(); startMove(-1); }, { passive: false });
+  touchLeft.addEventListener('touchend', (e) => { e.preventDefault(); stopMove(); }, { passive: false });
+  touchLeft.addEventListener('touchcancel', stopMove);
+  touchLeft.addEventListener('mousedown', () => startMove(-1));
+  touchLeft.addEventListener('mouseup', stopMove);
+  touchLeft.addEventListener('mouseleave', stopMove);
+
+  touchRight.addEventListener('touchstart', (e) => { e.preventDefault(); startMove(1); }, { passive: false });
+  touchRight.addEventListener('touchend', (e) => { e.preventDefault(); stopMove(); }, { passive: false });
+  touchRight.addEventListener('touchcancel', stopMove);
+  touchRight.addEventListener('mousedown', () => startMove(1));
+  touchRight.addEventListener('mouseup', stopMove);
+  touchRight.addEventListener('mouseleave', stopMove);
+
+  touchDrop.addEventListener('click', () => dropBall());
+  touchReset.addEventListener('click', () => reset());
 
   buildPegs();
   requestAnimationFrame(loop);

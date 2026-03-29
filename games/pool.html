@@ -63,8 +63,10 @@
     .game-area {
       position: relative;
       border: 1px solid var(--border, #7a7a90);
+      touch-action: manipulation;
+      max-width: 100%;
     }
-    canvas { display: block; }
+    canvas { display: block; touch-action: manipulation; }
     .controls {
       width: 100%;
       max-width: 900px;
@@ -110,9 +112,12 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.65rem;
       padding: 0.4rem 0.8rem;
+      min-height: 44px;
+      min-width: 44px;
       cursor: pointer;
       letter-spacing: 0.06em;
       transition: border-color 0.2s, color 0.2s;
+      touch-action: manipulation;
     }
     .mode-btns button:hover {
       border-color: var(--accent-cyan, #00f0ff);
@@ -121,6 +126,42 @@
     .mode-btns button.active {
       border-color: var(--accent-magenta, #ff2d7b);
       color: var(--accent-magenta, #ff2d7b);
+    }
+    .touch-controls {
+      width: 100%;
+      max-width: 900px;
+      display: none;
+      justify-content: center;
+      gap: 0.6rem;
+      padding: 0.5rem 1.5rem 0;
+    }
+    .touch-controls button {
+      background: transparent;
+      border: 1px solid var(--border, #7a7a90);
+      color: var(--text-bright, #e0e0e8);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.5rem 1.2rem;
+      min-height: 44px;
+      min-width: 44px;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: border-color 0.2s, color 0.2s;
+      touch-action: manipulation;
+    }
+    .touch-controls button:active {
+      border-color: var(--accent-cyan, #00f0ff);
+      color: var(--accent-cyan, #00f0ff);
+    }
+    @media (hover: none) and (pointer: coarse) {
+      .touch-controls { display: flex; }
+    }
+    @media (max-width: 600px) {
+      h1 { font-size: 1rem; }
+      .hud { font-size: 0.65rem; padding: 0.2rem 1rem 0.5rem; }
+      .controls { font-size: 0.6rem; padding: 0.8rem 1rem; }
+      .mode-btns button { font-size: 0.7rem; padding: 0.5rem 1rem; }
+      .top-bar { padding: 0.8rem 1rem; }
     }
     .scratch-msg {
       position: absolute;
@@ -155,8 +196,11 @@
     <canvas id="c"></canvas>
     <div class="scratch-msg" id="scratch-msg">SCRATCH!</div>
   </div>
+  <div class="touch-controls" id="touch-controls">
+    <button id="btn-new-game" onclick="resetGame()">↻ NEW GAME</button>
+  </div>
   <div class="controls">
-    <span>CLICK + DRAG</span> from cue ball to aim &amp; set power &middot;
+    <span>DRAG</span> from cue ball to aim &amp; set power &middot;
     <span>RELEASE</span> to shoot
     <br>
     <div class="mode-btns" style="justify-content:center;">
@@ -808,9 +852,12 @@
     });
 
     // Touch support
+    let lastTouchPos = { clientX: 0, clientY: 0 };
+
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
       const touch = e.touches[0];
+      lastTouchPos = { clientX: touch.clientX, clientY: touch.clientY };
       const mouseEvent = new MouseEvent('mousedown', {
         clientX: touch.clientX,
         clientY: touch.clientY
@@ -821,6 +868,7 @@
     canvas.addEventListener('touchmove', (e) => {
       e.preventDefault();
       const touch = e.touches[0];
+      lastTouchPos = { clientX: touch.clientX, clientY: touch.clientY };
       const mouseEvent = new MouseEvent('mousemove', {
         clientX: touch.clientX,
         clientY: touch.clientY
@@ -830,7 +878,10 @@
 
     canvas.addEventListener('touchend', (e) => {
       e.preventDefault();
-      const mouseEvent = new MouseEvent('mouseup', {});
+      const mouseEvent = new MouseEvent('mouseup', {
+        clientX: lastTouchPos.clientX,
+        clientY: lastTouchPos.clientY
+      });
       canvas.dispatchEvent(mouseEvent);
     }, { passive: false });
 

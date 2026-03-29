@@ -13,6 +13,8 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    * { touch-action: manipulation; }
+
     main {
       max-width: 640px;
       margin: 0 auto;
@@ -55,6 +57,8 @@
       display: block;
       margin: 0 auto 1rem;
       border: 1px solid var(--border);
+      max-width: 100%;
+      height: auto;
     }
 
     .hud {
@@ -91,6 +95,8 @@
       display: block;
       margin: 0 auto 1rem;
       border: 1px solid var(--border);
+      max-width: 100%;
+      height: auto;
     }
 
     .controls {
@@ -109,6 +115,80 @@
       font-family: inherit;
       font-size: 0.9em;
       color: var(--accent-cyan);
+    }
+
+    .touch-controls {
+      display: none;
+      margin: 1rem auto 0;
+      max-width: 300px;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    @media (pointer: coarse), (max-width: 768px) {
+      .touch-controls { display: flex; }
+      .controls { display: none; }
+    }
+
+    .touch-dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 52px);
+      grid-template-rows: repeat(2, 52px);
+      gap: 4px;
+    }
+
+    .touch-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 52px;
+      min-height: 52px;
+      background: var(--bg-panel, rgba(20,20,30,0.8));
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.2rem;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      transition: background 0.1s, color 0.1s;
+    }
+
+    .touch-btn:active {
+      background: var(--accent-cyan);
+      color: var(--bg);
+    }
+
+    .touch-spacer { min-width: 52px; min-height: 52px; }
+
+    .touch-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .touch-btn-drop {
+      min-width: 80px;
+      min-height: 80px;
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    .touch-btn-drop:active {
+      background: var(--accent-magenta);
+      color: var(--bg);
+    }
+
+    .touch-btn-pause {
+      min-width: 80px;
+      min-height: 40px;
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
     }
 
     .overlay {
@@ -205,6 +285,21 @@
       <kbd>SPACE</kbd> hard drop
     </div>
 
+    <div class="touch-controls" id="touch-controls">
+      <div class="touch-dpad">
+        <div class="touch-spacer"></div>
+        <button class="touch-btn" id="touch-cycle">&#x21BB;</button>
+        <div class="touch-spacer"></div>
+        <button class="touch-btn" id="touch-left">&larr;</button>
+        <button class="touch-btn" id="touch-down">&darr;</button>
+        <button class="touch-btn" id="touch-right">&rarr;</button>
+      </div>
+      <div class="touch-actions">
+        <button class="touch-btn touch-btn-drop" id="touch-drop">DROP</button>
+        <button class="touch-btn touch-btn-pause" id="touch-pause">PAUSE</button>
+      </div>
+    </div>
+
     <div class="overlay" id="start-overlay">
       <div class="overlay-box">
         <div class="overlay-title">COLUMNS</div>
@@ -230,7 +325,7 @@
     <div class="overlay hidden" id="pause-overlay">
       <div class="overlay-box">
         <div class="overlay-title">PAUSED</div>
-        <div class="overlay-text">Press <kbd>P</kbd> or <kbd>ESC</kbd> to resume</div>
+        <div class="overlay-text">Press <kbd>P</kbd> / <kbd>ESC</kbd> or tap to resume</div>
       </div>
     </div>
   </main>
@@ -779,6 +874,55 @@
         }
         softDrop = false;
       }, { passive: false });
+    })();
+
+    // --- Touch button controls ---
+    (function() {
+      var ids = {
+        'touch-left': function() { moveLeft(); },
+        'touch-right': function() { moveRight(); },
+        'touch-cycle': function() { cycleGems(); },
+        'touch-drop': function() { hardDrop(); },
+        'touch-pause': function() { togglePause(); }
+      };
+      Object.keys(ids).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            ids[id]();
+          }, { passive: false });
+          el.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            ids[id]();
+          });
+        }
+      });
+
+      // Soft drop: hold down button
+      var downBtn = document.getElementById('touch-down');
+      if (downBtn) {
+        downBtn.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          softDrop = true;
+        }, { passive: false });
+        downBtn.addEventListener('touchend', function(e) {
+          e.preventDefault();
+          softDrop = false;
+        }, { passive: false });
+        downBtn.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          softDrop = true;
+        });
+        downBtn.addEventListener('mouseup', function() {
+          softDrop = false;
+        });
+      }
+
+      // Tap pause overlay to resume
+      pauseOverlay.addEventListener('click', function() {
+        if (paused) togglePause();
+      });
     })();
 
     // --- Init ---

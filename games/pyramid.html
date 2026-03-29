@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PYRAMID SOLITAIRE / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1rem 4rem;
+      text-align: center;
+    }
+
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+    .back:hover { color: var(--accent-cyan); }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .info-bar {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+    }
+    .info-bar .label { color: var(--text-dim); }
+    .info-bar .value { color: var(--accent-cyan); font-weight: 700; }
+
+    #pyramid-area {
+      position: relative;
+      width: 100%;
+      max-width: 680px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .card-slot {
+      position: absolute;
+      width: 52px;
+      height: 72px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      user-select: none;
+    }
+
+    .card-slot.removed {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .card-slot.covered {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .card-slot.exposed:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 0 16px var(--glow-cyan-soft);
+    }
+
+    .card-slot.selected {
+      box-shadow: 0 0 20px var(--glow-magenta), inset 0 0 6px var(--glow-magenta);
+      transform: translateY(-4px);
+    }
+
+    .card-face {
+      width: 100%;
+      height: 100%;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .card-face .rank { font-size: 1rem; }
+    .card-face .suit { font-size: 0.75rem; margin-top: 1px; }
+    .card-face.red { color: #ff2d7b; }
+    .card-face.black { color: var(--text-bright); }
+
+    .stock-area {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .pile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .pile-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+    }
+
+    .stock-card, .waste-card {
+      width: 58px;
+      height: 80px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      user-select: none;
+    }
+
+    .stock-card {
+      background: var(--bg-secondary);
+      color: var(--accent-purple);
+      font-size: 1.2rem;
+      font-weight: 800;
+    }
+    .stock-card:hover {
+      border-color: var(--accent-purple);
+      box-shadow: 0 0 12px rgba(157, 78, 221, 0.3);
+    }
+    .stock-card.empty {
+      border-style: dashed;
+      opacity: 0.3;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .waste-card {
+      background: var(--bg-secondary);
+    }
+    .waste-card.empty {
+      border-style: dashed;
+      opacity: 0.3;
+      cursor: default;
+      pointer-events: none;
+    }
+    .waste-card:not(.empty):hover {
+      transform: translateY(-3px);
+      box-shadow: 0 0 16px var(--glow-cyan-soft);
+    }
+    .waste-card.selected {
+      box-shadow: 0 0 20px var(--glow-magenta), inset 0 0 6px var(--glow-magenta);
+      transform: translateY(-4px);
+    }
+
+    .waste-face {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+    .waste-face .rank { font-size: 1.1rem; }
+    .waste-face .suit { font-size: 0.8rem; margin-top: 2px; }
+    .waste-face.red { color: #ff2d7b; }
+    .waste-face.black { color: var(--text-bright); }
+
+    .btn-row {
+      display: flex;
+      justify-content: center;
+      gap: 0.8rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+    .btn.undo-btn:hover {
+      border-color: var(--accent-purple);
+      color: var(--accent-purple);
+    }
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    .help {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      line-height: 1.6;
+      margin-top: 1rem;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .help strong { color: var(--accent-cyan); font-weight: 700; }
+
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10, 10, 15, 0.92);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .overlay.show { display: flex; }
+
+    .overlay-box {
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      padding: 2.5rem 3rem;
+      text-align: center;
+      max-width: 360px;
+    }
+    .overlay-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 15px currentColor;
+    }
+    .overlay-title.win { color: var(--accent-green); }
+    .overlay-title.lose { color: var(--accent-magenta); }
+
+    .overlay-stat {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+    .overlay-stat .v { color: var(--accent-cyan); font-weight: 700; }
+
+    .overlay-btn {
+      margin-top: 1.5rem;
+      background: transparent;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      padding: 0.6rem 2rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .overlay-btn:hover {
+      background: rgba(0, 240, 255, 0.1);
+    }
+
+    .pairs-ref {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.4rem 0.8rem;
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      margin-bottom: 1rem;
+    }
+    .pairs-ref span { color: var(--accent-green); }
+
+    @media (max-width: 480px) {
+      .card-slot { width: 38px; height: 54px; }
+      .card-face .rank { font-size: 0.75rem; }
+      .card-face .suit { font-size: 0.6rem; }
+      .stock-card, .waste-card { width: 48px; height: 66px; }
+      h1 { font-size: 1.2rem; }
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>PYRAMID SOLITAIRE</h1>
+    <p class="subtitle">REMOVE PAIRS THAT SUM TO 13</p>
+
+    <div class="info-bar">
+      <div><span class="label">SCORE </span><span class="value" id="score">0</span></div>
+      <div><span class="label">REMOVED </span><span class="value" id="removed">0</span><span class="label"> / 28</span></div>
+      <div><span class="label">STOCK </span><span class="value" id="stock-count">24</span></div>
+    </div>
+
+    <div class="pairs-ref">
+      <div><span>K</span>=13</div>
+      <div><span>Q</span>+<span>A</span></div>
+      <div><span>J</span>+<span>2</span></div>
+      <div><span>10</span>+<span>3</span></div>
+      <div><span>9</span>+<span>4</span></div>
+      <div><span>8</span>+<span>5</span></div>
+      <div><span>7</span>+<span>6</span></div>
+    </div>
+
+    <div id="pyramid-area"></div>
+
+    <div class="stock-area">
+      <div class="pile">
+        <div class="stock-card" id="stock-pile" title="Draw a card">&#9646;&#9646;&#9646;</div>
+        <div class="pile-label">STOCK</div>
+      </div>
+      <div class="pile">
+        <div class="waste-card empty" id="waste-pile"></div>
+        <div class="pile-label">WASTE</div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn undo-btn" id="undo-btn" disabled>UNDO</button>
+      <button class="btn" id="new-btn">NEW GAME</button>
+    </div>
+
+    <div class="help">
+      <strong>Click</strong> exposed pyramid cards to select them.<br>
+      Pair two cards that sum to <strong>13</strong>, or click a <strong>King</strong> to remove it alone.<br>
+      <strong>Draw</strong> from the stock pile when stuck. Pair waste card with pyramid or another waste.<br>
+      Clear the entire pyramid to win.
+    </div>
+
+    <div class="overlay" id="overlay">
+      <div class="overlay-box">
+        <div class="overlay-title" id="overlay-title">CLEARED</div>
+        <div class="overlay-stat">Score: <span class="v" id="overlay-score">0</span></div>
+        <div class="overlay-stat">Cards removed: <span class="v" id="overlay-removed">0</span></div>
+        <div class="overlay-stat" id="overlay-best-line">Best score: <span class="v" id="overlay-best">0</span></div>
+        <button class="overlay-btn" id="overlay-btn">PLAY AGAIN</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // --- Card utilities ---
+    const SUITS = ['♠','♥','♦','♣'];
+    const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+    const VALUES = {A:1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,J:11,Q:12,K:13};
+
+    function makeDeck() {
+      const d = [];
+      for (const s of SUITS) for (const r of RANKS) d.push({rank:r, suit:s, value:VALUES[r]});
+      return d;
+    }
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.random() * (i + 1) | 0;
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function isRed(card) { return card.suit === '♥' || card.suit === '♦'; }
+
+    // --- Game state ---
+    let pyramid = [];    // array of {card, row, col, removed, el}
+    let stock = [];
+    let waste = [];
+    let selected = null; // {type:'pyramid'|'waste', index}
+    let score = 0;
+    let removedCount = 0;
+    let undoStack = [];
+    let bestScore = parseInt(localStorage.getItem('zero-pyramid-best') || '0');
+    let gameOver = false;
+
+    // DOM
+    const pyramidArea = document.getElementById('pyramid-area');
+    const stockPile = document.getElementById('stock-pile');
+    const wastePile = document.getElementById('waste-pile');
+    const scoreEl = document.getElementById('score');
+    const removedEl = document.getElementById('removed');
+    const stockCountEl = document.getElementById('stock-count');
+    const undoBtn = document.getElementById('undo-btn');
+    const newBtn = document.getElementById('new-btn');
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlayScore = document.getElementById('overlay-score');
+    const overlayRemoved = document.getElementById('overlay-removed');
+    const overlayBest = document.getElementById('overlay-best');
+    const overlayBtn = document.getElementById('overlay-btn');
+
+    function initGame() {
+      const deck = shuffle(makeDeck());
+      pyramid = [];
+      stock = [];
+      waste = [];
+      selected = null;
+      score = 0;
+      removedCount = 0;
+      undoStack = [];
+      gameOver = false;
+
+      // Deal pyramid: 7 rows, row i has i+1 cards
+      let idx = 0;
+      for (let row = 0; row < 7; row++) {
+        for (let col = 0; col <= row; col++) {
+          pyramid.push({card: deck[idx++], row, col, removed: false, el: null});
+        }
+      }
+
+      // Remaining to stock
+      stock = deck.slice(28);
+      waste = [];
+
+      renderPyramid();
+      renderWaste();
+      updateInfo();
+      overlay.classList.remove('show');
+    }
+
+    // --- Check if a pyramid card is exposed (not covered by cards below) ---
+    function isExposed(pidx) {
+      const p = pyramid[pidx];
+      if (p.removed) return false;
+      if (p.row === 6) return true;
+      // Covered by row+1, col and row+1, col+1
+      const leftChild = pyramid.find(c => c.row === p.row + 1 && c.col === p.col);
+      const rightChild = pyramid.find(c => c.row === p.row + 1 && c.col === p.col + 1);
+      return (!leftChild || leftChild.removed) && (!rightChild || rightChild.removed);
+    }
+
+    // --- Rendering ---
+    function renderPyramid() {
+      pyramidArea.innerHTML = '';
+
+      // Responsive sizing
+      const containerWidth = pyramidArea.offsetWidth || 680;
+      const isMobile = window.innerWidth <= 480;
+      const cardW = isMobile ? 38 : 52;
+      const cardH = isMobile ? 54 : 72;
+      const gapX = isMobile ? 4 : 6;
+      const gapY = isMobile ? 6 : 8;
+
+      // Calculate positions: center each row
+      const maxCols = 7;
+      const totalRowWidth = maxCols * cardW + (maxCols - 1) * gapX;
+      const startX = (containerWidth - totalRowWidth) / 2;
+      const totalHeight = 7 * cardH + 6 * gapY;
+      pyramidArea.style.height = totalHeight + 'px';
+
+      for (let i = 0; i < pyramid.length; i++) {
+        const p = pyramid[i];
+        const rowCards = p.row + 1;
+        const rowWidth = rowCards * cardW + (rowCards - 1) * gapX;
+        const rowOffsetX = (containerWidth - rowWidth) / 2;
+        const x = rowOffsetX + p.col * (cardW + gapX);
+        const y = p.row * (cardH + gapY);
+
+        const el = document.createElement('div');
+        el.className = 'card-slot';
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        el.style.width = cardW + 'px';
+        el.style.height = cardH + 'px';
+
+        if (p.removed) {
+          el.classList.add('removed');
+        } else if (!isExposed(i)) {
+          el.classList.add('covered');
+        } else {
+          el.classList.add('exposed');
+        }
+
+        const face = document.createElement('div');
+        face.className = 'card-face ' + (isRed(p.card) ? 'red' : 'black');
+        face.innerHTML = '<div class="rank">' + p.card.rank + '</div><div class="suit">' + p.card.suit + '</div>';
+        el.appendChild(face);
+
+        el.addEventListener('click', () => onPyramidClick(i));
+        pyramidArea.appendChild(el);
+        pyramid[i].el = el;
+      }
+    }
+
+    function renderWaste() {
+      if (waste.length === 0) {
+        wastePile.className = 'waste-card empty';
+        wastePile.innerHTML = '';
+      } else {
+        const top = waste[waste.length - 1];
+        wastePile.className = 'waste-card';
+        const face = document.createElement('div');
+        face.className = 'waste-face ' + (isRed(top) ? 'red' : 'black');
+        face.innerHTML = '<div class="rank">' + top.rank + '</div><div class="suit">' + top.suit + '</div>';
+        wastePile.innerHTML = '';
+        wastePile.appendChild(face);
+      }
+      // Update stock appearance
+      if (stock.length === 0) {
+        stockPile.className = 'stock-card empty';
+        stockPile.textContent = '';
+      } else {
+        stockPile.className = 'stock-card';
+        stockPile.textContent = '▮▮▮';
+      }
+    }
+
+    function updateInfo() {
+      scoreEl.textContent = score;
+      removedEl.textContent = removedCount;
+      stockCountEl.textContent = stock.length;
+      undoBtn.disabled = undoStack.length === 0;
+    }
+
+    function clearSelection() {
+      selected = null;
+      // Remove selected class from all
+      document.querySelectorAll('.card-slot.selected').forEach(el => el.classList.remove('selected'));
+      wastePile.classList.remove('selected');
+    }
+
+    // --- Interactions ---
+    function onPyramidClick(idx) {
+      if (gameOver) return;
+      if (!isExposed(idx)) return;
+
+      const p = pyramid[idx];
+
+      // King: remove alone
+      if (p.card.value === 13) {
+        pushUndo();
+        removePyramidCard(idx);
+        addScore(13);
+        clearSelection();
+        checkWin();
+        return;
+      }
+
+      if (selected === null) {
+        // Select this card
+        selected = {type: 'pyramid', index: idx};
+        p.el.classList.add('selected');
+        return;
+      }
+
+      if (selected.type === 'pyramid' && selected.index === idx) {
+        // Deselect
+        clearSelection();
+        return;
+      }
+
+      // Try to pair
+      let otherValue;
+      if (selected.type === 'pyramid') {
+        otherValue = pyramid[selected.index].card.value;
+      } else {
+        otherValue = waste[waste.length - 1].value;
+      }
+
+      if (p.card.value + otherValue === 13) {
+        pushUndo();
+        if (selected.type === 'pyramid') {
+          removePyramidCard(selected.index);
+        } else {
+          removeWasteCard();
+        }
+        removePyramidCard(idx);
+        addScore(13);
+        clearSelection();
+        checkWin();
+      } else {
+        // Switch selection to this card
+        clearSelection();
+        selected = {type: 'pyramid', index: idx};
+        p.el.classList.add('selected');
+      }
+    }
+
+    wastePile.addEventListener('click', () => {
+      if (gameOver) return;
+      if (waste.length === 0) return;
+
+      const top = waste[waste.length - 1];
+
+      // King: remove alone
+      if (top.value === 13) {
+        pushUndo();
+        removeWasteCard();
+        addScore(13);
+        clearSelection();
+        return;
+      }
+
+      if (selected === null) {
+        selected = {type: 'waste', index: waste.length - 1};
+        wastePile.classList.add('selected');
+        return;
+      }
+
+      if (selected.type === 'waste') {
+        // Deselect
+        clearSelection();
+        return;
+      }
+
+      // selected is pyramid, try to pair
+      const pVal = pyramid[selected.index].card.value;
+      if (pVal + top.value === 13) {
+        pushUndo();
+        removePyramidCard(selected.index);
+        removeWasteCard();
+        addScore(13);
+        clearSelection();
+        checkWin();
+      } else {
+        // Switch to waste
+        clearSelection();
+        selected = {type: 'waste', index: waste.length - 1};
+        wastePile.classList.add('selected');
+      }
+    });
+
+    stockPile.addEventListener('click', () => {
+      if (gameOver) return;
+      if (stock.length === 0) return;
+      pushUndo();
+      clearSelection();
+      waste.push(stock.pop());
+      renderWaste();
+      updateInfo();
+      checkStuck();
+    });
+
+    // --- Remove helpers ---
+    function removePyramidCard(idx) {
+      pyramid[idx].removed = true;
+      removedCount++;
+      refreshPyramidClasses();
+      renderWaste();
+      updateInfo();
+    }
+
+    function removeWasteCard() {
+      waste.pop();
+      renderWaste();
+      updateInfo();
+    }
+
+    function addScore(pts) {
+      score += pts;
+      updateInfo();
+    }
+
+    function refreshPyramidClasses() {
+      for (let i = 0; i < pyramid.length; i++) {
+        const p = pyramid[i];
+        if (!p.el) continue;
+        p.el.className = 'card-slot';
+        if (p.removed) {
+          p.el.classList.add('removed');
+        } else if (!isExposed(i)) {
+          p.el.classList.add('covered');
+        } else {
+          p.el.classList.add('exposed');
+        }
+      }
+    }
+
+    // --- Undo ---
+    function pushUndo() {
+      undoStack.push({
+        pyramidRemoved: pyramid.map(p => p.removed),
+        stock: stock.slice(),
+        waste: waste.slice(),
+        score,
+        removedCount
+      });
+      if (undoStack.length > 50) undoStack.shift();
+    }
+
+    undoBtn.addEventListener('click', () => {
+      if (undoStack.length === 0) return;
+      const state = undoStack.pop();
+      for (let i = 0; i < pyramid.length; i++) pyramid[i].removed = state.pyramidRemoved[i];
+      stock = state.stock;
+      waste = state.waste;
+      score = state.score;
+      removedCount = state.removedCount;
+      gameOver = false;
+      clearSelection();
+      refreshPyramidClasses();
+      renderWaste();
+      updateInfo();
+      overlay.classList.remove('show');
+    });
+
+    // --- Win/Lose ---
+    function checkWin() {
+      if (removedCount === 28) {
+        // Bonus for clearing
+        score += 50;
+        updateInfo();
+        showOverlay(true);
+      }
+    }
+
+    function checkStuck() {
+      // Check if any moves remain
+      if (hasMoves()) return;
+      // No moves and no stock = stuck
+      if (stock.length === 0) {
+        showOverlay(false);
+      }
+    }
+
+    function hasMoves() {
+      // Collect all exposed pyramid values
+      const exposed = [];
+      for (let i = 0; i < pyramid.length; i++) {
+        if (!pyramid[i].removed && isExposed(i)) {
+          exposed.push({value: pyramid[i].card.value, index: i});
+        }
+      }
+
+      // Check kings
+      for (const e of exposed) {
+        if (e.value === 13) return true;
+      }
+      if (waste.length > 0 && waste[waste.length - 1].value === 13) return true;
+
+      // Check pairs among exposed
+      for (let i = 0; i < exposed.length; i++) {
+        for (let j = i + 1; j < exposed.length; j++) {
+          if (exposed[i].value + exposed[j].value === 13) return true;
+        }
+      }
+
+      // Check exposed + waste top
+      if (waste.length > 0) {
+        const wv = waste[waste.length - 1].value;
+        for (const e of exposed) {
+          if (e.value + wv === 13) return true;
+        }
+      }
+
+      // Can still draw
+      if (stock.length > 0) return true;
+
+      return false;
+    }
+
+    function showOverlay(win) {
+      gameOver = true;
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem('zero-pyramid-best', bestScore);
+      }
+      overlayTitle.textContent = win ? 'PYRAMID CLEARED' : 'NO MOVES LEFT';
+      overlayTitle.className = 'overlay-title ' + (win ? 'win' : 'lose');
+      overlayScore.textContent = score;
+      overlayRemoved.textContent = removedCount + ' / 28';
+      overlayBest.textContent = bestScore;
+      overlay.classList.add('show');
+    }
+
+    overlayBtn.addEventListener('click', initGame);
+    newBtn.addEventListener('click', initGame);
+
+    // Handle resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(renderPyramid, 150);
+    });
+
+    // Start
+    initGame();
+  })();
+  </script>
+</body>
+</html>

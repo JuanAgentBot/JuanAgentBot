@@ -20,6 +20,8 @@
       margin: 0 auto;
       padding: 2rem 1rem 4rem;
       text-align: center;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .back {
@@ -53,7 +55,8 @@
     .info-bar {
       display: flex;
       justify-content: center;
-      gap: 2rem;
+      gap: 1rem 2rem;
+      flex-wrap: wrap;
       margin-bottom: 1rem;
       font-size: 0.75rem;
       letter-spacing: 0.06em;
@@ -70,11 +73,10 @@
 
     .card-slot {
       position: absolute;
-      width: 52px;
-      height: 72px;
       cursor: pointer;
       transition: transform 0.15s, box-shadow 0.15s;
       user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .card-slot.removed {
@@ -146,6 +148,7 @@
       cursor: pointer;
       transition: transform 0.15s, box-shadow 0.15s;
       user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .stock-card {
@@ -254,9 +257,10 @@
     .overlay-box {
       border: 1px solid var(--border);
       background: var(--bg-primary);
-      padding: 2.5rem 3rem;
+      padding: 2.5rem clamp(1.5rem, 5vw, 3rem);
       text-align: center;
       max-width: 360px;
+      margin: 1rem;
     }
     .overlay-title {
       font-size: 1.4rem;
@@ -303,11 +307,8 @@
     .pairs-ref span { color: var(--accent-green); }
 
     @media (max-width: 480px) {
-      .card-slot { width: 38px; height: 54px; }
-      .card-face .rank { font-size: 0.75rem; }
-      .card-face .suit { font-size: 0.6rem; }
-      .stock-card, .waste-card { width: 48px; height: 66px; }
       h1 { font-size: 1.2rem; }
+      .stock-area { gap: 1rem; }
     }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
@@ -466,20 +467,24 @@
     function renderPyramid() {
       pyramidArea.innerHTML = '';
 
-      // Responsive sizing
-      const containerWidth = pyramidArea.offsetWidth || 680;
-      const isMobile = window.innerWidth <= 480;
-      const cardW = isMobile ? 38 : 52;
-      const cardH = isMobile ? 54 : 72;
-      const gapX = isMobile ? 4 : 6;
-      const gapY = isMobile ? 6 : 8;
-
-      // Calculate positions: center each row
-      const maxCols = 7;
-      const totalRowWidth = maxCols * cardW + (maxCols - 1) * gapX;
-      const startX = (containerWidth - totalRowWidth) / 2;
+      // Responsive sizing – compute card dimensions from available space
+      const containerWidth = pyramidArea.offsetWidth || Math.min(680, window.innerWidth - 32);
+      const gapX = containerWidth <= 400 ? 3 : 6;
+      const gapY = containerWidth <= 400 ? 4 : 8;
+      const cardW = Math.min(52, Math.floor((containerWidth - 6 * gapX) / 7));
+      const cardH = Math.round(cardW * 72 / 52);
+      const scale = cardW / 52;
       const totalHeight = 7 * cardH + 6 * gapY;
       pyramidArea.style.height = totalHeight + 'px';
+
+      // Scale stock/waste cards to match
+      const stockW = Math.min(58, cardW + 6);
+      const stockH = Math.round(stockW * 80 / 58);
+      stockPile.style.width = stockW + 'px';
+      stockPile.style.height = stockH + 'px';
+      wastePile.style.width = stockW + 'px';
+      wastePile.style.height = stockH + 'px';
+      stockPile.style.fontSize = Math.max(0.8, scale * 1.2).toFixed(2) + 'rem';
 
       for (let i = 0; i < pyramid.length; i++) {
         const p = pyramid[i];
@@ -506,7 +511,7 @@
 
         const face = document.createElement('div');
         face.className = 'card-face ' + (isRed(p.card) ? 'red' : 'black');
-        face.innerHTML = '<div class="rank">' + p.card.rank + '</div><div class="suit">' + p.card.suit + '</div>';
+        face.innerHTML = '<div class="rank" style="font-size:' + Math.max(0.7, scale).toFixed(2) + 'rem">' + p.card.rank + '</div><div class="suit" style="font-size:' + Math.max(0.5, scale * 0.75).toFixed(2) + 'rem">' + p.card.suit + '</div>';
         el.appendChild(face);
 
         el.addEventListener('click', () => onPyramidClick(i));

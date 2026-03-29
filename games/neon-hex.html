@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON HEX / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 580px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+    .back:hover { color: var(--accent-cyan); }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto 1rem;
+      border: 1px solid var(--border);
+      max-width: 100%;
+    }
+    .hud {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1rem;
+      font-size: 0.8rem;
+    }
+    .hud-label { color: var(--text-dim); font-size: 0.65rem; letter-spacing: 0.08em; }
+    .hud-val { color: var(--accent-cyan); font-weight: 700; font-size: 1.1rem; }
+    .hud-val.best { color: var(--accent-green); }
+    .msg {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      min-height: 1.2em;
+      margin-bottom: 0.8rem;
+    }
+    .controls {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      line-height: 1.8;
+    }
+    .controls span { color: var(--accent-cyan); }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>NEON HEX</h1>
+    <p class="subtitle">SURVIVE THE CLOSING WALLS</p>
+
+    <canvas id="c" width="500" height="500"></canvas>
+
+    <div class="hud">
+      <div><div class="hud-label">TIME</div><div class="hud-val" id="time">0.00</div></div>
+      <div><div class="hud-label">BEST</div><div class="hud-val best" id="best">0.00</div></div>
+      <div><div class="hud-label">LEVEL</div><div class="hud-val" id="level">1</div></div>
+    </div>
+
+    <div class="msg" id="msg">PRESS SPACE OR TAP TO START</div>
+
+    <div class="controls">
+      <span>← →</span> or <span>A D</span> ROTATE &nbsp;|&nbsp; <span>SPACE</span> START / RESTART
+    </div>
+  </main>
+
+<script>
+(function() {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const timeEl = document.getElementById('time');
+  const bestEl = document.getElementById('best');
+  const levelEl = document.getElementById('level');
+  const msgEl = document.getElementById('msg');
+
+  // Colors
+  const VOID = '#0a0a0f';
+  const MAGENTA = '#ff2d7b';
+  const CYAN = '#00f0ff';
+  const GREEN = '#39ff14';
+  const PURPLE = '#9d4edd';
+  const WHITE = '#e0e0e8';
+  const GRAY = '#7a7a90';
+
+  const WALL_COLORS = [MAGENTA, CYAN, GREEN, PURPLE];
+
+  // Game state
+  const CX = 250, CY = 250;
+  const CENTER_R = 36;
+  const PLAYER_R = 44;
+  const PLAYER_SIZE = 8;
+  const SIDES = 6;
+  const SECTOR = Math.PI * 2 / SIDES;
+
+  let state = 'idle'; // idle, playing, dead
+  let playerAngle = 0;
+  let playerSpeed = 4.5; // radians per second
+  let walls = [];
+  let worldRotation = 0;
+  let worldRotationSpeed = 0.4;
+  let elapsed = 0;
+  let bestTime = parseFloat(localStorage.getItem('zero-hex-best') || '0');
+  let lastFrame = 0;
+  let spawnTimer = 0;
+  let spawnInterval = 1.8;
+  let wallSpeed = 120;
+  let level = 1;
+  let inputLeft = false;
+  let inputRight = false;
+  let flashTimer = 0;
+  let bgPulse = 0;
+
+  bestEl.textContent = bestTime.toFixed(2);
+
+  function spawnWall() {
+    // Create a wall ring with one or two gaps
+    const gapCount = level >= 4 ? (Math.random() < 0.3 ? 2 : 1) : 1;
+    const segments = [];
+    const gapSectors = new Set();
+
+    for (let i = 0; i < gapCount; i++) {
+      let s;
+      do { s = Math.floor(Math.random() * SIDES); } while (gapSectors.has(s));
+      gapSectors.add(s);
+    }
+
+    // Gap width in radians (narrows with level)
+    const gapWidth = Math.max(SECTOR * 0.45, SECTOR * 0.7 - level * 0.03);
+
+    for (let i = 0; i < SIDES; i++) {
+      if (gapSectors.has(i)) continue;
+      const startAngle = i * SECTOR;
+      segments.push({
+        startAngle: startAngle,
+        endAngle: startAngle + SECTOR,
+        color: WALL_COLORS[Math.floor(Math.random() * WALL_COLORS.length)]
+      });
+    }
+
+    // For gap sectors, add thinner segments on edges to create the gap
+    for (const g of gapSectors) {
+      const baseAngle = g * SECTOR;
+      const edgeWidth = (SECTOR - gapWidth) / 2;
+      if (edgeWidth > 0.02) {
+        segments.push({
+          startAngle: baseAngle,
+          endAngle: baseAngle + edgeWidth,
+          color: WALL_COLORS[Math.floor(Math.random() * WALL_COLORS.length)]
+        });
+        segments.push({
+          startAngle: baseAngle + SECTOR - edgeWidth,
+          endAngle: baseAngle + SECTOR,
+          color: WALL_COLORS[Math.floor(Math.random() * WALL_COLORS.length)]
+        });
+      }
+    }
+
+    walls.push({
+      radius: 320,
+      thickness: 16 + Math.random() * 8,
+      segments: segments
+    });
+  }
+
+  function resetGame() {
+    playerAngle = -Math.PI / 2;
+    walls = [];
+    worldRotation = 0;
+    elapsed = 0;
+    spawnTimer = 0;
+    spawnInterval = 1.8;
+    wallSpeed = 120;
+    level = 1;
+    flashTimer = 0;
+    worldRotationSpeed = 0.4;
+    levelEl.textContent = '1';
+    state = 'playing';
+    msgEl.textContent = '';
+    lastFrame = performance.now();
+  }
+
+  function update(dt) {
+    if (state !== 'playing') return;
+
+    elapsed += dt;
+    bgPulse += dt;
+
+    // Player rotation
+    if (inputLeft) playerAngle -= playerSpeed * dt;
+    if (inputRight) playerAngle += playerSpeed * dt;
+
+    // World rotation
+    worldRotation += worldRotationSpeed * dt;
+
+    // Difficulty scaling
+    const newLevel = Math.floor(elapsed / 10) + 1;
+    if (newLevel !== level) {
+      level = newLevel;
+      levelEl.textContent = level;
+      wallSpeed = 120 + level * 15;
+      spawnInterval = Math.max(0.6, 1.8 - level * 0.12);
+      worldRotationSpeed = 0.4 + level * 0.15;
+      // Reverse rotation direction sometimes
+      if (level % 3 === 0) worldRotationSpeed *= -1;
+    }
+
+    // Spawn walls
+    spawnTimer += dt;
+    if (spawnTimer >= spawnInterval) {
+      spawnTimer -= spawnInterval;
+      spawnWall();
+    }
+
+    // Move walls inward
+    for (let i = walls.length - 1; i >= 0; i--) {
+      walls[i].radius -= wallSpeed * dt;
+      if (walls[i].radius + walls[i].thickness < CENTER_R - 5) {
+        walls.splice(i, 1);
+      }
+    }
+
+    // Collision detection
+    const pAngle = normalizeAngle(playerAngle + worldRotation);
+    for (const wall of walls) {
+      const innerR = wall.radius;
+      const outerR = wall.radius + wall.thickness;
+      if (PLAYER_R >= innerR && PLAYER_R <= outerR) {
+        // Player is at this wall's radius - check if in a segment
+        for (const seg of wall.segments) {
+          const segStart = normalizeAngle(seg.startAngle);
+          const segEnd = normalizeAngle(seg.endAngle);
+          if (angleInRange(pAngle, segStart, seg.endAngle - seg.startAngle)) {
+            // Collision!
+            die();
+            return;
+          }
+        }
+      }
+    }
+
+    timeEl.textContent = elapsed.toFixed(2);
+
+    if (flashTimer > 0) flashTimer -= dt;
+  }
+
+  function die() {
+    state = 'dead';
+    flashTimer = 0.5;
+    if (elapsed > bestTime) {
+      bestTime = elapsed;
+      localStorage.setItem('zero-hex-best', bestTime.toFixed(2));
+      bestEl.textContent = bestTime.toFixed(2);
+      msgEl.textContent = 'NEW BEST! PRESS SPACE TO RETRY';
+    } else {
+      msgEl.textContent = 'PRESS SPACE OR TAP TO RETRY';
+    }
+  }
+
+  function normalizeAngle(a) {
+    a = a % (Math.PI * 2);
+    if (a < 0) a += Math.PI * 2;
+    return a;
+  }
+
+  function angleInRange(angle, start, span) {
+    // Check if angle is within [start, start+span]
+    let diff = normalizeAngle(angle - start);
+    return diff <= span + 0.01;
+  }
+
+  function draw() {
+    const isDark = !document.documentElement.getAttribute('data-theme') ||
+                   document.documentElement.getAttribute('data-theme') !== 'light';
+    const bg = isDark ? VOID : '#f0eff5';
+    const textColor = isDark ? WHITE : '#18182a';
+    const dimColor = isDark ? GRAY : '#6e6e85';
+
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 500, 500);
+
+    ctx.save();
+    ctx.translate(CX, CY);
+
+    // Background hexagonal grid (subtle)
+    drawBgGrid(isDark);
+
+    // Apply world rotation for walls
+    ctx.save();
+    ctx.rotate(worldRotation);
+
+    // Draw walls
+    for (const wall of walls) {
+      for (const seg of wall.segments) {
+        ctx.beginPath();
+        ctx.arc(0, 0, wall.radius + wall.thickness, seg.startAngle, seg.endAngle);
+        ctx.arc(0, 0, wall.radius, seg.endAngle, seg.startAngle, true);
+        ctx.closePath();
+        ctx.fillStyle = seg.color;
+        ctx.globalAlpha = 0.85;
+        ctx.fill();
+
+        // Glow
+        ctx.shadowColor = seg.color;
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    ctx.restore(); // un-rotate for center and player
+
+    // Center hexagon
+    drawHexagon(0, 0, CENTER_R, isDark ? '#121218' : '#e4e3ec', isDark ? MAGENTA : '#cc1166', 2);
+
+    // Player
+    const px = Math.cos(playerAngle) * PLAYER_R;
+    const py = Math.sin(playerAngle) * PLAYER_R;
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(playerAngle + Math.PI / 2);
+    ctx.beginPath();
+    ctx.moveTo(0, -PLAYER_SIZE);
+    ctx.lineTo(-PLAYER_SIZE * 0.7, PLAYER_SIZE * 0.5);
+    ctx.lineTo(PLAYER_SIZE * 0.7, PLAYER_SIZE * 0.5);
+    ctx.closePath();
+    ctx.fillStyle = CYAN;
+    ctx.shadowColor = CYAN;
+    ctx.shadowBlur = 15;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    ctx.restore();
+
+    // Death flash
+    if (flashTimer > 0) {
+      ctx.fillStyle = 'rgba(255, 45, 123, ' + (flashTimer * 0.6) + ')';
+      ctx.fillRect(0, 0, 500, 500);
+    }
+
+    // Idle state overlay
+    if (state === 'idle') {
+      ctx.fillStyle = isDark ? 'rgba(10, 10, 15, 0.6)' : 'rgba(240, 239, 245, 0.6)';
+      ctx.fillRect(0, 0, 500, 500);
+      ctx.font = '800 24px "JetBrains Mono"';
+      ctx.fillStyle = MAGENTA;
+      ctx.textAlign = 'center';
+      ctx.shadowColor = MAGENTA;
+      ctx.shadowBlur = 20;
+      ctx.fillText('NEON HEX', CX, CY - 20);
+      ctx.shadowBlur = 0;
+      ctx.font = '400 12px "JetBrains Mono"';
+      ctx.fillStyle = dimColor;
+      ctx.fillText('PRESS SPACE OR TAP', CX, CY + 15);
+    }
+  }
+
+  function drawHexagon(x, y, r, fill, stroke, lineWidth) {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = i * SECTOR - Math.PI / 2;
+      const px = x + Math.cos(a) * r;
+      const py = y + Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) {
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = lineWidth || 1;
+      ctx.shadowColor = stroke;
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  function drawBgGrid(isDark) {
+    ctx.globalAlpha = isDark ? 0.06 : 0.08;
+    ctx.strokeStyle = isDark ? CYAN : '#00717f';
+    ctx.lineWidth = 0.5;
+    for (let ring = 1; ring <= 5; ring++) {
+      const r = ring * 60;
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = i * SECTOR - Math.PI / 2 + worldRotation * 0.3;
+        const px = Math.cos(a) * r;
+        const py = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function loop(now) {
+    const dt = Math.min((now - lastFrame) / 1000, 0.05);
+    lastFrame = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Input
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { inputLeft = true; e.preventDefault(); }
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { inputRight = true; e.preventDefault(); }
+    if (e.key === ' ') {
+      e.preventDefault();
+      if (state !== 'playing') resetGame();
+    }
+  });
+  document.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') inputLeft = false;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') inputRight = false;
+  });
+
+  // Touch support
+  let touchStartX = 0;
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (state !== 'playing') { resetGame(); return; }
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    if (x < rect.width / 2) { inputLeft = true; inputRight = false; }
+    else { inputRight = true; inputLeft = false; }
+  });
+  canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    inputLeft = false;
+    inputRight = false;
+  });
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    if (x < rect.width / 2) { inputLeft = true; inputRight = false; }
+    else { inputRight = true; inputLeft = false; }
+  });
+
+  // Click to start on canvas
+  canvas.addEventListener('click', () => {
+    if (state !== 'playing') resetGame();
+  });
+
+  // Initial draw
+  lastFrame = performance.now();
+  draw();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

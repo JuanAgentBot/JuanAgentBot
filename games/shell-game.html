@@ -18,6 +18,7 @@
       margin: 0 auto;
       padding: 2rem 1.5rem 4rem;
       text-align: center;
+      touch-action: manipulation;
     }
 
     .back {
@@ -56,19 +57,19 @@
       width: 100%;
       height: 320px;
       margin: 0 auto 1.5rem;
+      touch-action: manipulation;
     }
 
     .cup {
       position: absolute;
-      width: 80px;
       cursor: pointer;
       transition: none;
       user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
     .cup-body {
-      width: 80px;
-      height: 100px;
       position: relative;
     }
 
@@ -77,22 +78,15 @@
       height: 100%;
     }
 
-    .cup.lifted .cup-body {
-      transform: translateY(-60px);
-    }
-
     .cup.clickable:hover .cup-body svg .cup-shape {
       filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.5));
     }
 
     .ball {
-      width: 24px;
-      height: 24px;
       border-radius: 50%;
       background: var(--accent-green);
       box-shadow: 0 0 12px rgba(57, 255, 20, 0.6), 0 0 4px rgba(57, 255, 20, 0.3);
       position: absolute;
-      bottom: 16px;
       left: 50%;
       transform: translateX(-50%);
       opacity: 0;
@@ -228,6 +222,15 @@
       text-shadow: 0 0 30px var(--glow-magenta);
     }
 
+    @media (max-width: 480px) {
+      h1 { font-size: 1.3rem; }
+      .stats { gap: 1rem; font-size: 0.65rem; }
+      #message { font-size: 0.8rem; }
+      .controls { font-size: 0.6rem; }
+      #start-btn { padding: 0.7rem 2.5rem; font-size: 0.85rem; min-height: 44px; }
+      .result-flash { font-size: 2.2rem; }
+    }
+
     @keyframes flashIn {
       0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
       30% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
@@ -258,7 +261,7 @@
     <button id="start-btn">START</button>
 
     <div class="controls">
-      CLICK THE CUP HIDING THE BALL<br>
+      TAP THE CUP HIDING THE BALL<br>
       DIFFICULTY ESCALATES EACH ROUND: MORE CUPS, FASTER SHUFFLES<br>
       STREAK MULTIPLIER: x1 &rarr; x2 &rarr; x3...
     </div>
@@ -284,7 +287,28 @@
     let shuffling = false;
     let canPick = false;
 
+    // Responsive cup sizing
+    let cupW = 80;
+    let cupH = 100;
+    let ballSize = 24;
+    let liftOffset = 60;
+    let arcHeight = 40;
+
     bestEl.textContent = best;
+
+    function calcSizes() {
+      const areaWidth = gameArea.offsetWidth;
+      const count = getCupCount();
+      // Leave 10px gap between cups minimum, and 10px padding each side
+      const maxCupW = Math.floor((areaWidth - 20 - (count - 1) * 10) / count);
+      cupW = Math.min(80, Math.max(48, maxCupW));
+      cupH = Math.round(cupW * 1.25);
+      ballSize = Math.round(cupW * 0.3);
+      liftOffset = Math.round(cupH * 0.6);
+      arcHeight = Math.round(cupH * 0.4);
+      // Adjust game area height
+      gameArea.style.height = (cupH + liftOffset + 100) + 'px';
+    }
 
     function getCupCount() {
       if (round <= 2) return 3;
@@ -338,25 +362,31 @@
       cups = [];
       cupPositions = [];
 
+      calcSizes();
       const count = getCupCount();
       const areaWidth = gameArea.offsetWidth;
-      const cupWidth = 80;
-      const spacing = Math.min(120, (areaWidth - cupWidth) / (count - 1));
-      const totalWidth = (count - 1) * spacing + cupWidth;
+      const spacing = Math.min(cupW * 1.5, (areaWidth - cupW) / (count - 1));
+      const totalWidth = (count - 1) * spacing + cupW;
       const startX = (areaWidth - totalWidth) / 2;
 
       for (let i = 0; i < count; i++) {
         const cup = document.createElement('div');
         cup.className = 'cup';
-        cup.innerHTML = `<div class="cup-body">${createCupSVG()}</div><div class="ball"></div>`;
+        cup.style.width = cupW + 'px';
+        cup.innerHTML = `<div class="cup-body" style="width:${cupW}px;height:${cupH}px">${createCupSVG()}</div><div class="ball" style="width:${ballSize}px;height:${ballSize}px;bottom:${Math.round(cupH * 0.16)}px"></div>`;
 
         const x = startX + i * spacing;
-        const y = 120;
+        const y = liftOffset + 20;
         cup.style.left = x + 'px';
         cup.style.top = y + 'px';
         cupPositions.push({ x, y });
 
         cup.addEventListener('click', () => pickCup(i));
+        // Touch support: fire on touchend to avoid delay
+        cup.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          pickCup(i);
+        });
         gameArea.appendChild(cup);
         cups.push(cup);
       }
@@ -374,16 +404,18 @@
 
     function liftCup(index) {
       return new Promise(resolve => {
-        cups[index].classList.add('lifted');
-        cups[index].querySelector('.cup-body').style.transition = 'transform 0.3s ease-out';
+        const body = cups[index].querySelector('.cup-body');
+        body.style.transition = 'transform 0.3s ease-out';
+        body.style.transform = `translateY(-${liftOffset}px)`;
         setTimeout(resolve, 350);
       });
     }
 
     function lowerCup(index) {
       return new Promise(resolve => {
-        cups[index].querySelector('.cup-body').style.transition = 'transform 0.3s ease-in';
-        cups[index].classList.remove('lifted');
+        const body = cups[index].querySelector('.cup-body');
+        body.style.transition = 'transform 0.3s ease-in';
+        body.style.transform = 'translateY(0)';
         setTimeout(resolve, 350);
       });
     }
@@ -412,7 +444,7 @@
           const curBx = posB.x + (posA.x - posB.x) * ease;
 
           // Arc: cups pass over each other
-          const arc = Math.sin(t * Math.PI) * 40;
+          const arc = Math.sin(t * Math.PI) * arcHeight;
           const curAy = posA.y - arc;
           const curBy = posB.y + arc * 0.3;
 
@@ -544,7 +576,7 @@
         // Game over
         streak = 0;
         streakEl.textContent = 0;
-        msgEl.textContent = `GAME OVER. Score: ${score}. Click START to play again.`;
+        msgEl.textContent = `GAME OVER. Score: ${score}. Tap START to play again.`;
         msgEl.className = 'wrong';
         score = 0;
         round = 0;

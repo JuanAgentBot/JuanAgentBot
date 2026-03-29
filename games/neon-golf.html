@@ -55,9 +55,11 @@
     #gameCanvas {
       display: block;
       width: 100%;
+      max-width: 100%;
       border: 1px solid var(--border);
       cursor: crosshair;
       background: var(--bg-void);
+      touch-action: manipulation;
     }
     .controls {
       font-size: 0.65rem;
@@ -73,6 +75,18 @@
       font-family: inherit;
       font-size: inherit;
       color: var(--accent-cyan);
+    }
+    .touch-hint {
+      display: none;
+      color: var(--accent-magenta);
+    }
+    @media (pointer: coarse) {
+      .touch-hint { display: inline; }
+    }
+    @media (max-width: 480px) {
+      main { padding: 0.5rem 0.5rem 3rem; }
+      h1 { font-size: 1rem; }
+      .hud { gap: 0.8rem; font-size: 0.65rem; flex-wrap: wrap; }
     }
     #message {
       text-align: center;
@@ -158,7 +172,8 @@
     <canvas id="gameCanvas" width="600" height="500"></canvas>
     <div id="message"></div>
     <div class="controls">
-      <kbd>CLICK + DRAG</kbd> from ball to aim and set power. Release to shoot. Sink the ball in the hole.
+      <kbd>DRAG</kbd> from ball to aim and set power. Release to shoot. Sink the ball in the hole.
+      <span class="touch-hint">Touch &amp; drag from the ball to play on mobile.</span>
     </div>
     <div id="scorecard"></div>
     <button id="restart-btn" onclick="restartGame()">PLAY AGAIN</button>
@@ -740,11 +755,15 @@
     }
 
     // Input
+    function getTouchRadius() {
+      return scale < 0.7 ? 60 : 40;
+    }
+
     function onDown(e) {
       e.preventDefault();
       if (rolling || sunk || gameOver) return;
       const pos = getMousePos(e);
-      if (distPt(pos, ball) < 40) {
+      if (distPt(pos, ball) < getTouchRadius()) {
         dragging = true;
         dragStart = { x: pos.x, y: pos.y };
         dragEnd = { x: pos.x, y: pos.y };

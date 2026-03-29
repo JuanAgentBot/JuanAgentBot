@@ -18,6 +18,8 @@
       margin: 0 auto;
       padding: 2rem 1.5rem 4rem;
       text-align: center;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .back {
@@ -90,8 +92,8 @@
     }
 
     .card-slot {
-      width: 130px;
-      height: 190px;
+      width: min(130px, 28vw);
+      height: min(190px, 41vw);
       border: 2px solid var(--border);
       display: flex;
       flex-direction: column;
@@ -312,6 +314,34 @@
       color: var(--text-muted);
     }
 
+    /* New round button */
+    .btn-newround {
+      display: none;
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .btn-newround:hover:not(:disabled) {
+      box-shadow: 0 0 15px var(--glow-cyan-soft);
+      background: rgba(0,240,255,0.08);
+    }
+
+    .btn-newround.visible { display: inline-block; }
+
+    /* Mobile responsive */
+    @media (max-width: 480px) {
+      h1 { font-size: 1.3rem; }
+      .cards-area { gap: 0.8rem; min-height: 150px; }
+      .card-rank { font-size: 2.2rem; }
+      .card-suit { font-size: 1.2rem; }
+      .card-corner { font-size: 0.6rem; }
+      .face-down-pattern { font-size: 1.8rem; }
+      .arrow { font-size: 1.4rem; }
+      .score-bar { gap: 1.5rem; }
+      .btn { padding: 0.9rem 1.4rem; font-size: 0.8rem; min-width: 100px; min-height: 44px; }
+      .history-card { width: 28px; height: 38px; font-size: 0.5rem; }
+    }
+
     /* Card flip animation */
     @keyframes flip-in {
       0% { transform: scaleX(0); }
@@ -370,6 +400,7 @@
       <button class="btn btn-higher" id="btn-higher" onclick="guess('higher')">&#9650; HIGHER</button>
       <button class="btn btn-cashout" id="btn-cashout" onclick="cashOut()" disabled>CASH OUT</button>
       <button class="btn btn-lower" id="btn-lower" onclick="guess('lower')">&#9660; LOWER</button>
+      <button class="btn btn-newround" id="btn-newround" onclick="newRound()">&#9654; NEW ROUND</button>
     </div>
 
     <div class="history" id="history-section" style="display:none">
@@ -415,6 +446,7 @@
       var elBtnHigher = document.getElementById('btn-higher');
       var elBtnLower = document.getElementById('btn-lower');
       var elBtnCashout = document.getElementById('btn-cashout');
+      var elBtnNewround = document.getElementById('btn-newround');
       var elHistorySection = document.getElementById('history-section');
       var elHistoryCards = document.getElementById('history-cards');
 
@@ -506,6 +538,14 @@
         elBtnHigher.disabled = !enabled;
         elBtnLower.disabled = !enabled;
         elBtnCashout.disabled = !enabled || streak === 0;
+        elBtnNewround.classList.remove('visible');
+      }
+
+      function showNewRound() {
+        elBtnHigher.disabled = true;
+        elBtnLower.disabled = true;
+        elBtnCashout.disabled = true;
+        elBtnNewround.classList.add('visible');
       }
 
       function startRound() {
@@ -593,12 +633,17 @@
           updateMultiplier();
           setButtons(false);
 
-          // Show restart hint
+          // Show new round button
           setTimeout(function() {
-            elMessage.innerHTML = 'WRONG! PRESS <kbd style="border:1px solid var(--border);padding:0.1em 0.4em;font-family:inherit">SPACE</kbd> FOR NEW ROUND';
+            elMessage.textContent = 'WRONG! TAP NEW ROUND TO CONTINUE';
             elMessage.className = 'message lose';
+            showNewRound();
           }, 1200);
         }
+      };
+
+      window.newRound = function() {
+        if (gameOver) startRound();
       };
 
       window.cashOut = function() {

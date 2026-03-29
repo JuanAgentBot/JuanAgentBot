@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON FLOW / ZERO game lab</title>
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      text-align: center;
+    }
+    .back {
+      display: inline-block;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      width: 100%;
+    }
+    .back:hover { color: var(--accent-cyan); }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent-magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 20px var(--glow-magenta);
+    }
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+    .controls-bar {
+      display: flex;
+      justify-content: center;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .controls-bar button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.4rem 0.8rem;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: all 0.2s;
+    }
+    .controls-bar button:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+    .controls-bar button.active {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+      text-shadow: 0 0 8px var(--glow-magenta);
+    }
+    #status {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-bottom: 0.8rem;
+      letter-spacing: 0.06em;
+      min-height: 1.2em;
+    }
+    #status.win {
+      color: var(--accent-green);
+      text-shadow: 0 0 10px rgba(57,255,20,0.4);
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      cursor: crosshair;
+      image-rendering: auto;
+    }
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-top: 1rem;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+    }
+    .stats span { color: var(--accent-cyan); }
+    .instructions {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      margin-top: 1.5rem;
+      line-height: 1.7;
+      letter-spacing: 0.04em;
+    }
+    .instructions kbd {
+      border: 1px solid var(--border);
+      padding: 0.1rem 0.35rem;
+      font-size: 0.6rem;
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <main>
+    <a href="./" class="back">&lt; GAME LAB</a>
+    <h1>NEON FLOW</h1>
+    <p class="subtitle">CONNECT MATCHING DOTS &middot; FILL THE GRID</p>
+
+    <div class="controls-bar">
+      <button onclick="setSize(5)" id="btn5">5x5</button>
+      <button onclick="setSize(6)" id="btn6">6x6</button>
+      <button onclick="setSize(7)" id="btn7" class="active">7x7</button>
+      <button onclick="setSize(8)" id="btn8">8x8</button>
+      <button onclick="setSize(9)" id="btn9">9x9</button>
+      <button onclick="newPuzzle()" id="btnNew">NEW</button>
+      <button onclick="clearAll()" id="btnClear">CLEAR</button>
+    </div>
+
+    <div id="status">DRAW PATHS BETWEEN MATCHING DOTS</div>
+
+    <canvas id="game"></canvas>
+
+    <div class="stats">
+      <div>FLOWS <span id="flowCount">0</span>/<span id="flowTotal">0</span></div>
+      <div>FILLED <span id="fillPct">0</span>%</div>
+      <div>MOVES <span id="moveCount">0</span></div>
+      <div>PUZZLE <span id="puzzleNum">1</span></div>
+    </div>
+
+    <p class="instructions">
+      CLICK A DOT AND DRAG TO DRAW A PATH TO ITS MATCH<br>
+      PATHS CANNOT CROSS OR OVERLAP<br>
+      FILL EVERY CELL TO SOLVE THE PUZZLE<br>
+      <kbd>R</kbd> CLEAR ALL &middot; <kbd>N</kbd> NEW PUZZLE &middot; <kbd>Z</kbd> UNDO LAST FLOW
+    </p>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    const COLORS = [
+      { hex: '#ff2d7b', glow: 'rgba(255,45,123,0.4)', name: 'magenta' },
+      { hex: '#00f0ff', glow: 'rgba(0,240,255,0.4)', name: 'cyan' },
+      { hex: '#39ff14', glow: 'rgba(57,255,20,0.4)', name: 'green' },
+      { hex: '#9d4edd', glow: 'rgba(157,78,221,0.4)', name: 'purple' },
+      { hex: '#ffb000', glow: 'rgba(255,176,0,0.4)', name: 'amber' },
+      { hex: '#ff1744', glow: 'rgba(255,23,68,0.4)', name: 'crimson' },
+      { hex: '#ff6ac1', glow: 'rgba(255,106,193,0.4)', name: 'pink' },
+      { hex: '#33ff33', glow: 'rgba(51,255,51,0.4)', name: 'phosphor' },
+      { hex: '#00bcd4', glow: 'rgba(0,188,212,0.4)', name: 'teal' },
+    ];
+
+    let gridSize = 7;
+    let cellSize, padding, gridPx;
+    let endpoints = [];   // [{r,c,color},...] pairs
+    let paths = {};       // colorIdx -> [{r,c},...]
+    let grid = [];        // grid[r][c] = colorIdx or -1
+    let drawing = false;
+    let drawColor = -1;
+    let currentPath = [];
+    let moves = 0;
+    let puzzleCount = 0;
+    let solved = false;
+
+    function setSize(s) {
+      gridSize = s;
+      document.querySelectorAll('.controls-bar button').forEach(b => b.classList.remove('active'));
+      document.getElementById('btn' + s).classList.add('active');
+      newPuzzle();
+    }
+
+    function initCanvas() {
+      const maxW = Math.min(560, window.innerWidth - 40);
+      gridPx = maxW;
+      cellSize = Math.floor(gridPx / gridSize);
+      gridPx = cellSize * gridSize;
+      padding = 0;
+      canvas.width = gridPx;
+      canvas.height = gridPx;
+      canvas.style.width = gridPx + 'px';
+      canvas.style.height = gridPx + 'px';
+    }
+
+    // Puzzle generation: random walk fill
+    function generatePuzzle() {
+      const N = gridSize;
+      let board = Array.from({length: N}, () => Array(N).fill(-1));
+      let pathList = [];
+      let colorIdx = 0;
+      let attempts = 0;
+      const maxAttempts = 200;
+
+      while (attempts < maxAttempts) {
+        // Find empty cells
+        let empty = [];
+        for (let r = 0; r < N; r++)
+          for (let c = 0; c < N; c++)
+            if (board[r][c] === -1) empty.push({r, c});
+
+        if (empty.length === 0) break;
+        if (empty.length === 1) {
+          // Single cell left - try to extend an adjacent path
+          let cell = empty[0];
+          let extended = false;
+          let dirs = shuffle([[-1,0],[1,0],[0,-1],[0,1]]);
+          for (let [dr, dc] of dirs) {
+            let nr = cell.r + dr, nc = cell.c + dc;
+            if (nr >= 0 && nr < N && nc >= 0 && nc < N && board[nr][nc] !== -1) {
+              let ci = board[nr][nc];
+              let path = pathList[ci];
+              let last = path[path.length - 1];
+              if (last.r === nr && last.c === nc) {
+                path.push({r: cell.r, c: cell.c});
+                board[cell.r][cell.c] = ci;
+                extended = true;
+                break;
+              }
+              let first = path[0];
+              if (first.r === nr && first.c === nc) {
+                path.unshift({r: cell.r, c: cell.c});
+                board[cell.r][cell.c] = ci;
+                extended = true;
+                break;
+              }
+            }
+          }
+          if (!extended) {
+            // Reset and retry
+            attempts++;
+            board = Array.from({length: N}, () => Array(N).fill(-1));
+            pathList = [];
+            colorIdx = 0;
+            continue;
+          }
+          break;
+        }
+
+        // Pick random start from empty cells
+        let start = empty[Math.floor(Math.random() * empty.length)];
+        let path = [{r: start.r, c: start.c}];
+        board[start.r][start.c] = colorIdx;
+
+        // Random walk
+        let minLen = 2;
+        let maxLen = Math.max(3, Math.floor(N * 1.5));
+        let targetLen = minLen + Math.floor(Math.random() * (maxLen - minLen + 1));
+
+        for (let step = 1; step < targetLen; step++) {
+          let cur = path[path.length - 1];
+          let dirs = shuffle([[-1,0],[1,0],[0,-1],[0,1]]);
+          let moved = false;
+          for (let [dr, dc] of dirs) {
+            let nr = cur.r + dr, nc = cur.c + dc;
+            if (nr >= 0 && nr < N && nc >= 0 && nc < N && board[nr][nc] === -1) {
+              path.push({r: nr, c: nc});
+              board[nr][nc] = colorIdx;
+              moved = true;
+              break;
+            }
+          }
+          if (!moved) break;
+        }
+
+        if (path.length >= 2) {
+          pathList.push(path);
+          colorIdx++;
+        } else {
+          // Isolated single cell, mark it and try to extend later
+          board[start.r][start.c] = -1;
+        }
+
+        if (colorIdx > COLORS.length) break;
+        attempts++;
+      }
+
+      // Check if grid is fully filled
+      let allFilled = true;
+      for (let r = 0; r < N; r++)
+        for (let c = 0; c < N; c++)
+          if (board[r][c] === -1) allFilled = false;
+
+      if (!allFilled || pathList.length < 3) {
+        return generatePuzzle(); // Retry
+      }
+
+      // Limit color count
+      if (pathList.length > COLORS.length) {
+        return generatePuzzle();
+      }
+
+      return pathList;
+    }
+
+    function shuffle(arr) {
+      let a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function newPuzzle() {
+      initCanvas();
+      solved = false;
+      moves = 0;
+
+      let pathList = generatePuzzle();
+
+      endpoints = [];
+      for (let i = 0; i < pathList.length; i++) {
+        let p = pathList[i];
+        endpoints.push(
+          {r: p[0].r, c: p[0].c, color: i},
+          {r: p[p.length-1].r, c: p[p.length-1].c, color: i}
+        );
+      }
+
+      // Clear player state
+      paths = {};
+      grid = Array.from({length: gridSize}, () => Array(gridSize).fill(-1));
+      // Mark endpoints on grid
+      for (let ep of endpoints) {
+        grid[ep.r][ep.c] = ep.color;
+      }
+
+      puzzleCount++;
+      updateStats();
+      document.getElementById('status').textContent = 'DRAW PATHS BETWEEN MATCHING DOTS';
+      document.getElementById('status').className = '';
+      draw();
+    }
+
+    function clearAll() {
+      if (solved) return;
+      paths = {};
+      grid = Array.from({length: gridSize}, () => Array(gridSize).fill(-1));
+      for (let ep of endpoints) {
+        grid[ep.r][ep.c] = ep.color;
+      }
+      moves = 0;
+      updateStats();
+      document.getElementById('status').textContent = 'DRAW PATHS BETWEEN MATCHING DOTS';
+      document.getElementById('status').className = '';
+      draw();
+    }
+
+    function undoLast() {
+      if (solved) return;
+      // Remove the last drawn flow
+      let keys = Object.keys(paths).map(Number);
+      if (keys.length === 0) return;
+      let lastKey = keys[keys.length - 1];
+      removePath(lastKey);
+      updateStats();
+      draw();
+    }
+
+    function removePath(colorIdx) {
+      if (paths[colorIdx]) {
+        for (let cell of paths[colorIdx]) {
+          if (!isEndpoint(cell.r, cell.c)) {
+            grid[cell.r][cell.c] = -1;
+          }
+        }
+        delete paths[colorIdx];
+      }
+    }
+
+    function isEndpoint(r, c) {
+      return endpoints.some(ep => ep.r === r && ep.c === c);
+    }
+
+    function getEndpointColor(r, c) {
+      let ep = endpoints.find(e => e.r === r && e.c === c);
+      return ep ? ep.color : -1;
+    }
+
+    function getEndpointsForColor(ci) {
+      return endpoints.filter(ep => ep.color === ci);
+    }
+
+    function getCellFromPos(x, y) {
+      let rect = canvas.getBoundingClientRect();
+      let cx = x - rect.left;
+      let cy = y - rect.top;
+      let c = Math.floor(cx / cellSize);
+      let r = Math.floor(cy / cellSize);
+      if (r >= 0 && r < gridSize && c >= 0 && c < gridSize) return {r, c};
+      return null;
+    }
+
+    function areAdjacent(a, b) {
+      return Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1;
+    }
+
+    // Drawing input
+    function startDraw(x, y) {
+      if (solved) return;
+      let cell = getCellFromPos(x, y);
+      if (!cell) return;
+
+      let epColor = getEndpointColor(cell.r, cell.c);
+      if (epColor === -1) {
+        // Check if clicking on a path to remove it
+        let ci = grid[cell.r][cell.c];
+        if (ci !== -1 && paths[ci]) {
+          removePath(ci);
+          updateStats();
+          draw();
+        }
+        return;
+      }
+
+      // Start drawing from this endpoint
+      drawColor = epColor;
+      // Remove existing path for this color
+      removePath(drawColor);
+
+      currentPath = [{r: cell.r, c: cell.c}];
+      grid[cell.r][cell.c] = drawColor;
+      drawing = true;
+      draw();
+    }
+
+    function continueDraw(x, y) {
+      if (!drawing) return;
+      let cell = getCellFromPos(x, y);
+      if (!cell) return;
+
+      let last = currentPath[currentPath.length - 1];
+      if (cell.r === last.r && cell.c === last.c) return;
+
+      // Allow backtracking
+      if (currentPath.length >= 2) {
+        let prev = currentPath[currentPath.length - 2];
+        if (cell.r === prev.r && cell.c === prev.c) {
+          let removed = currentPath.pop();
+          if (!isEndpoint(removed.r, removed.c)) {
+            grid[removed.r][removed.c] = -1;
+          }
+          draw();
+          return;
+        }
+      }
+
+      if (!areAdjacent(last, cell)) return;
+
+      // Check if cell is free or is our target endpoint
+      let targetEps = getEndpointsForColor(drawColor);
+      let startEp = targetEps.find(e => e.r === currentPath[0].r && e.c === currentPath[0].c);
+      let endEp = targetEps.find(e => e !== startEp);
+
+      if (cell.r === endEp.r && cell.c === endEp.c) {
+        // Reached target endpoint!
+        currentPath.push(cell);
+        grid[cell.r][cell.c] = drawColor;
+        finishDraw();
+        return;
+      }
+
+      // Cell must be empty
+      if (grid[cell.r][cell.c] !== -1) {
+        // If it's a path of another color, remove that path
+        let otherColor = grid[cell.r][cell.c];
+        if (otherColor !== drawColor && paths[otherColor]) {
+          removePath(otherColor);
+        } else if (otherColor !== drawColor) {
+          return; // It's an endpoint of another color
+        } else {
+          return;
+        }
+      }
+
+      currentPath.push(cell);
+      grid[cell.r][cell.c] = drawColor;
+      draw();
+    }
+
+    function finishDraw() {
+      if (drawing && currentPath.length >= 2) {
+        let targetEps = getEndpointsForColor(drawColor);
+        let startEp = targetEps.find(e => e.r === currentPath[0].r && e.c === currentPath[0].c);
+        let endEp = targetEps.find(e => e !== startEp);
+        let last = currentPath[currentPath.length - 1];
+
+        if (last.r === endEp.r && last.c === endEp.c) {
+          // Successfully connected
+          paths[drawColor] = [...currentPath];
+          moves++;
+        } else {
+          // Incomplete - remove the path cells
+          for (let cell of currentPath) {
+            if (!isEndpoint(cell.r, cell.c)) {
+              grid[cell.r][cell.c] = -1;
+            }
+          }
+        }
+      } else if (drawing) {
+        // Single cell click, just clean up
+        for (let cell of currentPath) {
+          if (!isEndpoint(cell.r, cell.c)) {
+            grid[cell.r][cell.c] = -1;
+          }
+        }
+      }
+
+      drawing = false;
+      drawColor = -1;
+      currentPath = [];
+      updateStats();
+      checkWin();
+      draw();
+    }
+
+    function endDraw() {
+      finishDraw();
+    }
+
+    function checkWin() {
+      let numColors = new Set(endpoints.map(e => e.color)).size;
+      if (Object.keys(paths).length < numColors) return;
+
+      // Check all cells filled
+      for (let r = 0; r < gridSize; r++)
+        for (let c = 0; c < gridSize; c++)
+          if (grid[r][c] === -1) return;
+
+      solved = true;
+      document.getElementById('status').textContent = 'SOLVED! ALL FLOWS CONNECTED';
+      document.getElementById('status').className = 'win';
+    }
+
+    function updateStats() {
+      let numColors = new Set(endpoints.map(e => e.color)).size;
+      let connectedFlows = Object.keys(paths).length;
+      document.getElementById('flowCount').textContent = connectedFlows;
+      document.getElementById('flowTotal').textContent = numColors;
+      document.getElementById('moveCount').textContent = moves;
+      document.getElementById('puzzleNum').textContent = puzzleCount;
+
+      let filled = 0;
+      let total = gridSize * gridSize;
+      for (let r = 0; r < gridSize; r++)
+        for (let c = 0; c < gridSize; c++)
+          if (grid[r][c] !== -1) filled++;
+      document.getElementById('fillPct').textContent = Math.floor(filled / total * 100);
+    }
+
+    function draw() {
+      let isDark = !document.documentElement.hasAttribute('data-theme') ||
+                   document.documentElement.getAttribute('data-theme') !== 'light';
+
+      let bgColor = isDark ? '#0a0a0f' : '#f0eff5';
+      let gridColor = isDark ? '#1a1a24' : '#e4e3ec';
+      let lineColor = isDark ? '#2a2a38' : '#c8c8d6';
+
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw grid lines
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= gridSize; i++) {
+        let pos = i * cellSize;
+        ctx.beginPath();
+        ctx.moveTo(pos, 0);
+        ctx.lineTo(pos, gridPx);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, pos);
+        ctx.lineTo(gridPx, pos);
+        ctx.stroke();
+      }
+
+      // Draw filled cells (path backgrounds)
+      for (let r = 0; r < gridSize; r++) {
+        for (let c = 0; c < gridSize; c++) {
+          let ci = grid[r][c];
+          if (ci !== -1 && !isEndpoint(r, c)) {
+            let color = COLORS[ci % COLORS.length];
+            ctx.fillStyle = isDark ?
+              hexToRGBA(color.hex, 0.15) :
+              hexToRGBA(color.hex, 0.12);
+            ctx.fillRect(c * cellSize + 1, r * cellSize + 1, cellSize - 2, cellSize - 2);
+          }
+        }
+      }
+
+      // Draw paths as thick lines
+      let allPaths = {...paths};
+      if (drawing && currentPath.length >= 2) {
+        allPaths['__current'] = currentPath;
+      }
+
+      for (let key of Object.keys(allPaths)) {
+        let ci = key === '__current' ? drawColor : parseInt(key);
+        let path = allPaths[key];
+        if (path.length < 2) continue;
+
+        let color = COLORS[ci % COLORS.length];
+        let half = cellSize / 2;
+        let thickness = Math.max(6, cellSize * 0.3);
+
+        // Glow
+        ctx.strokeStyle = color.glow;
+        ctx.lineWidth = thickness + 6;
+        ctx.lineCap = 'square';
+        ctx.lineJoin = 'miter';
+        ctx.beginPath();
+        ctx.moveTo(path[0].c * cellSize + half, path[0].r * cellSize + half);
+        for (let i = 1; i < path.length; i++) {
+          ctx.lineTo(path[i].c * cellSize + half, path[i].r * cellSize + half);
+        }
+        ctx.stroke();
+
+        // Main line
+        ctx.strokeStyle = color.hex;
+        ctx.lineWidth = thickness;
+        ctx.beginPath();
+        ctx.moveTo(path[0].c * cellSize + half, path[0].r * cellSize + half);
+        for (let i = 1; i < path.length; i++) {
+          ctx.lineTo(path[i].c * cellSize + half, path[i].r * cellSize + half);
+        }
+        ctx.stroke();
+      }
+
+      // Draw single-cell current path indicator
+      if (drawing && currentPath.length === 1) {
+        let cell = currentPath[0];
+        let color = COLORS[drawColor % COLORS.length];
+        let half = cellSize / 2;
+        let thickness = Math.max(6, cellSize * 0.3);
+        ctx.fillStyle = color.glow;
+        ctx.fillRect(
+          cell.c * cellSize + half - thickness/2 - 3,
+          cell.r * cellSize + half - thickness/2 - 3,
+          thickness + 6, thickness + 6
+        );
+      }
+
+      // Draw endpoints (dots)
+      for (let ep of endpoints) {
+        let color = COLORS[ep.color % COLORS.length];
+        let cx = ep.c * cellSize + cellSize / 2;
+        let cy = ep.r * cellSize + cellSize / 2;
+        let radius = cellSize * 0.3;
+
+        // Outer glow
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius + 4, 0, Math.PI * 2);
+        ctx.fillStyle = color.glow;
+        ctx.fill();
+
+        // Main dot
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = color.hex;
+        ctx.fill();
+
+        // Inner highlight
+        ctx.beginPath();
+        ctx.arc(cx - radius * 0.2, cy - radius * 0.2, radius * 0.35, 0, Math.PI * 2);
+        ctx.fillStyle = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.4)';
+        ctx.fill();
+      }
+
+      // Win overlay
+      if (solved) {
+        ctx.fillStyle = isDark ? 'rgba(10,10,15,0.6)' : 'rgba(240,239,245,0.6)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = `800 ${cellSize * 0.8}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#39ff14';
+        ctx.shadowColor = 'rgba(57,255,20,0.6)';
+        ctx.shadowBlur = 20;
+        ctx.fillText('SOLVED', gridPx / 2, gridPx / 2);
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    function hexToRGBA(hex, alpha) {
+      let r = parseInt(hex.slice(1,3), 16);
+      let g = parseInt(hex.slice(3,5), 16);
+      let b = parseInt(hex.slice(5,7), 16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    // Event listeners
+    canvas.addEventListener('mousedown', e => {
+      e.preventDefault();
+      startDraw(e.clientX, e.clientY);
+    });
+    canvas.addEventListener('mousemove', e => {
+      e.preventDefault();
+      continueDraw(e.clientX, e.clientY);
+    });
+    canvas.addEventListener('mouseup', e => {
+      e.preventDefault();
+      endDraw();
+    });
+    canvas.addEventListener('mouseleave', e => {
+      endDraw();
+    });
+
+    // Touch support
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      let t = e.touches[0];
+      startDraw(t.clientX, t.clientY);
+    }, {passive: false});
+    canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+      let t = e.touches[0];
+      continueDraw(t.clientX, t.clientY);
+    }, {passive: false});
+    canvas.addEventListener('touchend', e => {
+      e.preventDefault();
+      endDraw();
+    }, {passive: false});
+
+    // Keyboard
+    document.addEventListener('keydown', e => {
+      if (e.key === 'r' || e.key === 'R') clearAll();
+      if (e.key === 'n' || e.key === 'N') newPuzzle();
+      if (e.key === 'z' || e.key === 'Z') undoLast();
+    });
+
+    // Resize
+    window.addEventListener('resize', () => {
+      initCanvas();
+      draw();
+    });
+
+    // Start
+    newPuzzle();
+  </script>
+</body>
+</html>

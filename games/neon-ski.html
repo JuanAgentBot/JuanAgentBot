@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neon Ski / ZERO</title>
+  <meta name="description" content="Downhill skiing through a neon forest. Dodge trees, collect flags, survive.">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    body {
+      margin: 0;
+      background: #0a0a0f;
+      color: #e0e0e8;
+      font-family: 'JetBrains Mono', monospace;
+      overflow: hidden;
+    }
+
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 1rem;
+      background: rgba(10, 10, 15, 0.9);
+      border-bottom: 1px solid #7a7a90;
+      z-index: 100;
+    }
+
+    .top-bar a {
+      color: #7a7a90;
+      text-decoration: none;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      transition: color 0.3s;
+    }
+
+    .top-bar a:hover {
+      color: #00f0ff;
+    }
+
+    .top-bar .title {
+      color: #ff2d7b;
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-shadow: 0 0 10px rgba(255, 45, 123, 0.5);
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(10, 10, 15, 0.85);
+      z-index: 50;
+    }
+
+    .overlay.hidden {
+      display: none;
+    }
+
+    .overlay h2 {
+      color: #ff2d7b;
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 20px rgba(255, 45, 123, 0.6);
+    }
+
+    .overlay .sub {
+      color: #7a7a90;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+    }
+
+    .overlay .stat {
+      color: #00f0ff;
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+    }
+
+    .overlay .stat-label {
+      color: #7a7a90;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+    }
+
+    .overlay .prompt {
+      color: #39ff14;
+      font-size: 0.8rem;
+      margin-top: 1rem;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .controls-info {
+      color: #7a7a90;
+      font-size: 0.6rem;
+      letter-spacing: 0.06em;
+      margin-top: 1.5rem;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .controls-info span {
+      color: #9d4edd;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .hud {
+      position: fixed;
+      top: 42px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      z-index: 40;
+      pointer-events: none;
+    }
+
+    .hud-item {
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+    }
+
+    .hud-item .label {
+      color: #7a7a90;
+    }
+
+    .hud-item .value {
+      color: #00f0ff;
+      font-weight: 700;
+      text-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+    }
+
+    .hud-item .value.green {
+      color: #39ff14;
+      text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+    }
+  </style>
+  <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="./">&lt; GAME LAB</a>
+    <div class="title">NEON SKI</div>
+    <div style="width: 80px"></div>
+  </div>
+
+  <div class="hud" id="hud">
+    <div class="hud-item"><span class="label">SCORE </span><span class="value" id="hud-score">0</span></div>
+    <div class="hud-item"><span class="label">FLAGS </span><span class="value green" id="hud-flags">0</span></div>
+    <div class="hud-item"><span class="label">SPEED </span><span class="value" id="hud-speed">1</span></div>
+    <div class="hud-item"><span class="label">BEST </span><span class="value" id="hud-best">0</span></div>
+  </div>
+
+  <canvas id="c"></canvas>
+
+  <div class="overlay" id="start-screen">
+    <h2>NEON SKI</h2>
+    <div class="sub">DOWNHILL THROUGH THE NEON FOREST</div>
+    <div class="prompt">PRESS SPACE OR TAP TO START</div>
+    <div class="controls-info">
+      <span>← →</span> or <span>A D</span> to steer<br>
+      <span>SHIFT</span> to brake &nbsp; <span>SPACE</span> to tuck (speed boost)<br>
+      Collect <span style="color:#39ff14">flags</span> for bonus points<br>
+      Dodge <span style="color:#ff2d7b">trees</span> and <span style="color:#7a7a90">rocks</span>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="game-over">
+    <h2>WIPEOUT</h2>
+    <div class="sub">YOU HIT AN OBSTACLE</div>
+    <div class="stat" id="go-score">0</div>
+    <div class="stat-label">SCORE</div>
+    <div class="stat" id="go-flags">0</div>
+    <div class="stat-label">FLAGS COLLECTED</div>
+    <div class="stat" id="go-distance">0m</div>
+    <div class="stat-label">DISTANCE</div>
+    <div class="prompt">PRESS SPACE OR TAP TO RETRY</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    const hudScore = document.getElementById('hud-score');
+    const hudFlags = document.getElementById('hud-flags');
+    const hudSpeed = document.getElementById('hud-speed');
+    const hudBest = document.getElementById('hud-best');
+    const startScreen = document.getElementById('start-screen');
+    const gameOverScreen = document.getElementById('game-over');
+    const goScore = document.getElementById('go-score');
+    const goFlags = document.getElementById('go-flags');
+    const goDistance = document.getElementById('go-distance');
+
+    // Colors
+    const VOID = '#0a0a0f';
+    const SNOW_DARK = '#12121a';
+    const SNOW_LINE = '#1a1a28';
+    const MAGENTA = '#ff2d7b';
+    const CYAN = '#00f0ff';
+    const GREEN = '#39ff14';
+    const PURPLE = '#9d4edd';
+    const WHITE = '#e0e0e8';
+    const DIM = '#7a7a90';
+    const TREE_DARK = '#0d3d0d';
+    const TREE_GLOW = '#1a6b1a';
+
+    let W, H;
+    let state = 'start'; // start, playing, dead
+    let best = parseInt(localStorage.getItem('neon-ski-best') || '0');
+
+    // Player
+    let px, py, pvx;
+    let speed, baseSpeed;
+    let braking, tucking;
+
+    // World
+    let obstacles = [];
+    let flags = [];
+    let particles = [];
+    let snowTrails = [];
+    let distance, score, flagCount;
+    let spawnTimer, flagTimer;
+    let speedLevel;
+
+    // Snow particles (background)
+    let snowflakes = [];
+
+    // Input
+    const keys = {};
+
+    function resize() {
+      W = Math.min(window.innerWidth, 500);
+      H = window.innerHeight;
+      canvas.width = W;
+      canvas.height = H;
+    }
+
+    function init() {
+      px = W / 2;
+      py = H * 0.75;
+      pvx = 0;
+      speed = 3;
+      baseSpeed = 3;
+      braking = false;
+      tucking = false;
+      obstacles = [];
+      flags = [];
+      particles = [];
+      snowTrails = [];
+      distance = 0;
+      score = 0;
+      flagCount = 0;
+      spawnTimer = 0;
+      flagTimer = 0;
+      speedLevel = 1;
+
+      // Init snowflakes
+      snowflakes = [];
+      for (let i = 0; i < 60; i++) {
+        snowflakes.push({
+          x: Math.random() * W,
+          y: Math.random() * H,
+          size: Math.random() * 2 + 0.5,
+          speed: Math.random() * 1 + 0.5,
+          drift: (Math.random() - 0.5) * 0.3
+        });
+      }
+    }
+
+    function spawnObstacle() {
+      const type = Math.random() < 0.6 ? 'tree' : 'rock';
+      const x = Math.random() * (W - 40) + 20;
+      if (type === 'tree') {
+        obstacles.push({
+          type: 'tree',
+          x: x,
+          y: -30,
+          w: 20,
+          h: 28,
+          hitR: 8
+        });
+      } else {
+        const size = Math.random() * 10 + 12;
+        obstacles.push({
+          type: 'rock',
+          x: x,
+          y: -30,
+          w: size,
+          h: size * 0.7,
+          hitR: size * 0.4
+        });
+      }
+    }
+
+    function spawnFlag() {
+      const x = Math.random() * (W - 60) + 30;
+      flags.push({
+        x: x,
+        y: -20,
+        collected: false,
+        alpha: 1
+      });
+    }
+
+    function addTrail() {
+      snowTrails.push({
+        x: px - 4,
+        y: py + 8,
+        w: 2,
+        alpha: 0.6,
+        life: 30
+      });
+      snowTrails.push({
+        x: px + 4,
+        y: py + 8,
+        w: 2,
+        alpha: 0.6,
+        life: 30
+      });
+    }
+
+    function addCrashParticles(x, y) {
+      for (let i = 0; i < 20; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const sp = Math.random() * 4 + 1;
+        particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * sp,
+          vy: Math.sin(angle) * sp - 2,
+          life: Math.random() * 30 + 15,
+          maxLife: 45,
+          color: [MAGENTA, CYAN, WHITE][Math.floor(Math.random() * 3)],
+          size: Math.random() * 3 + 1
+        });
+      }
+    }
+
+    function addFlagParticles(x, y) {
+      for (let i = 0; i < 10; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const sp = Math.random() * 2 + 0.5;
+        particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * sp,
+          vy: Math.sin(angle) * sp - 1,
+          life: Math.random() * 20 + 10,
+          maxLife: 30,
+          color: GREEN,
+          size: Math.random() * 2 + 1
+        });
+      }
+    }
+
+    function update() {
+      if (state !== 'playing') return;
+
+      // Input
+      const left = keys['ArrowLeft'] || keys['KeyA'];
+      const right = keys['ArrowRight'] || keys['KeyD'];
+      braking = keys['ShiftLeft'] || keys['ShiftRight'];
+      tucking = keys['Space'];
+
+      // Steering
+      const steerForce = 0.4;
+      const friction = 0.92;
+      if (left) pvx -= steerForce;
+      if (right) pvx += steerForce;
+      pvx *= friction;
+
+      // Speed
+      if (braking) {
+        speed = Math.max(1.5, speed - 0.05);
+      } else if (tucking) {
+        speed = Math.min(baseSpeed + 4, speed + 0.03);
+      } else {
+        speed += (baseSpeed - speed) * 0.02;
+      }
+
+      // Position
+      px += pvx;
+      px = Math.max(12, Math.min(W - 12, px));
+
+      // Distance and speed progression
+      distance += speed * 0.5;
+      score = Math.floor(distance / 10) + flagCount * 50;
+
+      const newLevel = Math.floor(distance / 500) + 1;
+      if (newLevel > speedLevel) {
+        speedLevel = newLevel;
+        baseSpeed = 3 + speedLevel * 0.4;
+      }
+
+      // Spawn obstacles
+      spawnTimer -= speed;
+      if (spawnTimer <= 0) {
+        spawnObstacle();
+        const gap = Math.max(40, 120 - speedLevel * 5);
+        spawnTimer = gap + Math.random() * 60;
+      }
+
+      // Spawn flags
+      flagTimer -= speed;
+      if (flagTimer <= 0) {
+        spawnFlag();
+        flagTimer = 200 + Math.random() * 150;
+      }
+
+      // Move obstacles
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        o.y += speed;
+        if (o.y > H + 40) {
+          obstacles.splice(i, 1);
+          continue;
+        }
+
+        // Collision
+        const dx = px - o.x;
+        const dy = py - o.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < o.hitR + 8) {
+          // Crash!
+          addCrashParticles(px, py);
+          state = 'dead';
+          if (score > best) {
+            best = score;
+            localStorage.setItem('neon-ski-best', best.toString());
+          }
+          goScore.textContent = score;
+          goFlags.textContent = flagCount;
+          goDistance.textContent = Math.floor(distance) + 'm';
+          gameOverScreen.classList.remove('hidden');
+          return;
+        }
+      }
+
+      // Move flags
+      for (let i = flags.length - 1; i >= 0; i--) {
+        const f = flags[i];
+        f.y += speed;
+
+        if (!f.collected) {
+          const dx = px - f.x;
+          const dy = py - f.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 18) {
+            f.collected = true;
+            flagCount++;
+            addFlagParticles(f.x, f.y);
+          }
+        }
+
+        if (f.collected) {
+          f.alpha -= 0.05;
+          if (f.alpha <= 0) {
+            flags.splice(i, 1);
+            continue;
+          }
+        }
+
+        if (f.y > H + 30) {
+          flags.splice(i, 1);
+        }
+      }
+
+      // Trails
+      if (Math.random() < 0.5) addTrail();
+      for (let i = snowTrails.length - 1; i >= 0; i--) {
+        const t = snowTrails[i];
+        t.y += speed * 0.3;
+        t.alpha -= 0.015;
+        t.life--;
+        if (t.life <= 0 || t.alpha <= 0) {
+          snowTrails.splice(i, 1);
+        }
+      }
+
+      // Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.08;
+        p.life--;
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+        }
+      }
+
+      // Snowflakes
+      for (const s of snowflakes) {
+        s.y += s.speed + speed * 0.5;
+        s.x += s.drift;
+        if (s.y > H) {
+          s.y = -5;
+          s.x = Math.random() * W;
+        }
+        if (s.x < 0) s.x = W;
+        if (s.x > W) s.x = 0;
+      }
+
+      // HUD
+      hudScore.textContent = score;
+      hudFlags.textContent = flagCount;
+      hudSpeed.textContent = speedLevel;
+      hudBest.textContent = best;
+    }
+
+    function drawTree(x, y) {
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(x + 3, y + 12, 10, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Trunk
+      ctx.fillStyle = '#3a2010';
+      ctx.fillRect(x - 2, y, 4, 10);
+
+      // Tree layers (bottom to top)
+      const layers = [
+        { w: 18, h: 10, yOff: -2 },
+        { w: 14, h: 9, yOff: -8 },
+        { w: 10, h: 8, yOff: -14 }
+      ];
+
+      for (const l of layers) {
+        // Glow
+        ctx.shadowColor = GREEN;
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = TREE_DARK;
+        ctx.beginPath();
+        ctx.moveTo(x, y + l.yOff - l.h);
+        ctx.lineTo(x - l.w / 2, y + l.yOff);
+        ctx.lineTo(x + l.w / 2, y + l.yOff);
+        ctx.closePath();
+        ctx.fill();
+
+        // Outline
+        ctx.strokeStyle = GREEN;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.6;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    function drawRock(x, y, w, h) {
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(x + 2, y + h * 0.4, w * 0.5, h * 0.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Rock body
+      ctx.shadowColor = DIM;
+      ctx.shadowBlur = 6;
+      ctx.fillStyle = '#2a2a35';
+      ctx.beginPath();
+      ctx.moveTo(x - w * 0.4, y + h * 0.2);
+      ctx.lineTo(x - w * 0.3, y - h * 0.3);
+      ctx.lineTo(x + w * 0.1, y - h * 0.4);
+      ctx.lineTo(x + w * 0.4, y - h * 0.15);
+      ctx.lineTo(x + w * 0.35, y + h * 0.3);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = DIM;
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.5;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+    }
+
+    function drawFlag(x, y, alpha) {
+      ctx.globalAlpha = alpha;
+
+      // Pole
+      ctx.strokeStyle = WHITE;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y + 10);
+      ctx.lineTo(x, y - 10);
+      ctx.stroke();
+
+      // Flag triangle
+      ctx.shadowColor = GREEN;
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = GREEN;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 10);
+      ctx.lineTo(x + 10, y - 5);
+      ctx.lineTo(x, y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.globalAlpha = 1;
+    }
+
+    function drawSkier(x, y) {
+      // Ski trails glow
+      ctx.shadowColor = CYAN;
+      ctx.shadowBlur = 4;
+
+      // Left ski
+      ctx.strokeStyle = CYAN;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x - 5, y - 4);
+      ctx.lineTo(x - 6, y + 10);
+      ctx.stroke();
+
+      // Right ski
+      ctx.beginPath();
+      ctx.moveTo(x + 5, y - 4);
+      ctx.lineTo(x + 6, y + 10);
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+
+      // Body
+      ctx.fillStyle = CYAN;
+      ctx.shadowColor = CYAN;
+      ctx.shadowBlur = 12;
+
+      // Torso
+      ctx.fillRect(x - 3, y - 6, 6, 10);
+
+      // Head
+      ctx.beginPath();
+      ctx.arc(x, y - 9, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+
+      // Arms (angled based on steering)
+      ctx.strokeStyle = CYAN;
+      ctx.lineWidth = 2;
+      const armAngle = pvx * 0.15;
+      // Left arm
+      ctx.beginPath();
+      ctx.moveTo(x - 3, y - 3);
+      ctx.lineTo(x - 10 - armAngle * 3, y + 2);
+      ctx.stroke();
+      // Right arm
+      ctx.beginPath();
+      ctx.moveTo(x + 3, y - 3);
+      ctx.lineTo(x + 10 - armAngle * 3, y + 2);
+      ctx.stroke();
+
+      // Speed lines when tucking
+      if (tucking) {
+        ctx.strokeStyle = CYAN;
+        ctx.globalAlpha = 0.3;
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+          const lx = x + (Math.random() - 0.5) * 16;
+          ctx.beginPath();
+          ctx.moveTo(lx, y + 12);
+          ctx.lineTo(lx + (Math.random() - 0.5) * 4, y + 22 + Math.random() * 8);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      // Brake indicator
+      if (braking) {
+        ctx.fillStyle = MAGENTA;
+        ctx.shadowColor = MAGENTA;
+        ctx.shadowBlur = 8;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.arc(x, y + 12, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function drawSnowLines() {
+      // Horizontal snow texture lines moving with the slope
+      ctx.strokeStyle = SNOW_LINE;
+      ctx.lineWidth = 1;
+      const offset = (distance * 2) % 30;
+      for (let y = -30 + offset; y < H; y += 30) {
+        ctx.globalAlpha = 0.3;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        // Slightly wavy
+        for (let x = 0; x < W; x += 20) {
+          ctx.lineTo(x, y + Math.sin(x * 0.05 + distance * 0.01) * 2);
+        }
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function draw() {
+      // Background
+      ctx.fillStyle = SNOW_DARK;
+      ctx.fillRect(0, 0, W, H);
+
+      // Snow texture
+      drawSnowLines();
+
+      // Edge borders (slope edges)
+      const grad = ctx.createLinearGradient(0, 0, 20, 0);
+      grad.addColorStop(0, 'rgba(157, 78, 221, 0.15)');
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 20, H);
+
+      const grad2 = ctx.createLinearGradient(W, 0, W - 20, 0);
+      grad2.addColorStop(0, 'rgba(157, 78, 221, 0.15)');
+      grad2.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad2;
+      ctx.fillRect(W - 20, 0, 20, H);
+
+      // Snow trails
+      for (const t of snowTrails) {
+        ctx.fillStyle = `rgba(224, 224, 232, ${t.alpha * 0.3})`;
+        ctx.fillRect(t.x, t.y, t.w, 4);
+      }
+
+      // Snowflakes
+      for (const s of snowflakes) {
+        ctx.fillStyle = `rgba(224, 224, 232, ${0.2 + s.size * 0.1})`;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Flags
+      for (const f of flags) {
+        drawFlag(f.x, f.y, f.alpha);
+      }
+
+      // Obstacles
+      for (const o of obstacles) {
+        if (o.type === 'tree') {
+          drawTree(o.x, o.y);
+        } else {
+          drawRock(o.x, o.y, o.w, o.h);
+        }
+      }
+
+      // Player
+      if (state === 'playing') {
+        drawSkier(px, py);
+      }
+
+      // Particles
+      for (const p of particles) {
+        const a = p.life / p.maxLife;
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = a;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 6;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      }
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+
+      // Distance marker on the side every 100m
+      const distMarker = Math.floor(distance / 100);
+      const markerOffset = (distance % 100) / 100 * H;
+      ctx.fillStyle = DIM;
+      ctx.font = '9px "JetBrains Mono", monospace';
+      ctx.textAlign = 'left';
+      for (let i = 0; i < 5; i++) {
+        const m = distMarker - i + 2;
+        if (m > 0) {
+          const my = H - markerOffset + i * (H / 2) - H;
+          if (my > 40 && my < H - 10) {
+            ctx.globalAlpha = 0.4;
+            ctx.fillText(m * 100 + 'm', 4, my);
+            // Small dash
+            ctx.fillRect(0, my - 3, 3, 1);
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function startGame() {
+      init();
+      state = 'playing';
+      startScreen.classList.add('hidden');
+      gameOverScreen.classList.add('hidden');
+      hudBest.textContent = best;
+    }
+
+    // Input handlers
+    document.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (state === 'start' || state === 'dead') {
+          startGame();
+        }
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+    });
+
+    // Touch support
+    let touchX = null;
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (state === 'start' || state === 'dead') {
+        startGame();
+        return;
+      }
+      touchX = e.touches[0].clientX;
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (state !== 'playing' || touchX === null) return;
+      const newX = e.touches[0].clientX;
+      const diff = newX - touchX;
+      pvx += diff * 0.08;
+      touchX = newX;
+    });
+
+    canvas.addEventListener('touchend', () => {
+      touchX = null;
+    });
+
+    // Click on overlays
+    startScreen.addEventListener('click', () => {
+      if (state === 'start') startGame();
+    });
+
+    gameOverScreen.addEventListener('click', () => {
+      if (state === 'dead') startGame();
+    });
+
+    // Init
+    resize();
+    window.addEventListener('resize', resize);
+    hudBest.textContent = best;
+    gameLoop();
+  </script>
+</body>
+</html>

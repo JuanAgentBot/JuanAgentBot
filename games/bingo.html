@@ -13,6 +13,10 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    *, *::before, *::after {
+      touch-action: manipulation;
+    }
+
     main {
       max-width: 520px;
       margin: 0 auto;
@@ -60,10 +64,10 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 80px;
-      height: 80px;
+      width: min(80px, 20vw);
+      height: min(80px, 20vw);
       border: 2px solid var(--accent-magenta);
-      font-size: 1.6rem;
+      font-size: clamp(1.1rem, 4vw, 1.6rem);
       font-weight: 800;
       color: var(--accent-magenta);
       text-shadow: 0 0 12px var(--glow-magenta);
@@ -122,7 +126,7 @@
     }
 
     .bingo-header span {
-      font-size: 1.1rem;
+      font-size: clamp(0.9rem, 3.5vw, 1.1rem);
       font-weight: 800;
       padding: 0.5rem 0;
       letter-spacing: 0.1em;
@@ -146,13 +150,16 @@
       align-items: center;
       justify-content: center;
       border: 1px solid var(--border);
-      font-size: 1rem;
+      font-size: clamp(0.8rem, 3.5vw, 1rem);
       font-weight: 700;
       color: var(--text-bright);
       cursor: pointer;
       transition: all 0.2s;
       position: relative;
       user-select: none;
+      -webkit-user-select: none;
+      min-width: 44px;
+      min-height: 44px;
     }
 
     .cell:hover:not(.marked):not(.free) {
@@ -215,7 +222,8 @@
       color: var(--text-muted);
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.7rem;
-      padding: 0.5rem 1rem;
+      padding: 0.6rem 1.2rem;
+      min-height: 44px;
       cursor: pointer;
       letter-spacing: 0.06em;
       transition: all 0.2s;
@@ -262,7 +270,8 @@
       color: var(--text-dim);
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.6rem;
-      padding: 0.3rem 0.6rem;
+      padding: 0.5rem 0.8rem;
+      min-height: 36px;
       cursor: pointer;
       transition: all 0.2s;
     }
@@ -352,6 +361,61 @@
       font-size: 0.55rem;
       color: var(--text-muted);
     }
+
+    .kbd-hint {
+      display: block;
+    }
+
+    @media (max-width: 480px) {
+      main {
+        padding: 1.2rem 0.8rem 3rem;
+      }
+
+      h1 {
+        font-size: 1.3rem;
+      }
+
+      .bingo-grid {
+        gap: 1px;
+      }
+
+      .bingo-header {
+        gap: 1px;
+      }
+
+      .cell.free {
+        font-size: 0.5rem;
+      }
+
+      .recent-ball {
+        width: 32px;
+        height: 24px;
+        font-size: 0.5rem;
+      }
+
+      .controls {
+        gap: 0.4rem;
+      }
+
+      .btn {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.65rem;
+      }
+
+      .kbd-hint {
+        display: none;
+      }
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      .cell:hover:not(.marked):not(.free) {
+        border-color: var(--border);
+      }
+
+      .kbd-hint {
+        display: none;
+      }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -410,7 +474,7 @@
       Numbers are called automatically or manually.<br>
       Click called numbers on your card to mark them.<br>
       Complete a row, column, diagonal, or four corners to win.<br>
-      <kbd>SPACE</kbd> call next &nbsp; <kbd>N</kbd> new card &nbsp; <kbd>S</kbd> start/pause
+      <span class="kbd-hint"><kbd>SPACE</kbd> call next &nbsp; <kbd>N</kbd> new card &nbsp; <kbd>S</kbd> start/pause</span>
     </div>
   </main>
 

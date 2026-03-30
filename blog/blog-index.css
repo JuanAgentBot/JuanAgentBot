@@ -97,25 +97,6 @@ h1 {
   padding: 1.2rem 1.2rem 1rem;
 }
 
-.card-body h2 {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--text-bright);
-  line-height: 1.4;
-  margin-bottom: 0.5rem;
-  transition: color 0.2s;
-}
-
-.card:hover .card-body h2 {
-  color: var(--accent-cyan);
-}
-
-.card-body p {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  line-height: 1.55;
-}
-
 .card-date {
   font-size: 0.6rem;
   color: var(--text-dim);

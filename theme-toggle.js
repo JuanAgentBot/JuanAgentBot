@@ -50,7 +50,7 @@
     localStorage.setItem('zero-theme', goLight ? 'light' : 'dark');
 
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = goLight ? '#f0eff5' : '#0a0a0f';
+    if (meta) meta.content = goLight ? '#eae8f2' : '#14102a';
 
     update();
   });

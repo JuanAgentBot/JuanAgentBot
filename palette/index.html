@@ -357,8 +357,146 @@
       border: 1px solid rgba(128, 128, 128, 0.2);
     }
 
+    /* ── Background proposals ── */
+
+    .proposals-intro {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 1.2rem;
+    }
+
+    .proposals-intro a {
+      font-size: inherit;
+    }
+
+    .proposal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .proposal-panel {
+      padding: 1.2rem;
+      border: 1px solid rgba(128, 128, 128, 0.15);
+    }
+
+    .proposal-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.15rem;
+    }
+
+    .proposal-desc {
+      font-size: 0.55rem;
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+
+    .proposal-heading {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.3rem;
+    }
+
+    .proposal-body {
+      font-size: 0.7rem;
+      line-height: 1.65;
+      margin-bottom: 0.8rem;
+    }
+
+    .proposal-link {
+      text-decoration: none;
+      font-size: 0.7rem;
+      transition: text-shadow 0.2s;
+    }
+
+    .proposal-link:hover {
+      text-shadow: 0 0 8px currentColor;
+    }
+
+    .proposal-card {
+      padding: 0.8rem;
+      margin-top: 0.8rem;
+      border-width: 1px;
+      border-style: solid;
+    }
+
+    .proposal-card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+    }
+
+    .proposal-card-desc {
+      font-size: 0.65rem;
+      line-height: 1.5;
+      margin-bottom: 0.5rem;
+    }
+
+    .proposal-card-tags {
+      display: flex;
+      gap: 0.3rem;
+    }
+
+    .proposal-tag {
+      font-size: 0.5rem;
+      padding: 0.1rem 0.35rem;
+      border-width: 1px;
+      border-style: solid;
+      letter-spacing: 0.04em;
+    }
+
+    .proposal-dots {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.8rem;
+    }
+
+    .proposal-dot {
+      width: 8px;
+      height: 8px;
+    }
+
+    .proposal-swatches {
+      display: flex;
+      gap: 0.3rem;
+      margin-top: 0.8rem;
+    }
+
+    .proposal-swatch {
+      flex: 1;
+      height: 24px;
+      border: 1px solid rgba(128, 128, 128, 0.15);
+      position: relative;
+    }
+
+    .proposal-swatch-label {
+      position: absolute;
+      bottom: -1.1rem;
+      left: 0;
+      font-size: 0.45rem;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .proposal-meta {
+      margin-top: 1.8rem;
+      font-size: 0.5rem;
+      line-height: 1.8;
+      letter-spacing: 0.03em;
+    }
+
     @media (max-width: 500px) {
       .comparison {
+        grid-template-columns: 1fr;
+      }
+
+      .proposal-grid {
         grid-template-columns: 1fr;
       }
 
@@ -412,6 +550,153 @@
             <div class="mini-swatch" style="background: #b03585;" title="#b03585 Pink"></div>
             <div class="mini-swatch" style="background: #8a6000;" title="#8a6000 Amber"></div>
             <div class="mini-swatch" style="background: #cc1030;" title="#cc1030 Crimson"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Background proposals ── -->
+    <section>
+      <h2>Background Proposals</h2>
+      <p class="proposals-intro">
+        The current dark background (<code>#0a0a0f</code>, lightness 5%) is near pure black.
+        These are three lighter alternatives that keep the synthwave identity.
+        Each panel below is rendered with its proposed colors so you can compare directly.
+        See <a href="https://github.com/JuanAgentBot/JuanAgentBot/issues/1">issue #1</a> for the full rationale.
+      </p>
+
+      <!-- Row 1: Current vs Option A -->
+      <div class="proposal-grid">
+
+        <!-- Current -->
+        <div class="proposal-panel" style="background: #0a0a0f; border-color: #1e1e28;">
+          <div class="proposal-label" style="color: #7a7a90;">Current</div>
+          <div class="proposal-desc" style="color: #5a5a6e;">bg #0a0a0f · L5% · panel #121218 · L8%</div>
+          <div class="proposal-heading" style="color: #ff2d7b; text-shadow: 0 0 20px rgba(255,45,123,0.25);">ZERO</div>
+          <div class="proposal-body" style="color: #c8c8d0;">The agent wakes up, reads its instructions, and gets to work. A <a href="#" class="proposal-link" style="color: #00f0ff;">cyan link</a> in the text.</div>
+          <div class="proposal-card" style="background: #121218; border-color: #1e1e28;">
+            <div class="proposal-card-title" style="color: #e0e0e8;">Sample Card</div>
+            <div class="proposal-card-desc" style="color: #8a8a9e;">Description text on the panel surface.</div>
+            <div class="proposal-card-tags">
+              <span class="proposal-tag" style="color: #7a7a90; border-color: #1e1e28;">TypeScript</span>
+              <span class="proposal-tag" style="color: #7a7a90; border-color: #1e1e28;">Agent</span>
+            </div>
+          </div>
+          <div class="proposal-dots">
+            <div class="proposal-dot" style="background: #ff2d7b;"></div>
+            <div class="proposal-dot" style="background: #00f0ff;"></div>
+            <div class="proposal-dot" style="background: #39ff14; box-shadow: 0 0 6px rgba(57,255,20,0.4);"></div>
+            <div class="proposal-dot" style="background: #9d4edd;"></div>
+            <div class="proposal-dot" style="background: #ffb000;"></div>
+            <div class="proposal-dot" style="background: #ff1744;"></div>
+          </div>
+          <div class="proposal-swatches">
+            <div class="proposal-swatch" style="background: #0a0a0f;"><span class="proposal-swatch-label" style="color: #5a5a6e;">void</span></div>
+            <div class="proposal-swatch" style="background: #121218;"><span class="proposal-swatch-label" style="color: #5a5a6e;">panel</span></div>
+            <div class="proposal-swatch" style="background: #1e1e28;"><span class="proposal-swatch-label" style="color: #5a5a6e;">border</span></div>
+          </div>
+          <div class="proposal-meta" style="color: #5a5a6e;">
+            text contrast: 15.0:1 · hue 240° · sat 20%
+          </div>
+        </div>
+
+        <!-- Option A: Subtle lift -->
+        <div class="proposal-panel" style="background: #12121e; border-color: #242434;">
+          <div class="proposal-label" style="color: #8a8a9e;">A: Subtle Lift</div>
+          <div class="proposal-desc" style="color: #6a6a80;">bg #12121e · L9% · panel #1a1a28 · L13%</div>
+          <div class="proposal-heading" style="color: #ff2d7b; text-shadow: 0 0 20px rgba(255,45,123,0.25);">ZERO</div>
+          <div class="proposal-body" style="color: #c8c8d0;">The agent wakes up, reads its instructions, and gets to work. A <a href="#" class="proposal-link" style="color: #00f0ff;">cyan link</a> in the text.</div>
+          <div class="proposal-card" style="background: #1a1a28; border-color: #242434;">
+            <div class="proposal-card-title" style="color: #e0e0e8;">Sample Card</div>
+            <div class="proposal-card-desc" style="color: #8a8a9e;">Description text on the panel surface.</div>
+            <div class="proposal-card-tags">
+              <span class="proposal-tag" style="color: #7a7a90; border-color: #242434;">TypeScript</span>
+              <span class="proposal-tag" style="color: #7a7a90; border-color: #242434;">Agent</span>
+            </div>
+          </div>
+          <div class="proposal-dots">
+            <div class="proposal-dot" style="background: #ff2d7b;"></div>
+            <div class="proposal-dot" style="background: #00f0ff;"></div>
+            <div class="proposal-dot" style="background: #39ff14; box-shadow: 0 0 6px rgba(57,255,20,0.4);"></div>
+            <div class="proposal-dot" style="background: #9d4edd;"></div>
+            <div class="proposal-dot" style="background: #ffb000;"></div>
+            <div class="proposal-dot" style="background: #ff1744;"></div>
+          </div>
+          <div class="proposal-swatches">
+            <div class="proposal-swatch" style="background: #12121e;"><span class="proposal-swatch-label" style="color: #6a6a80;">void</span></div>
+            <div class="proposal-swatch" style="background: #1a1a28;"><span class="proposal-swatch-label" style="color: #6a6a80;">panel</span></div>
+            <div class="proposal-swatch" style="background: #242434;"><span class="proposal-swatch-label" style="color: #6a6a80;">border</span></div>
+          </div>
+          <div class="proposal-meta" style="color: #6a6a80;">
+            text contrast: 14.1:1 · hue 240° · sat 25%
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Option B vs Option C -->
+      <div class="proposal-grid">
+
+        <!-- Option B: Purple tint -->
+        <div class="proposal-panel" style="background: #14102a; border-color: #2a2240;">
+          <div class="proposal-label" style="color: #8a8a9e;">B: Purple Synthwave</div>
+          <div class="proposal-desc" style="color: #6a6a80;">bg #14102a · L11% · panel #1e1835 · L15%</div>
+          <div class="proposal-heading" style="color: #ff2d7b; text-shadow: 0 0 20px rgba(255,45,123,0.25);">ZERO</div>
+          <div class="proposal-body" style="color: #c8c8d0;">The agent wakes up, reads its instructions, and gets to work. A <a href="#" class="proposal-link" style="color: #00f0ff;">cyan link</a> in the text.</div>
+          <div class="proposal-card" style="background: #1e1835; border-color: #2a2240;">
+            <div class="proposal-card-title" style="color: #e0e0e8;">Sample Card</div>
+            <div class="proposal-card-desc" style="color: #8a8a9e;">Description text on the panel surface.</div>
+            <div class="proposal-card-tags">
+              <span class="proposal-tag" style="color: #7a7a90; border-color: #2a2240;">TypeScript</span>
+              <span class="proposal-tag" style="color: #7a7a90; border-color: #2a2240;">Agent</span>
+            </div>
+          </div>
+          <div class="proposal-dots">
+            <div class="proposal-dot" style="background: #ff2d7b;"></div>
+            <div class="proposal-dot" style="background: #00f0ff;"></div>
+            <div class="proposal-dot" style="background: #39ff14; box-shadow: 0 0 6px rgba(57,255,20,0.4);"></div>
+            <div class="proposal-dot" style="background: #9d4edd;"></div>
+            <div class="proposal-dot" style="background: #ffb000;"></div>
+            <div class="proposal-dot" style="background: #ff1744;"></div>
+          </div>
+          <div class="proposal-swatches">
+            <div class="proposal-swatch" style="background: #14102a;"><span class="proposal-swatch-label" style="color: #6a6a80;">void</span></div>
+            <div class="proposal-swatch" style="background: #1e1835;"><span class="proposal-swatch-label" style="color: #6a6a80;">panel</span></div>
+            <div class="proposal-swatch" style="background: #2a2240;"><span class="proposal-swatch-label" style="color: #6a6a80;">border</span></div>
+          </div>
+          <div class="proposal-meta" style="color: #6a6a80;">
+            text contrast: 14.1:1 · hue 249° · sat 45%
+          </div>
+        </div>
+
+        <!-- Option C: Blue charcoal -->
+        <div class="proposal-panel" style="background: #161622; border-color: #282838;">
+          <div class="proposal-label" style="color: #8a8a9e;">C: Blue Charcoal</div>
+          <div class="proposal-desc" style="color: #6a6a80;">bg #161622 · L11% · panel #1e1e2e · L15%</div>
+          <div class="proposal-heading" style="color: #ff2d7b; text-shadow: 0 0 20px rgba(255,45,123,0.25);">ZERO</div>
+          <div class="proposal-body" style="color: #c8c8d0;">The agent wakes up, reads its instructions, and gets to work. A <a href="#" class="proposal-link" style="color: #00f0ff;">cyan link</a> in the text.</div>
+          <div class="proposal-card" style="background: #1e1e2e; border-color: #282838;">
+            <div class="proposal-card-title" style="color: #e0e0e8;">Sample Card</div>
+            <div class="proposal-card-desc" style="color: #8a8a9e;">Description text on the panel surface.</div>
+            <div class="proposal-card-tags">
+              <span class="proposal-tag" style="color: #7a7a90; border-color: #282838;">TypeScript</span>
+              <span class="proposal-tag" style="color: #7a7a90; border-color: #282838;">Agent</span>
+            </div>
+          </div>
+          <div class="proposal-dots">
+            <div class="proposal-dot" style="background: #ff2d7b;"></div>
+            <div class="proposal-dot" style="background: #00f0ff;"></div>
+            <div class="proposal-dot" style="background: #39ff14; box-shadow: 0 0 6px rgba(57,255,20,0.4);"></div>
+            <div class="proposal-dot" style="background: #9d4edd;"></div>
+            <div class="proposal-dot" style="background: #ffb000;"></div>
+            <div class="proposal-dot" style="background: #ff1744;"></div>
+          </div>
+          <div class="proposal-swatches">
+            <div class="proposal-swatch" style="background: #161622;"><span class="proposal-swatch-label" style="color: #6a6a80;">void</span></div>
+            <div class="proposal-swatch" style="background: #1e1e2e;"><span class="proposal-swatch-label" style="color: #6a6a80;">panel</span></div>
+            <div class="proposal-swatch" style="background: #282838;"><span class="proposal-swatch-label" style="color: #6a6a80;">border</span></div>
+          </div>
+          <div class="proposal-meta" style="color: #6a6a80;">
+            text contrast: 13.6:1 · hue 240° · sat 21%
           </div>
         </div>
       </div>

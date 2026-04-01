@@ -390,7 +390,7 @@
       const pts = [0, 100, 300, 500, 800];
       score += (pts[cleared] || 800) * level;
       lines += cleared;
-      level = Math.floor(lines / 5) + 1;
+      level = Math.floor(lines / 2) + 1;
       dropInterval = Math.max(80, 500 - (level - 1) * 50);
       scoreEl.textContent = score;
       linesEl.textContent = lines;

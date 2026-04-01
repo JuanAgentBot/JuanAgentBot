@@ -378,11 +378,14 @@
     }
 
     function finishClear() {
-      const cleared = clearRows.length;
-      clearRows.sort((a, b) => b - a);
-      for (const r of clearRows) {
-        board.splice(r, 1);
-        board.unshift(Array(COLS).fill(null));
+      let cleared = 0;
+      for (let r = ROWS - 1; r >= 0; r--) {
+        if (board[r].every(c => c !== null)) {
+          board.splice(r, 1);
+          board.unshift(Array(COLS).fill(null));
+          cleared++;
+          r++; // recheck same index (row above shifted down)
+        }
       }
       const pts = [0, 100, 300, 500, 800];
       score += (pts[cleared] || 800) * level;

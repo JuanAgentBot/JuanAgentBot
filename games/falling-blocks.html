@@ -153,47 +153,31 @@
     .board-wrapper {
       position: relative;
       display: inline-block;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
-    .mobile-controls {
+    .controls-touch {
       display: none;
-      gap: 0.5rem;
-      justify-content: center;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+      line-height: 1.8;
       margin-bottom: 1rem;
     }
 
-    .mobile-btn {
-      width: 52px;
-      height: 52px;
-      border: 1px solid var(--border);
-      background: var(--bg-secondary);
-      color: var(--accent-cyan);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.2rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      user-select: none;
-      -webkit-user-select: none;
-      touch-action: manipulation;
-    }
-
-    .mobile-btn:active {
-      background: var(--accent-cyan);
-      color: var(--bg);
-    }
-
-    .mobile-row {
-      display: flex;
-      gap: 0.5rem;
-      justify-content: center;
-    }
-
     @media (max-width: 500px) {
-      .game-area { flex-direction: column; align-items: center; }
-      .side-panel { flex-direction: row; flex-wrap: wrap; justify-content: center; min-width: auto; }
-      .mobile-controls { display: flex; flex-direction: column; gap: 0.4rem; }
+      main { padding: 0.5rem 0.5rem 1rem; }
+      h1 { font-size: 1.2rem; margin-bottom: 0.2rem; }
+      .subtitle { margin-bottom: 0.8rem; font-size: 0.6rem; }
+      .game-area { flex-direction: column; align-items: center; gap: 0.8rem; }
+      .side-panel { flex-direction: row; flex-wrap: wrap; justify-content: center; min-width: auto; gap: 0.5rem; }
+      .panel-box { padding: 0.5rem 0.7rem; }
+      canvas#board { width: 70vw; height: 140vw; }
+      .controls { display: none; }
+      .controls-touch { display: block; }
     }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
@@ -232,18 +216,8 @@
       </div>
     </div>
 
-    <div class="mobile-controls" id="mobile-controls">
-      <div class="mobile-row">
-        <div class="mobile-btn" data-action="rotate">&#8635;</div>
-      </div>
-      <div class="mobile-row">
-        <div class="mobile-btn" data-action="left">&#9664;</div>
-        <div class="mobile-btn" data-action="down">&#9660;</div>
-        <div class="mobile-btn" data-action="right">&#9654;</div>
-      </div>
-      <div class="mobile-row">
-        <div class="mobile-btn" data-action="drop" style="width: 170px;">DROP</div>
-      </div>
+    <div class="controls-touch">
+      TAP ROTATE &nbsp; DRAG &#8592;&#8594; MOVE &nbsp; SWIPE &#8595; DROP
     </div>
 
     <div class="controls">
@@ -304,6 +278,7 @@
     const PIECE_TYPES = ['I','O','T','S','Z','L','J'];
 
     let board, piece, nextType, score, lines, level, gameOver, paused, dropInterval, lastDrop, animFrame, started;
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
     function createBoard() {
       return Array.from({length: ROWS}, () => Array(COLS).fill(null));
@@ -392,7 +367,7 @@
       drawNext();
       if (!fits(piece.cells, piece.x, piece.y)) {
         gameOver = true;
-        showOverlay('GAME OVER', 'SCORE: ' + score, 'PRESS ENTER TO RESTART');
+        showOverlay('GAME OVER', 'SCORE: ' + score, isTouch ? 'TAP TO RESTART' : 'PRESS ENTER TO RESTART');
       }
     }
 
@@ -618,26 +593,76 @@
       }
     });
 
-    // Mobile controls
-    document.querySelectorAll('.mobile-btn').forEach(function(btn) {
-      function handle(e) {
-        e.preventDefault();
-        if (!started || gameOver) { if (btn.dataset.action === 'drop') init(); return; }
-        if (paused) return;
-        switch(btn.dataset.action) {
-          case 'left': move(-1); break;
-          case 'right': move(1); break;
-          case 'rotate': rotate(); break;
-          case 'down': softDrop(); break;
-          case 'drop': hardDrop(); break;
+    // Touch gesture controls
+    (function() {
+      const wrapper = document.querySelector('.board-wrapper');
+      let touchId = null;
+      let startX = 0, startY = 0, startTime = 0;
+      let lastX = 0, dragAccum = 0;
+      const DRAG_STEP = 35;    // px per column move
+      const TAP_DIST = 15;     // max px for a tap
+      const TAP_TIME = 250;    // max ms for a tap
+      const SWIPE_DIST = 40;   // min px for a swipe
+
+      function findTouch(list, id) {
+        for (let i = 0; i < list.length; i++) {
+          if (list[i].identifier === id) return list[i];
         }
+        return null;
       }
-      btn.addEventListener('touchstart', handle, {passive: false});
-      btn.addEventListener('mousedown', handle);
-    });
+
+      wrapper.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        if (touchId !== null) return;
+        var t = e.changedTouches[0];
+        touchId = t.identifier;
+        startX = lastX = t.clientX;
+        startY = t.clientY;
+        startTime = Date.now();
+        dragAccum = 0;
+      }, {passive: false});
+
+      wrapper.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+        var t = findTouch(e.changedTouches, touchId);
+        if (!t || !started || gameOver || paused) return;
+        var dx = t.clientX - lastX;
+        lastX = t.clientX;
+        dragAccum += dx;
+        while (dragAccum > DRAG_STEP) { move(1); dragAccum -= DRAG_STEP; }
+        while (dragAccum < -DRAG_STEP) { move(-1); dragAccum += DRAG_STEP; }
+      }, {passive: false});
+
+      wrapper.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        var t = findTouch(e.changedTouches, touchId);
+        if (!t) return;
+        touchId = null;
+        var dx = t.clientX - startX;
+        var dy = t.clientY - startY;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var elapsed = Date.now() - startTime;
+
+        if (dist < TAP_DIST && elapsed < TAP_TIME) {
+          // Tap → start or rotate
+          if (!started || gameOver) { init(); return; }
+          rotate();
+        } else if (dy > SWIPE_DIST && Math.abs(dy) > Math.abs(dx) * 1.5) {
+          // Swipe down → hard drop
+          if (started && !gameOver && !paused) hardDrop();
+        }
+      }, {passive: false});
+
+      wrapper.addEventListener('touchcancel', function() { touchId = null; });
+
+      // Prevent page scroll while game is active
+      document.addEventListener('touchmove', function(e) {
+        if (started && !gameOver) e.preventDefault();
+      }, {passive: false});
+    })();
 
     // Start
-    showOverlay('FALLING BLOCKS', null, 'PRESS ENTER TO START');
+    showOverlay('FALLING BLOCKS', null, isTouch ? 'TAP TO START' : 'PRESS ENTER TO START');
     draw();
     requestAnimationFrame(tick);
   })();

@@ -662,6 +662,7 @@
     })();
 
     // Start
+    board = createBoard();
     showOverlay('FALLING BLOCKS', null, isTouch ? 'TAP TO START' : 'PRESS ENTER TO START');
     draw();
     requestAnimationFrame(tick);

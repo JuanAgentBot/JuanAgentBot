@@ -285,6 +285,13 @@
     const CLEAR_FLASH_MS = 280;
     const CLEAR_DISSOLVE_MS = 320;
 
+    // Neon phosphor trail
+    let trail = [];
+    const TRAIL_DURATION = 250;
+
+    // Combo tracking
+    let combo = 0;
+
     function createBoard() {
       return Array.from({length: ROWS}, () => Array(COLS).fill(null));
     }
@@ -346,6 +353,7 @@
         if (board[r].every(c => c !== null)) full.push(r);
       }
       if (full.length > 0) {
+        combo++;
         clearing = true;
         clearRows = full;
         clearStart = performance.now();
@@ -356,6 +364,7 @@
           }
         }
       } else {
+        combo = 0;
         spawn();
       }
     }
@@ -427,8 +436,23 @@
       ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Grid lines
-      ctx.strokeStyle = 'rgba(122, 122, 144, 0.08)';
+      // Screen shake for combos
+      let shaking = false;
+      if (clearing && combo >= 2) {
+        const shakeElapsed = performance.now() - clearStart;
+        if (shakeElapsed < CLEAR_FLASH_MS) {
+          shaking = true;
+          const intensity = Math.min(combo, 5) * 1.5;
+          ctx.save();
+          ctx.translate((Math.random() - 0.5) * intensity, (Math.random() - 0.5) * intensity);
+        }
+      }
+
+      // Grid lines (pulse with drop rhythm)
+      const gridPulse = started && !gameOver && !paused
+        ? 0.06 + Math.sin(performance.now() / (dropInterval || 500) * Math.PI) * 0.04
+        : 0.08;
+      ctx.strokeStyle = 'rgba(122, 122, 144, ' + gridPulse.toFixed(3) + ')';
       ctx.lineWidth = 1;
       for (let c = 1; c < COLS; c++) {
         ctx.beginPath();
@@ -486,6 +510,28 @@
         }
       }
 
+      // Neon phosphor trail
+      const trailNow = performance.now();
+      for (let i = trail.length - 1; i >= 0; i--) {
+        const tr = trail[i];
+        const age = trailNow - tr.time;
+        if (age > TRAIL_DURATION) { trail.splice(i, 1); continue; }
+        const alpha = (1 - age / TRAIL_DURATION) * 0.25;
+        for (const [cx, cy] of tr.cells) {
+          const bx = tr.x + cx;
+          const by = tr.y + cy;
+          if (by >= 0 && by < ROWS && bx >= 0 && bx < COLS) {
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = COLORS[tr.type];
+            ctx.shadowColor = GLOW[tr.type];
+            ctx.shadowBlur = 6;
+            ctx.fillRect(bx * CELL + 1, by * CELL + 1, CELL - 2, CELL - 2);
+            ctx.shadowBlur = 0;
+          }
+        }
+      }
+      ctx.globalAlpha = 1;
+
       if (piece && !gameOver && !clearing) {
         // Ghost piece
         const gy = ghostY();
@@ -509,6 +555,26 @@
           if (by >= 0) drawCell(ctx, bx, by, piece.type);
         }
       }
+
+      // Combo indicator
+      if (combo >= 2 && clearing) {
+        const comboElapsed = performance.now() - clearStart;
+        const comboTotal = CLEAR_FLASH_MS + CLEAR_DISSOLVE_MS;
+        const comboAlpha = Math.max(0, 1 - comboElapsed / comboTotal * 0.5);
+        const fontSize = Math.min(24 + combo * 3, 40);
+        ctx.globalAlpha = comboAlpha;
+        ctx.font = 'bold ' + fontSize + 'px "JetBrains Mono", monospace';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = combo >= 4 ? 'rgba(255, 45, 123, 0.9)' : 'rgba(0, 240, 255, 0.8)';
+        ctx.shadowBlur = 12 + combo * 4;
+        ctx.fillText('\u00d7' + combo, canvas.width / 2, canvas.height / 2);
+        ctx.shadowBlur = 0;
+        ctx.textAlign = 'left';
+        ctx.globalAlpha = 1;
+      }
+
+      if (shaking) ctx.restore();
     }
 
     function drawNext() {
@@ -559,6 +625,7 @@
       board = createBoard();
       score = 0; lines = 0; level = 1;
       gameOver = false; paused = false;
+      trail = []; combo = 0;
       dropInterval = 500;
       lastDrop = 0;
       scoreEl.textContent = '0';
@@ -580,6 +647,7 @@
       }
       if (time - lastDrop > dropInterval) {
         if (fits(piece.cells, piece.x, piece.y + 1)) {
+          pushTrail();
           piece.y++;
         } else {
           lock();
@@ -587,6 +655,10 @@
         lastDrop = time;
       }
       draw();
+    }
+
+    function pushTrail() {
+      trail.push({cells: piece.cells.map(c => [...c]), x: piece.x, y: piece.y, type: piece.type, time: performance.now()});
     }
 
     function move(dx) {
@@ -609,6 +681,7 @@
 
     function softDrop() {
       if (fits(piece.cells, piece.x, piece.y + 1)) {
+        pushTrail();
         piece.y++;
         score += 1;
         scoreEl.textContent = score;
@@ -618,7 +691,9 @@
 
     function hardDrop() {
       let dropped = 0;
+      const dropNow = performance.now();
       while (fits(piece.cells, piece.x, piece.y + 1)) {
+        trail.push({cells: piece.cells.map(c => [...c]), x: piece.x, y: piece.y, type: piece.type, time: dropNow - dropped * 20});
         piece.y++;
         dropped++;
       }

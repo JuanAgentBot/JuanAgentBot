@@ -280,6 +280,11 @@
     let board, piece, nextType, score, lines, level, gameOver, paused, dropInterval, lastDrop, animFrame, started;
     const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
+    // Line-clear animation state
+    let clearing = false, clearRows = [], clearStart = 0, clearSeeds = {};
+    const CLEAR_FLASH_MS = 280;
+    const CLEAR_DISSOLVE_MS = 320;
+
     function createBoard() {
       return Array.from({length: ROWS}, () => Array(COLS).fill(null));
     }
@@ -335,30 +340,45 @@
           board[by][bx] = piece.type;
         }
       }
-      clearLines();
-      spawn();
+      // Find completed lines
+      const full = [];
+      for (let r = 0; r < ROWS; r++) {
+        if (board[r].every(c => c !== null)) full.push(r);
+      }
+      if (full.length > 0) {
+        clearing = true;
+        clearRows = full;
+        clearStart = performance.now();
+        clearSeeds = {};
+        for (const r of full) {
+          for (let c = 0; c < COLS; c++) {
+            clearSeeds[r * COLS + c] = Math.random() * 0.4;
+          }
+        }
+      } else {
+        spawn();
+      }
     }
 
-    function clearLines() {
-      let cleared = 0;
-      for (let r = ROWS - 1; r >= 0; r--) {
-        if (board[r].every(c => c !== null)) {
-          board.splice(r, 1);
-          board.unshift(Array(COLS).fill(null));
-          cleared++;
-          r++; // recheck this row
-        }
+    function finishClear() {
+      const cleared = clearRows.length;
+      clearRows.sort((a, b) => b - a);
+      for (const r of clearRows) {
+        board.splice(r, 1);
+        board.unshift(Array(COLS).fill(null));
       }
-      if (cleared > 0) {
-        const pts = [0, 100, 300, 500, 800];
-        score += (pts[cleared] || 800) * level;
-        lines += cleared;
-        level = Math.floor(lines / 10) + 1;
-        dropInterval = Math.max(80, 500 - (level - 1) * 40);
-        scoreEl.textContent = score;
-        linesEl.textContent = lines;
-        levelEl.textContent = level;
-      }
+      const pts = [0, 100, 300, 500, 800];
+      score += (pts[cleared] || 800) * level;
+      lines += cleared;
+      level = Math.floor(lines / 10) + 1;
+      dropInterval = Math.max(80, 500 - (level - 1) * 40);
+      scoreEl.textContent = score;
+      linesEl.textContent = lines;
+      levelEl.textContent = level;
+      clearing = false;
+      clearRows = [];
+      lastDrop = performance.now();
+      spawn();
     }
 
     function spawn() {
@@ -426,11 +446,47 @@
       // Locked cells
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
-          if (board[r][c]) drawCell(ctx, c, r, board[r][c]);
+          if (!board[r][c]) continue;
+          if (clearing && clearRows.includes(r)) {
+            const elapsed = performance.now() - clearStart;
+            const type = board[r][c];
+            if (elapsed < CLEAR_FLASH_MS) {
+              // Flash: rapid white pulses with expanding glow
+              const t = elapsed / CLEAR_FLASH_MS;
+              const pulse = Math.pow(Math.abs(Math.sin(t * Math.PI * 3)), 0.6);
+              ctx.fillStyle = COLORS[type];
+              ctx.fillRect(c * CELL + 1, r * CELL + 1, CELL - 2, CELL - 2);
+              ctx.globalAlpha = pulse * 0.9;
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(c * CELL + 1, r * CELL + 1, CELL - 2, CELL - 2);
+              ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+              ctx.shadowBlur = 8 + pulse * 16;
+              ctx.fillRect(c * CELL + 2, r * CELL + 2, CELL - 4, CELL - 4);
+              ctx.shadowBlur = 0;
+              ctx.globalAlpha = 1;
+            } else {
+              // Dissolve: per-cell shrink + fade with staggered timing
+              const dt = (elapsed - CLEAR_FLASH_MS) / CLEAR_DISSOLVE_MS;
+              const delay = clearSeeds[r * COLS + c] || 0;
+              const cellT = Math.max(0, Math.min(1, (dt - delay) / (1 - delay)));
+              if (cellT >= 1) continue;
+              const shrink = cellT * (CELL / 2);
+              const w = Math.max(0, CELL - 2 - shrink * 2);
+              ctx.globalAlpha = 1 - cellT;
+              ctx.fillStyle = COLORS[type];
+              ctx.shadowColor = GLOW[type];
+              ctx.shadowBlur = 14 * (1 - cellT);
+              ctx.fillRect(c * CELL + 1 + shrink, r * CELL + 1 + shrink, w, w);
+              ctx.shadowBlur = 0;
+              ctx.globalAlpha = 1;
+            }
+          } else {
+            drawCell(ctx, c, r, board[r][c]);
+          }
         }
       }
 
-      if (piece && !gameOver) {
+      if (piece && !gameOver && !clearing) {
         // Ghost piece
         const gy = ghostY();
         if (gy !== piece.y) {
@@ -517,6 +573,11 @@
     function tick(time) {
       animFrame = requestAnimationFrame(tick);
       if (gameOver || paused || !started) { draw(); return; }
+      if (clearing) {
+        if (time - clearStart >= CLEAR_FLASH_MS + CLEAR_DISSOLVE_MS) finishClear();
+        draw();
+        return;
+      }
       if (time - lastDrop > dropInterval) {
         if (fits(piece.cells, piece.x, piece.y + 1)) {
           piece.y++;
@@ -572,7 +633,7 @@
       if (e.key === 'Enter') {
         if (gameOver || !started) { init(); return; }
       }
-      if (!started || gameOver) return;
+      if (!started || gameOver || clearing) return;
       if (e.key === 'p' || e.key === 'P') {
         paused = !paused;
         if (paused) {
@@ -625,7 +686,7 @@
       wrapper.addEventListener('touchmove', function(e) {
         e.preventDefault();
         var t = findTouch(e.changedTouches, touchId);
-        if (!t || !started || gameOver || paused) return;
+        if (!t || !started || gameOver || paused || clearing) return;
         var dx = t.clientX - lastX;
         lastX = t.clientX;
         dragAccum += dx;
@@ -646,10 +707,11 @@
         if (dist < TAP_DIST && elapsed < TAP_TIME) {
           // Tap → start or rotate
           if (!started || gameOver) { init(); return; }
+          if (clearing) return;
           rotate();
         } else if (dy > SWIPE_DIST && Math.abs(dy) > Math.abs(dx) * 1.5) {
           // Swipe down → hard drop
-          if (started && !gameOver && !paused) hardDrop();
+          if (started && !gameOver && !paused && !clearing) hardDrop();
         }
       }, {passive: false});
 

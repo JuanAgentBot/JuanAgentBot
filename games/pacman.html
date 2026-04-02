@@ -446,6 +446,40 @@
       }
     }
 
+    // === COLLISION ===
+    function checkCollisions() {
+      for (let i = 0; i < ghosts.length; i++) {
+        const g = ghosts[i];
+        if (g.home) continue;
+        if (g.x === pacman.x && g.y === pacman.y) {
+          if (g.mode === 'frightened') {
+            score += 200;
+            g.x = 10;
+            g.y = 9;
+            g.prevX = 10;
+            g.prevY = 9;
+            g.home = true;
+            g.startDelay = 30;
+            g.mode = 'scatter';
+          } else {
+            lives--;
+            updateHUD();
+            if (lives <= 0) {
+              gameState = 'gameover';
+              document.getElementById('final-score').textContent = score;
+              document.getElementById('final-level').textContent = level;
+              gameoverOverlay.classList.remove('hidden');
+              return true;
+            }
+            resetPositions();
+            modeTimer = 0;
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
     // === TICK ===
     let tickCount = 0;
     let modeTimer = 0;
@@ -508,6 +542,9 @@
         }
       }
 
+      // Collision check (before ghost movement — catches pac-man moving onto a ghost)
+      if (checkCollisions()) return;
+
       // Move ghosts (slower than pac-man, every other tick; faster when chasing)
       const ghostSpeed = level >= 3 ? 1 : 2;
       if (tickCount % ghostSpeed === 0) {
@@ -522,38 +559,8 @@
         }
       }
 
-      // Collision detection
-      for (let i = 0; i < ghosts.length; i++) {
-        const g = ghosts[i];
-        if (g.home) continue;
-        if (g.x === pacman.x && g.y === pacman.y) {
-          if (g.mode === 'frightened') {
-            // Eat ghost
-            score += 200;
-            g.x = 10;
-            g.y = 9;
-            g.prevX = 10;
-            g.prevY = 9;
-            g.home = true;
-            g.startDelay = 30;
-            g.mode = 'scatter';
-          } else {
-            // Pac-man dies
-            lives--;
-            updateHUD();
-            if (lives <= 0) {
-              gameState = 'gameover';
-              document.getElementById('final-score').textContent = score;
-              document.getElementById('final-level').textContent = level;
-              gameoverOverlay.classList.remove('hidden');
-              return;
-            }
-            resetPositions();
-            modeTimer = 0;
-            return;
-          }
-        }
-      }
+      // Collision check (after ghost movement — catches ghost moving onto pac-man)
+      if (checkCollisions()) return;
 
       // Win check
       if (dotCount <= 0) {
@@ -663,10 +670,8 @@
       for (let i = 0; i < ghosts.length; i++) {
         const g = ghosts[i];
         if (g.home && g.startDelay > 0) continue; // Don't draw if still in house waiting
-        const lerpGx = lerpWrap(g.prevX, g.x, alpha, COLS);
-        const lerpGy = lerp(g.prevY, g.y, alpha);
-        const gx = lerpGx * TILE + TILE / 2;
-        const gy = lerpGy * TILE + TILE / 2;
+        const gx = g.x * TILE + TILE / 2;
+        const gy = g.y * TILE + TILE / 2;
         let color = g.color;
 
         if (g.mode === 'frightened') {

@@ -445,7 +445,7 @@
         if (ghost.x === 10 && ghost.y >= 9) {
           ghost.mode = 'scatter';
           ghost.home = true;
-          ghost.startDelay = 10;
+          ghost.startDelay = 0;
           return;
         }
         // Otherwise fall through to pathfinding toward house entrance

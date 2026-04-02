@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>PAC-MAN / ZERO game lab</title>
   <meta name="theme-color" content="#14102a">
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -13,11 +13,22 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    html, body {
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
     main {
       max-width: 640px;
       margin: 0 auto;
-      padding: 2rem 1.5rem 4rem;
+      padding: 1rem 1rem 2rem;
       text-align: center;
+      overflow: hidden;
+    }
+    @media (min-width: 641px) {
+      html, body { overflow: auto; position: static; }
+      main { padding: 2rem 1.5rem 4rem; }
     }
     .back {
       display: inline-block;
@@ -59,6 +70,14 @@
       margin: 0 auto;
       border: 1px solid #7a7a90;
       image-rendering: pixelated;
+      max-width: 100%;
+      height: auto;
+    }
+    canvas {
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     .controls {
       margin-top: 1rem;
@@ -71,6 +90,19 @@
       color: #00f0ff;
       border: 1px solid #7a7a90;
       padding: 0.1em 0.4em;
+    }
+    @media (pointer: coarse) {
+      .controls { display: none; }
+      .touch-hint {
+        display: block;
+        margin-top: 0.8rem;
+        font-size: 0.65rem;
+        color: var(--text-dim);
+        letter-spacing: 0.06em;
+      }
+    }
+    @media (pointer: fine) {
+      .touch-hint { display: none; }
     }
     .overlay {
       position: fixed;
@@ -101,34 +133,7 @@
       font-size: 0.7rem;
       margin-top: 0.8rem;
     }
-    .touch-controls {
-      display: none;
-      margin-top: 1rem;
-      gap: 0.3rem;
-    }
-    .touch-controls button {
-      width: 52px;
-      height: 52px;
-      background: transparent;
-      border: 1px solid #7a7a90;
-      color: #e0e0e8;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.2rem;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .touch-controls button:active {
-      border-color: #00f0ff;
-      color: #00f0ff;
-    }
-    @media (pointer: coarse) {
-      .touch-controls {
-        display: grid;
-        grid-template-columns: 52px 52px 52px;
-        grid-template-rows: 52px 52px;
-        justify-content: center;
-      }
-    }
+
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -143,14 +148,7 @@
       <span class="hud-level">LEVEL: <span id="level">1</span></span>
     </div>
     <canvas id="c"></canvas>
-    <div class="touch-controls">
-      <div></div>
-      <button id="btn-up">&#9650;</button>
-      <div></div>
-      <button id="btn-left">&#9664;</button>
-      <button id="btn-down">&#9660;</button>
-      <button id="btn-right">&#9654;</button>
-    </div>
+    <div class="touch-hint">SWIPE TO MOVE &middot; TAP TO START</div>
     <div class="controls">
       <kbd>&#8592;</kbd> <kbd>&#8593;</kbd> <kbd>&#8594;</kbd> <kbd>&#8595;</kbd> MOVE
       &nbsp;&middot;&nbsp; <kbd>P</kbd> PAUSE
@@ -159,7 +157,7 @@
 
     <div class="overlay" id="start-overlay">
       <h2>PAC-MAN</h2>
-      <p>Arrow keys to move</p>
+      <p>Swipe or arrow keys to move</p>
       <p>Eat all dots to clear the level</p>
       <p style="color:#ffb000">Power pellets let you eat ghosts</p>
       <div class="dim">PRESS ANY KEY OR TAP TO START</div>
@@ -789,48 +787,78 @@
       }
     });
 
-    // Touch controls
-    document.getElementById('btn-up').addEventListener('touchstart', function(e) { e.preventDefault(); handleTouch(0, -1); });
-    document.getElementById('btn-down').addEventListener('touchstart', function(e) { e.preventDefault(); handleTouch(0, 1); });
-    document.getElementById('btn-left').addEventListener('touchstart', function(e) { e.preventDefault(); handleTouch(-1, 0); });
-    document.getElementById('btn-right').addEventListener('touchstart', function(e) { e.preventDefault(); handleTouch(1, 0); });
+    // === SWIPE GESTURE DETECTION ===
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    const SWIPE_THRESHOLD = 20;
+    const TAP_THRESHOLD = 10;
 
-    function handleTouch(dx, dy) {
+    function dismissOverlay() {
       if (gameState === 'start') {
         gameState = 'playing';
         startOverlay.classList.add('hidden');
+        return true;
       } else if (gameState === 'gameover') {
         gameoverOverlay.classList.add('hidden');
         initGame();
         gameState = 'playing';
+        return true;
       } else if (gameState === 'win') {
         winOverlay.classList.add('hidden');
         level++;
         initLevel();
         gameState = 'playing';
         updateHUD();
+        return true;
       }
-      setDir(dx, dy);
+      return false;
     }
 
-    // Tap overlays to dismiss
+    document.addEventListener('touchstart', function(e) {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
+      // Prevent scrolling/zooming while playing
+      if (gameState === 'playing') e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchmove', function(e) {
+      if (gameState === 'playing') e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchend', function(e) {
+      if (e.changedTouches.length !== 1) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+      const elapsed = Date.now() - touchStartTime;
+
+      // Tap detection (short swipe = tap)
+      if (absDx < TAP_THRESHOLD && absDy < TAP_THRESHOLD && elapsed < 300) {
+        dismissOverlay();
+        return;
+      }
+
+      // Swipe detection
+      if (absDx < SWIPE_THRESHOLD && absDy < SWIPE_THRESHOLD) return;
+
+      dismissOverlay();
+
+      if (absDx > absDy) {
+        // Horizontal swipe
+        setDir(dx > 0 ? 1 : -1, 0);
+      } else {
+        // Vertical swipe
+        setDir(0, dy > 0 ? 1 : -1);
+      }
+    }, { passive: true });
+
+    // Tap overlays to dismiss (mouse/click for desktop)
     [startOverlay, gameoverOverlay, winOverlay].forEach(function(el) {
-      el.addEventListener('click', function() {
-        if (gameState === 'start') {
-          gameState = 'playing';
-          startOverlay.classList.add('hidden');
-        } else if (gameState === 'gameover') {
-          gameoverOverlay.classList.add('hidden');
-          initGame();
-          gameState = 'playing';
-        } else if (gameState === 'win') {
-          winOverlay.classList.add('hidden');
-          level++;
-          initLevel();
-          gameState = 'playing';
-          updateHUD();
-        }
-      });
+      el.addEventListener('click', function() { dismissOverlay(); });
     });
 
     // === INIT ===

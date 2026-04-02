@@ -1241,7 +1241,7 @@
       const runPhase = Date.now() / 130;
       const headBobY = Math.sin(runPhase * 2) * 7;
       const headBobX = Math.cos(runPhase) * 3;
-      const leanAngle = -angleDelta * 3; // subtle roll into turns
+      const leanAngle = 0; // no tilt
       const breathe = Math.sin(Date.now() / 400) * 2; // subtle breathing
 
       ctx.save();
@@ -1385,13 +1385,16 @@
           const ghostDist = tY;
           const gFog = Math.max(0.2, 1 - tY / 8);
 
-          // Ghost facing: compare ghost movement dir to camera-to-ghost vector
+          // Ghost facing: how much of the ghost's front we can see
+          // ghostAngle = direction ghost faces. We see its front when
+          // the ghost faces TOWARD the camera (ghost-to-cam ≈ ghostAngle)
           const gsDx = gs1.dx || 0, gsDy = gs1.dy || 0;
           const ghostAngle = Math.atan2(gsDy, gsDx);
-          const camToGhostAngle = Math.atan2(-gy, -gx);
-          let relAngle = camToGhostAngle - ghostAngle;
+          const ghostToCamAngle = Math.atan2(-gy, -gx); // vector from ghost to camera
+          let relAngle = ghostToCamAngle - ghostAngle; // 0 = ghost faces camera
           while (relAngle > Math.PI) relAngle -= Math.PI * 2;
           while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+          // viewCos: +1 = ghost faces camera, -1 = ghost faces away
           const viewCos = Math.cos(relAngle);
           const viewSin = Math.sin(relAngle);
 
@@ -1443,8 +1446,8 @@
           ctx.fill();
           ctx.shadowBlur = 0;
 
-          // Eyes — only visible from front/side, shift with facing direction
-          if (viewCos > -0.2) {
+          // Eyes — only visible when ghost faces toward camera
+          if (viewCos > 0.3) {
             const eyeR = gr * 0.22;
             const eyeSpread = gr * 0.28;
             const eyeShift = -viewSin * eyeSpread * 0.7;

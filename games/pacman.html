@@ -1241,7 +1241,7 @@
       const runPhase = Date.now() / 130;
       const headBobY = Math.sin(runPhase * 2) * 7;
       const headBobX = Math.cos(runPhase) * 3;
-      const leanAngle = -angleDelta * 18; // roll into turns
+      const leanAngle = -angleDelta * 3; // subtle roll into turns
       const breathe = Math.sin(Date.now() / 400) * 2; // subtle breathing
 
       ctx.save();

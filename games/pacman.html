@@ -374,6 +374,9 @@
 
     // === GHOST AI ===
     function getGhostTarget(ghost, idx) {
+      if (ghost.mode === 'eaten') {
+        return { x: 10, y: 7 }; // Ghost house entrance
+      }
       if (ghost.mode === 'frightened') {
         return { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * MAP_TEMPLATE.length) };
       }
@@ -432,6 +435,22 @@
         ghost.dy = -1;
       }
 
+      // Eaten ghost — walk into house, then regenerate
+      if (ghost.mode === 'eaten') {
+        if (ghost.x === 10 && ghost.y >= 7 && ghost.y < 9) {
+          ghost.dx = 0; ghost.dy = 1;
+          ghost.y++;
+          return;
+        }
+        if (ghost.x === 10 && ghost.y >= 9) {
+          ghost.mode = 'scatter';
+          ghost.home = true;
+          ghost.startDelay = 10;
+          return;
+        }
+        // Otherwise fall through to pathfinding toward house entrance
+      }
+
       const target = getGhostTarget(ghost, idx);
       const dirs = [
         { dx: 0, dy: -1 },
@@ -482,10 +501,10 @@
     function checkCollisions() {
       for (let i = 0; i < ghosts.length; i++) {
         const g = ghosts[i];
-        if (g.home) continue;
+        if (g.home || g.mode === 'eaten') continue;
         if (g.x === pacman.x && g.y === pacman.y) {
           if (g.mode === 'frightened') {
-            // Ghost eaten — score popup + send home
+            // Ghost eaten — eyes navigate home
             eatEffects.push({
               x: g.x * TILE + TILE / 2,
               y: g.y * TILE + TILE / 2,
@@ -493,14 +512,7 @@
               startTime: Date.now()
             });
             score += 200;
-            g.x = 10;
-            g.y = 9;
-            g.prevX = 10;
-            g.prevY = 9;
-            g.home = true;
-            g.startDelay = 30;
-            g.mode = 'scatter';
-            g.moveAge = 0;
+            g.mode = 'eaten';
           } else {
             // Pac-man dies — start death animation
             lives--;
@@ -565,7 +577,7 @@
             dotCount--;
             frightenedTimer = 80; // ~8 seconds
             for (let g of ghosts) {
-              if (!g.home) {
+              if (!g.home && g.mode !== 'eaten') {
                 g.mode = 'frightened';
                 g.dx = -g.dx;
                 g.dy = -g.dy;
@@ -593,7 +605,9 @@
       for (let i = 0; i < ghosts.length; i++) {
         const g = ghosts[i];
         let moves = false;
-        if (tickCount % ghostSpeed === 0) {
+        if (g.mode === 'eaten') {
+          moves = true; // Eyes always move at full speed
+        } else if (tickCount % ghostSpeed === 0) {
           if (g.mode !== 'frightened' && frightenedTimer === 0) {
             g.mode = inChase ? 'chase' : 'scatter';
           }
@@ -785,12 +799,33 @@
         const g = ghosts[i];
         if (g.home && g.startDelay > 0) continue; // Don't draw ghosts still waiting
         const baseSpeed = level >= 3 ? 1 : 2;
-        const ghostPeriod = (g.mode === 'frightened') ? baseSpeed * 3 : baseSpeed;
+        const ghostPeriod = g.mode === 'eaten' ? 1 : (g.mode === 'frightened') ? baseSpeed * 3 : baseSpeed;
         const ghostAlpha = Math.min(1, (g.moveAge + alpha) / ghostPeriod);
         const lerpGx = lerpWrap(g.prevX, g.x, ghostAlpha, COLS);
         const lerpGy = lerp(g.prevY, g.y, ghostAlpha);
         const gx = lerpGx * TILE + TILE / 2;
         const gy = lerpGy * TILE + TILE / 2;
+
+        // Eaten ghost — just eyes rushing home
+        if (g.mode === 'eaten') {
+          ctx.fillStyle = '#fff';
+          ctx.shadowColor = '#fff';
+          ctx.shadowBlur = 4;
+          ctx.beginPath();
+          ctx.arc(gx - 4, gy - 2, 3.5, 0, Math.PI * 2);
+          ctx.arc(gx + 4, gy - 2, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = '#1a1a2e';
+          const edx = g.dx * 2;
+          const edy = g.dy * 2;
+          ctx.beginPath();
+          ctx.arc(gx - 4 + edx, gy - 2 + edy, 2, 0, Math.PI * 2);
+          ctx.arc(gx + 4 + edx, gy - 2 + edy, 2, 0, Math.PI * 2);
+          ctx.fill();
+          continue;
+        }
+
         let color = g.color;
 
         if (g.mode === 'frightened') {
@@ -823,7 +858,6 @@
           ctx.arc(gx - 3, gy - 3, 3, 0, Math.PI * 2);
           ctx.arc(gx + 3, gy - 3, 3, 0, Math.PI * 2);
           ctx.fill();
-          // Pupils
           ctx.fillStyle = '#111';
           const pdx = g.dx * 1.5;
           const pdy = g.dy * 1.5;

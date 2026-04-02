@@ -1336,10 +1336,12 @@
         }
       }
 
-      // Ghost sprite
+      // Ghost sprite — glides toward camera + floating bob
       if (killerGhost) {
-        const gx = killerGhost.x + 0.5 - camX;
-        const gy = killerGhost.y + 0.5 - camY;
+        const ghostAdvance = t * 2.0; // ghost advances ~2 tiles toward camera
+        const ghostBob = Math.sin(Date.now() / 200) * 0.06;
+        const gx = killerGhost.x + 0.5 - deathDirX * ghostAdvance - camX;
+        const gy = killerGhost.y + 0.5 - deathDirY * ghostAdvance + ghostBob - camY;
         const invDet = 1 / (planeX * dirY - dirX * planeY);
         const tX = invDet * (dirY * gx - dirX * gy);
         const tY = invDet * (-planeY * gx + planeX * gy);

@@ -296,10 +296,10 @@
       };
 
       ghosts = [
-        { x: 9, y: 9, prevX: 9, prevY: 9, dx: 0, dy: -1, color: GHOST_COLORS[0], mode: 'scatter', startDelay: 0, home: true },
-        { x: 10, y: 9, prevX: 10, prevY: 9, dx: 0, dy: -1, color: GHOST_COLORS[1], mode: 'scatter', startDelay: 30, home: true },
-        { x: 11, y: 9, prevX: 11, prevY: 9, dx: 0, dy: -1, color: GHOST_COLORS[2], mode: 'scatter', startDelay: 60, home: true },
-        { x: 10, y: 10, prevX: 10, prevY: 10, dx: 0, dy: -1, color: GHOST_COLORS[3], mode: 'scatter', startDelay: 90, home: true }
+        { x: 9, y: 9, prevX: 9, prevY: 9, dx: 0, dy: -1, color: GHOST_COLORS[0], mode: 'scatter', startDelay: 0, home: true, moveAge: 0 },
+        { x: 10, y: 9, prevX: 10, prevY: 9, dx: 0, dy: -1, color: GHOST_COLORS[1], mode: 'scatter', startDelay: 30, home: true, moveAge: 0 },
+        { x: 11, y: 9, prevX: 11, prevY: 9, dx: 0, dy: -1, color: GHOST_COLORS[2], mode: 'scatter', startDelay: 60, home: true, moveAge: 0 },
+        { x: 10, y: 10, prevX: 10, prevY: 10, dx: 0, dy: -1, color: GHOST_COLORS[3], mode: 'scatter', startDelay: 90, home: true, moveAge: 0 }
       ];
     }
 
@@ -315,10 +315,10 @@
       pacman.moving = false;
       frightenedTimer = 0;
 
-      ghosts[0].x = 9; ghosts[0].y = 9; ghosts[0].prevX = 9; ghosts[0].prevY = 9; ghosts[0].home = true; ghosts[0].mode = 'scatter';
-      ghosts[1].x = 10; ghosts[1].y = 9; ghosts[1].prevX = 10; ghosts[1].prevY = 9; ghosts[1].home = true; ghosts[1].mode = 'scatter';
-      ghosts[2].x = 11; ghosts[2].y = 9; ghosts[2].prevX = 11; ghosts[2].prevY = 9; ghosts[2].home = true; ghosts[2].mode = 'scatter';
-      ghosts[3].x = 10; ghosts[3].y = 10; ghosts[3].prevX = 10; ghosts[3].prevY = 10; ghosts[3].home = true; ghosts[3].mode = 'scatter';
+      ghosts[0].x = 9; ghosts[0].y = 9; ghosts[0].prevX = 9; ghosts[0].prevY = 9; ghosts[0].home = true; ghosts[0].mode = 'scatter'; ghosts[0].moveAge = 0;
+      ghosts[1].x = 10; ghosts[1].y = 9; ghosts[1].prevX = 10; ghosts[1].prevY = 9; ghosts[1].home = true; ghosts[1].mode = 'scatter'; ghosts[1].moveAge = 0;
+      ghosts[2].x = 11; ghosts[2].y = 9; ghosts[2].prevX = 11; ghosts[2].prevY = 9; ghosts[2].home = true; ghosts[2].mode = 'scatter'; ghosts[2].moveAge = 0;
+      ghosts[3].x = 10; ghosts[3].y = 10; ghosts[3].prevX = 10; ghosts[3].prevY = 10; ghosts[3].home = true; ghosts[3].mode = 'scatter'; ghosts[3].moveAge = 0;
 
       for (let g of ghosts) {
         g.dx = 0;
@@ -461,6 +461,7 @@
             g.home = true;
             g.startDelay = 30;
             g.mode = 'scatter';
+            g.moveAge = 0;
           } else {
             lives--;
             updateHUD();
@@ -545,17 +546,28 @@
       // Collision check (before ghost movement — catches pac-man moving onto a ghost)
       if (checkCollisions()) return;
 
-      // Move ghosts (slower than pac-man, every other tick; faster when chasing)
+      // Move ghosts (slower than pac-man; per-ghost prev tracking for smooth interpolation)
       const ghostSpeed = level >= 3 ? 1 : 2;
-      if (tickCount % ghostSpeed === 0) {
-        for (let i = 0; i < ghosts.length; i++) {
-          const g = ghosts[i];
+      for (let i = 0; i < ghosts.length; i++) {
+        const g = ghosts[i];
+        let moves = false;
+        if (tickCount % ghostSpeed === 0) {
           if (g.mode !== 'frightened' && frightenedTimer === 0) {
             g.mode = inChase ? 'chase' : 'scatter';
           }
-          // Frightened ghosts move slower
-          if (g.mode === 'frightened' && tickCount % 3 !== 0) continue;
+          if (g.mode === 'frightened' && tickCount % 3 !== 0) {
+            moves = false;
+          } else {
+            moves = true;
+          }
+        }
+        if (moves) {
+          g.prevX = g.x;
+          g.prevY = g.y;
           moveGhost(g, i);
+          g.moveAge = 0;
+        } else {
+          g.moveAge++;
         }
       }
 
@@ -670,8 +682,11 @@
       for (let i = 0; i < ghosts.length; i++) {
         const g = ghosts[i];
         if (g.home && g.startDelay > 0) continue; // Don't draw if still in house waiting
-        const lerpGx = lerpWrap(g.prevX, g.x, alpha, COLS);
-        const lerpGy = lerp(g.prevY, g.y, alpha);
+        const baseSpeed = level >= 3 ? 1 : 2;
+        const ghostPeriod = (g.mode === 'frightened') ? baseSpeed * 3 : baseSpeed;
+        const ghostAlpha = Math.min(1, (g.moveAge + alpha) / ghostPeriod);
+        const lerpGx = lerpWrap(g.prevX, g.x, ghostAlpha, COLS);
+        const lerpGy = lerp(g.prevY, g.y, ghostAlpha);
         const gx = lerpGx * TILE + TILE / 2;
         const gy = lerpGy * TILE + TILE / 2;
         let color = g.color;
@@ -758,10 +773,9 @@
       if (accumulator > tickRate * 3) accumulator = tickRate;
 
       while (accumulator >= tickRate) {
-        // Store previous positions for interpolation
+        // Store previous position for pac-man interpolation
         pacman.prevX = pacman.x;
         pacman.prevY = pacman.y;
-        for (let g of ghosts) { g.prevX = g.x; g.prevY = g.y; }
         tick();
         accumulator -= tickRate;
       }

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>BREAKOUT / ZERO game lab</title>
   <meta name="theme-color" content="#14102a">
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -61,6 +61,8 @@
       display: block;
       border: 1px solid var(--border);
       background: var(--bg-void);
+      touch-action: none;
+      -webkit-touch-callout: none;
     }
 
     .hud {
@@ -102,6 +104,17 @@
       padding: 0.1rem 0.4rem;
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.6rem;
+    }
+
+    .touch-hint {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      margin-top: 0.5rem;
+    }
+
+    @media (pointer: fine) {
+      .touch-hint { display: none; }
     }
 
     .overlay {
@@ -153,19 +166,19 @@
 
       <div class="overlay" id="start-overlay">
         <div class="overlay-title">BREAKOUT</div>
-        <div class="overlay-sub">PRESS SPACE TO START</div>
+        <div class="overlay-sub" id="start-sub">PRESS SPACE TO START</div>
       </div>
 
       <div class="overlay hidden" id="gameover-overlay">
         <div class="overlay-title">GAME OVER</div>
         <div class="overlay-score" id="final-score"></div>
-        <div class="overlay-sub">PRESS SPACE TO RESTART</div>
+        <div class="overlay-sub" id="gameover-sub">PRESS SPACE TO RESTART</div>
       </div>
 
       <div class="overlay hidden" id="win-overlay">
         <div class="overlay-title" style="color: var(--accent-green); text-shadow: 0 0 20px rgba(57,255,20,0.5);">ALL CLEAR</div>
         <div class="overlay-score" id="win-score"></div>
-        <div class="overlay-sub">PRESS SPACE FOR NEXT LEVEL</div>
+        <div class="overlay-sub" id="win-sub">PRESS SPACE FOR NEXT LEVEL</div>
       </div>
     </div>
 
@@ -175,17 +188,42 @@
       <span class="hud-lives">LIVES: <span id="lives">3</span></span>
     </div>
 
-    <div class="controls">
+    <div class="controls" id="controls">
       <kbd>←</kbd> <kbd>→</kbd> or <kbd>MOUSE</kbd> move paddle &nbsp;·&nbsp; <kbd>SPACE</kbd> launch ball
     </div>
+    <div class="touch-hint">DRAG TO MOVE &middot; TAP TO LAUNCH</div>
   </main>
 
   <script>
   (function() {
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
-    const W = canvas.width;
-    const H = canvas.height;
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+
+    // Responsive canvas sizing
+    const BASE_W = 480;
+    const BASE_H = 400;
+    const ASPECT = BASE_H / BASE_W;
+
+    function resizeCanvas() {
+      const maxW = Math.min(BASE_W, window.innerWidth - 48);
+      canvas.style.width = maxW + 'px';
+      canvas.style.height = Math.floor(maxW * ASPECT) + 'px';
+      canvas.width = BASE_W;
+      canvas.height = BASE_H;
+    }
+    resizeCanvas();
+
+    const W = BASE_W;
+    const H = BASE_H;
+
+    // Touch-aware overlay text
+    if (isTouch) {
+      document.getElementById('start-sub').textContent = 'TAP TO START';
+      document.getElementById('gameover-sub').textContent = 'TAP TO RESTART';
+      document.getElementById('win-sub').textContent = 'TAP FOR NEXT LEVEL';
+      document.getElementById('controls').style.display = 'none';
+    }
 
     // Brand colors
     const VOID = '#0a0a0f';
@@ -598,6 +636,17 @@
         nextLevel();
       }
     }, { passive: false });
+
+    // Prevent scroll/zoom while playing
+    document.addEventListener('touchmove', function(e) {
+      if (state === 'playing') e.preventDefault();
+    }, { passive: false });
+
+    // Handle resize
+    window.addEventListener('resize', function() {
+      resizeCanvas();
+      draw();
+    });
 
     // Init
     initGame();

@@ -266,6 +266,8 @@
     let killerGhostIdx = -1;
     let rewindSnaps = [];
     let deathDirX = 1, deathDirY = 0;
+    let fpSmoothedAngle = null;
+    let fpPrevAngle = null;
     const REWIND_DUR = 1000;
     const ZOOM_DUR = 800;
     const TRANSITION_DUR = 300;
@@ -1216,12 +1218,36 @@
       const laDy = laTarget.y - camY;
       const laAngle = (laDx !== 0 || laDy !== 0) ? Math.atan2(laDy, laDx) : segAngle;
 
-      const angle = lerpAngle(segAngle, laAngle, 0.5);
+      // Momentum-based smooth turning
+      const rawTarget = lerpAngle(segAngle, laAngle, 0.6);
+      if (fpSmoothedAngle === null) fpSmoothedAngle = rawTarget;
+      fpSmoothedAngle = lerpAngle(fpSmoothedAngle, rawTarget, 0.1);
+      const angle = fpSmoothedAngle;
+
+      // Turn rate for lean calculation
+      if (fpPrevAngle === null) fpPrevAngle = angle;
+      let angleDelta = angle - fpPrevAngle;
+      while (angleDelta > Math.PI) angleDelta -= Math.PI * 2;
+      while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
+      fpPrevAngle = angle;
+
       const dirX = Math.cos(angle);
       const dirY = Math.sin(angle);
 
       const planeX = -dirY * 0.66;
       const planeY = dirX * 0.66;
+
+      // Running camera effects
+      const runPhase = Date.now() / 130;
+      const headBobY = Math.sin(runPhase * 2) * 7;
+      const headBobX = Math.cos(runPhase) * 3;
+      const leanAngle = -angleDelta * 18; // roll into turns
+      const breathe = Math.sin(Date.now() / 400) * 2; // subtle breathing
+
+      ctx.save();
+      ctx.translate(screenW / 2, screenH / 2);
+      ctx.rotate(leanAngle);
+      ctx.translate(-screenW / 2 + headBobX, -screenH / 2 + headBobY + breathe);
 
       // Ceiling gradient
       const cGrad = ctx.createLinearGradient(0, 0, 0, screenH / 2);
@@ -1356,50 +1382,56 @@
 
         if (tY > 0.2) {
           const spScreenX = Math.floor((screenW / 2) * (1 + tX / tY));
-          const spSize = Math.abs(Math.floor(screenH / tY)) * 0.85;
-          const spStartX = spScreenX - spSize / 2;
-          const spStartY = screenH / 2 - spSize / 2;
+          const spSize = Math.abs(Math.floor(screenH / tY)) * 0.55;
           const gFog = Math.max(0.2, 1 - tY / 8);
+
+          // Smooth floating: slow sine + gentle secondary wave
+          const floatY = Math.sin(Date.now() / 350) * spSize * 0.06
+                       + Math.sin(Date.now() / 180) * spSize * 0.02;
+          // Wavy skirt animation
+          const skirtPhase = Date.now() / 200;
+
+          const cx = spScreenX;
+          const cy = screenH / 2 - spSize * 0.15 + floatY;
+          const gr = spSize * 0.45;
 
           ctx.save();
           ctx.globalAlpha = Math.min(1, gFog + 0.3);
           ctx.shadowColor = killerGhost.color;
-          ctx.shadowBlur = 25 * gFog;
+          ctx.shadowBlur = 15 * gFog;
           ctx.fillStyle = killerGhost.color;
 
-          // Ghost body
-          const cx = spScreenX, cy = spStartY + spSize * 0.35;
-          const gr = spSize * 0.4;
+          // 2D-style ghost body: semicircle top + wavy skirt
           ctx.beginPath();
           ctx.arc(cx, cy, gr, Math.PI, 0, false);
-          ctx.lineTo(cx + gr, cy + gr * 0.8);
-          for (let w = 0; w < 4; w++) {
-            const wx = cx + gr - (w * gr * 0.5);
-            ctx.quadraticCurveTo(wx - gr * 0.12, cy + gr * 0.95, wx - gr * 0.25, cy + gr * 0.8);
+          ctx.lineTo(cx + gr, cy + gr * 0.75);
+          // 3 wave segments like the 2D ghost
+          for (let w = 0; w < 3; w++) {
+            const wx1 = cx + gr - (w * 2 * gr / 3);
+            const wAmp = 3 + Math.sin(skirtPhase + w * 2) * 2;
+            ctx.quadraticCurveTo(
+              wx1 - gr / 3, cy + gr * 0.75 + wAmp,
+              wx1 - 2 * gr / 3, cy + gr * 0.75
+            );
           }
           ctx.closePath();
           ctx.fill();
-
-          // Glow outline
-          ctx.strokeStyle = killerGhost.color;
-          ctx.lineWidth = 2;
-          ctx.stroke();
           ctx.shadowBlur = 0;
 
-          // Eyes
+          // Eyes (2D style: white circles + dark pupils)
           ctx.fillStyle = '#fff';
-          ctx.shadowColor = '#fff';
-          ctx.shadowBlur = 8;
-          const eyeR = gr * 0.18;
+          const eyeR = gr * 0.22;
+          const eyeSpread = gr * 0.28;
           ctx.beginPath();
-          ctx.arc(cx - gr * 0.25, cy - gr * 0.1, eyeR, 0, Math.PI * 2);
-          ctx.arc(cx + gr * 0.25, cy - gr * 0.1, eyeR, 0, Math.PI * 2);
+          ctx.arc(cx - eyeSpread, cy - gr * 0.08, eyeR, 0, Math.PI * 2);
+          ctx.arc(cx + eyeSpread, cy - gr * 0.08, eyeR, 0, Math.PI * 2);
           ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.fillStyle = '#0a0a1a';
+          // Pupils look toward camera
+          ctx.fillStyle = '#111';
+          const pupilR = eyeR * 0.55;
           ctx.beginPath();
-          ctx.arc(cx - gr * 0.25, cy - gr * 0.1, eyeR * 0.55, 0, Math.PI * 2);
-          ctx.arc(cx + gr * 0.25, cy - gr * 0.1, eyeR * 0.55, 0, Math.PI * 2);
+          ctx.arc(cx - eyeSpread, cy - gr * 0.08, pupilR, 0, Math.PI * 2);
+          ctx.arc(cx + eyeSpread, cy - gr * 0.08, pupilR, 0, Math.PI * 2);
           ctx.fill();
 
           ctx.restore();
@@ -1430,7 +1462,10 @@
       ctx.shadowBlur = 0;
       ctx.restore();
 
-      // Scanlines
+      // End running camera transform
+      ctx.restore();
+
+      // Scanlines (screen-space)
       ctx.fillStyle = 'rgba(0,0,0,0.12)';
       for (let y = 0; y < screenH; y += 3) ctx.fillRect(0, y, screenW, 1);
 
@@ -1477,6 +1512,8 @@
         if (elapsed >= ZOOM_DUR) {
           cinematicPhase = 'fp';
           cinematicStart = now;
+          fpSmoothedAngle = null;
+          fpPrevAngle = null;
         }
       } else if (cinematicPhase === 'fp') {
         const t = Math.min(1, elapsed / FP_DUR);

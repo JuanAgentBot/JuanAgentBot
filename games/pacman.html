@@ -703,6 +703,12 @@
 
     // === RENDER ===
     function lerp(a, b, t) { return a + (b - a) * t; }
+    function lerpAngle(a, b, t) {
+      let d = b - a;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      return a + d * t;
+    }
     function lerpWrap(a, b, t, max) {
       if (Math.abs(b - a) > max / 2) return b; // tunnel wrap — snap
       return lerp(a, b, t);
@@ -1097,27 +1103,82 @@
       const len = rewindSnaps.length;
       if (len < 2) return;
 
-      // Camera follows recorded path toward death
-      const startIdx = Math.max(0, len - 15);
-      const endIdx = len - 1;
-      const range = endIdx - startIdx;
-      const fpT = Math.min(t * 1.1, 1); // reach ghost slightly before end
-      const histT = startIdx + range * fpT;
-      const idx = Math.min(Math.floor(histT), endIdx - 1);
-      const frac = histT - idx;
-      const s1 = rewindSnaps[idx];
-      const s2 = rewindSnaps[Math.min(idx + 1, endIdx)];
+      // Build clean path: deduplicate positions, compute angles
+      const path = [];
+      let lx = -1, ly = -1;
+      for (let i = 0; i < len; i++) {
+        const s = rewindSnaps[i];
+        if (s.px !== lx || s.py !== ly) {
+          let a;
+          if (s.pdx === 1 && s.pdy === 0) a = 0;
+          else if (s.pdx === -1 && s.pdy === 0) a = Math.PI;
+          else if (s.pdx === 0 && s.pdy === -1) a = -Math.PI / 2;
+          else if (s.pdx === 0 && s.pdy === 1) a = Math.PI / 2;
+          else a = path.length > 0 ? path[path.length - 1].a : Math.atan2(deathDirY, deathDirX);
+          path.push({ x: s.px + 0.5, y: s.py + 0.5, a });
+          lx = s.px; ly = s.py;
+        }
+      }
+      if (killerGhost) {
+        const la = path.length > 0 ? path[path.length - 1].a : 0;
+        path.push({ x: killerGhost.x + 0.5, y: killerGhost.y + 0.5, a: la });
+      }
+      if (path.length < 2) return;
 
-      const camX = lerp(s1.px, s2.px, frac) + 0.5;
-      const camY = lerp(s1.py, s2.py, frac) + 0.5;
+      // Use last ~12 unique positions
+      const usePath = path.slice(Math.max(0, path.length - 12));
 
-      // Smooth direction from history
-      let d1x = s1.pdx || deathDirX, d1y = s1.pdy || deathDirY;
-      let d2x = s2.pdx || deathDirX, d2y = s2.pdy || deathDirY;
-      let dirX = lerp(d1x, d2x, frac);
-      let dirY = lerp(d1y, d2y, frac);
-      const dLen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
-      dirX /= dLen; dirY /= dLen;
+      // Segment lengths for constant-speed travel
+      const segLens = [];
+      let totalLen = 0;
+      for (let i = 1; i < usePath.length; i++) {
+        const dx = usePath[i].x - usePath[i - 1].x;
+        const dy = usePath[i].y - usePath[i - 1].y;
+        const sl = Math.sqrt(dx * dx + dy * dy);
+        segLens.push(sl);
+        totalLen += sl;
+      }
+      if (totalLen === 0) return;
+
+      // Map t → constant-speed distance along path
+      const targetDist = Math.min(t * 1.05, 1) * totalLen;
+      let accum = 0, segIdx = 0, segFrac = 0;
+      for (let i = 0; i < segLens.length; i++) {
+        if (accum + segLens[i] >= targetDist) {
+          segIdx = i;
+          segFrac = segLens[i] > 0 ? (targetDist - accum) / segLens[i] : 0;
+          break;
+        }
+        accum += segLens[i];
+        segIdx = i;
+        segFrac = 1;
+      }
+
+      const p1 = usePath[segIdx];
+      const p2 = usePath[Math.min(segIdx + 1, usePath.length - 1)];
+      const camX = lerp(p1.x, p2.x, segFrac);
+      const camY = lerp(p1.y, p2.y, segFrac);
+
+      // Camera angle: blend segment direction with look-ahead
+      const segDx = p2.x - p1.x;
+      const segDy = p2.y - p1.y;
+      const segAngle = (segDx !== 0 || segDy !== 0) ? Math.atan2(segDy, segDx) : p1.a;
+
+      // Look ahead 1.5 tiles for smooth anticipation
+      let laAccum = (1 - segFrac) * (segLens[segIdx] || 0);
+      let laIdx = segIdx + 1;
+      while (laAccum < 1.5 && laIdx < usePath.length - 1) {
+        laAccum += segLens[laIdx] || 0;
+        laIdx++;
+      }
+      const laTarget = usePath[Math.min(laIdx, usePath.length - 1)];
+      const laDx = laTarget.x - camX;
+      const laDy = laTarget.y - camY;
+      const laAngle = (laDx !== 0 || laDy !== 0) ? Math.atan2(laDy, laDx) : segAngle;
+
+      const angle = lerpAngle(segAngle, laAngle, 0.5);
+      const dirX = Math.cos(angle);
+      const dirY = Math.sin(angle);
 
       const planeX = -dirY * 0.66;
       const planeY = dirX * 0.66;

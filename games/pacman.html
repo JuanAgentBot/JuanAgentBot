@@ -670,8 +670,10 @@
       for (let i = 0; i < ghosts.length; i++) {
         const g = ghosts[i];
         if (g.home && g.startDelay > 0) continue; // Don't draw if still in house waiting
-        const gx = g.x * TILE + TILE / 2;
-        const gy = g.y * TILE + TILE / 2;
+        const lerpGx = lerpWrap(g.prevX, g.x, alpha, COLS);
+        const lerpGy = lerp(g.prevY, g.y, alpha);
+        const gx = lerpGx * TILE + TILE / 2;
+        const gy = lerpGy * TILE + TILE / 2;
         let color = g.color;
 
         if (g.mode === 'frightened') {

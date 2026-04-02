@@ -459,14 +459,14 @@
         { dx: 1, dy: 0 }
       ];
 
-      // Can't reverse direction
+      // Can't reverse direction (eaten ghosts exempt — they need to get home)
       const reverse = { dx: -ghost.dx, dy: -ghost.dy };
 
       let bestDir = null;
       let bestDist = Infinity;
 
       for (const d of dirs) {
-        if (d.dx === reverse.dx && d.dy === reverse.dy) continue;
+        if (ghost.mode !== 'eaten' && d.dx === reverse.dx && d.dy === reverse.dy) continue;
         const nx = wrapX(ghost.x + d.dx);
         const ny = ghost.y + d.dy;
 

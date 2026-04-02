@@ -150,6 +150,79 @@
       text-shadow: 0 0 10px var(--glow-cyan-soft);
     }
 
+    .mode-select {
+      display: flex;
+      gap: 0.8rem;
+      margin-top: 1rem;
+      justify-content: center;
+    }
+
+    .mode-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0.5em 1.2em;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .mode-btn:hover, .mode-btn:focus {
+      color: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--glow-cyan-soft);
+      outline: none;
+    }
+
+    .mode-btn.daily:hover, .mode-btn.daily:focus {
+      color: var(--accent-magenta);
+      border-color: var(--accent-magenta);
+      box-shadow: 0 0 8px var(--glow-magenta);
+    }
+
+    .daily-date {
+      font-size: 0.6rem;
+      color: var(--accent-magenta);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 10px var(--glow-magenta);
+    }
+
+    .daily-best {
+      font-size: 0.65rem;
+      color: var(--accent-green);
+      letter-spacing: 0.06em;
+      margin-top: 0.3rem;
+      text-shadow: 0 0 8px rgba(57, 255, 20, 0.3);
+    }
+
+    .new-record {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--accent-green);
+      letter-spacing: 0.1em;
+      margin-top: 0.3rem;
+      text-shadow: 0 0 12px rgba(57, 255, 20, 0.5);
+      animation: record-pulse 0.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes record-pulse {
+      from { opacity: 0.7; }
+      to { opacity: 1; }
+    }
+
+    .mode-badge {
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      color: var(--accent-magenta);
+      text-shadow: 0 0 8px var(--glow-magenta);
+      margin-bottom: 0.5rem;
+      min-height: 1em;
+    }
+
     .board-wrapper {
       position: relative;
       display: inline-block;
@@ -224,6 +297,8 @@
       </div>
     </div>
 
+    <div id="mode-badge" class="mode-badge"></div>
+
     <div class="controls-touch">
       TAP ROTATE &nbsp; DRAG &#8592;&#8594; MOVE &nbsp; SWIPE &#8595; DROP
     </div>
@@ -250,6 +325,7 @@
     const scoreEl = document.getElementById('score');
     const linesEl = document.getElementById('lines');
     const levelEl = document.getElementById('level');
+    const modeBadge = document.getElementById('mode-badge');
 
     // Brand colors for pieces
     const COLORS = {
@@ -286,7 +362,51 @@
     const PIECE_TYPES = ['I','O','T','S','Z','L','J'];
 
     let board, piece, nextType, score, lines, level, gameOver, paused, dropInterval, lastDrop, animFrame, started;
+    let gameMode = 'classic'; // 'classic' or 'daily'
+    let seededRng = null;
     const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    // Seeded PRNG (mulberry32)
+    function mulberry32(seed) {
+      return function() {
+        seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+        var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    function hashString(str) {
+      var hash = 0;
+      for (var i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return hash;
+    }
+
+    function todayString() {
+      var d = new Date();
+      return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+    }
+
+    function getDailyBest(dateStr) {
+      try {
+        var raw = localStorage.getItem('falling-blocks-daily-' + dateStr);
+        return raw ? JSON.parse(raw) : null;
+      } catch(e) { return null; }
+    }
+
+    function saveDailyBest(dateStr, score, lines, level) {
+      var prev = getDailyBest(dateStr);
+      if (!prev || score > prev.score) {
+        localStorage.setItem('falling-blocks-daily-' + dateStr, JSON.stringify({score: score, lines: lines, level: level}));
+        return true; // new record
+      }
+      return false;
+    }
 
     // Line-clear animation state
     let clearing = false, clearRows = [], clearStart = 0, clearSeeds = {};
@@ -305,6 +425,9 @@
     }
 
     function randomType() {
+      if (gameMode === 'daily' && seededRng) {
+        return PIECE_TYPES[Math.floor(seededRng() * PIECE_TYPES.length)];
+      }
       return PIECE_TYPES[Math.floor(Math.random() * PIECE_TYPES.length)];
     }
 
@@ -407,7 +530,22 @@
       drawNext();
       if (!fits(piece.cells, piece.x, piece.y)) {
         gameOver = true;
-        showOverlay('GAME OVER', 'SCORE: ' + score, isTouch ? 'TAP TO RESTART' : 'PRESS ENTER TO RESTART');
+        if (gameMode === 'daily') {
+          var dateStr = todayString();
+          var isRecord = saveDailyBest(dateStr, score, lines, level);
+          var best = getDailyBest(dateStr);
+          var extra = '';
+          if (isRecord) {
+            extra = '<div class="new-record">NEW DAILY BEST!</div>';
+          } else if (best) {
+            extra = '<div class="daily-best">BEST TODAY: ' + best.score + '</div>';
+          }
+          showOverlay('GAME OVER',
+            '<div class="daily-date">DAILY ' + dateStr + '</div>SCORE: ' + score + extra,
+            isTouch ? 'TAP TO RETRY' : 'PRESS ENTER TO RETRY');
+        } else {
+          showOverlay('GAME OVER', 'SCORE: ' + score, isTouch ? 'TAP TO RESTART' : 'PRESS ENTER TO RESTART');
+        }
       }
     }
 
@@ -628,11 +766,36 @@
         '<div class="overlay-text">' + sub + '</div>';
     }
 
+    function showStartScreen() {
+      overlay.style.display = 'flex';
+      var dateStr = todayString();
+      var best = getDailyBest(dateStr);
+      var bestLine = best ? '<div class="daily-best">TODAY\'S BEST: ' + best.score + '</div>' : '';
+      overlay.innerHTML =
+        '<div class="overlay-title">FALLING BLOCKS</div>' +
+        '<div class="overlay-text">CHOOSE MODE</div>' +
+        '<div class="mode-select">' +
+          '<button class="mode-btn classic" data-mode="classic">CLASSIC</button>' +
+          '<button class="mode-btn daily" data-mode="daily">DAILY</button>' +
+        '</div>' +
+        '<div style="margin-top:0.6rem"><div class="daily-date">DAILY: ' + dateStr + '</div>' + bestLine + '</div>';
+
+      // Attach click handlers to mode buttons
+      var btns = overlay.querySelectorAll('.mode-btn');
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].addEventListener('click', function(e) {
+          e.stopPropagation();
+          init(this.getAttribute('data-mode'));
+        });
+      }
+    }
+
     function hideOverlay() {
       overlay.style.display = 'none';
     }
 
-    function init() {
+    function init(mode) {
+      if (mode) gameMode = mode;
       board = createBoard();
       score = 0; lines = 0; level = 1;
       gameOver = false; paused = false;
@@ -642,9 +805,15 @@
       scoreEl.textContent = '0';
       linesEl.textContent = '0';
       levelEl.textContent = '1';
+      if (gameMode === 'daily') {
+        seededRng = mulberry32(hashString(todayString()));
+      } else {
+        seededRng = null;
+      }
       nextType = randomType();
       spawn();
       hideOverlay();
+      modeBadge.textContent = gameMode === 'daily' ? 'DAILY \u2022 ' + todayString() : '';
       started = true;
     }
 
@@ -717,7 +886,13 @@
     // Keyboard
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') {
-        if (gameOver || !started) { init(); return; }
+        if (!started) { showStartScreen(); return; }
+        if (gameOver) { showStartScreen(); return; }
+      }
+      // Quick mode keys from start/game-over screen
+      if ((!started || gameOver) && (e.key === '1' || e.key === '2')) {
+        init(e.key === '1' ? 'classic' : 'daily');
+        return;
       }
       if (!started || gameOver || clearing) return;
       if (e.key === 'p' || e.key === 'P') {
@@ -791,8 +966,8 @@
         var elapsed = Date.now() - startTime;
 
         if (dist < TAP_DIST && elapsed < TAP_TIME) {
-          // Tap → start or rotate
-          if (!started || gameOver) { init(); return; }
+          // Tap → start screen or rotate
+          if (!started || gameOver) { showStartScreen(); return; }
           if (clearing) return;
           rotate();
         } else if (dy > SWIPE_DIST && Math.abs(dy) > Math.abs(dx) * 1.5) {
@@ -811,7 +986,7 @@
 
     // Start
     board = createBoard();
-    showOverlay('FALLING BLOCKS', null, isTouch ? 'TAP TO START' : 'PRESS ENTER TO START');
+    showStartScreen();
     draw();
     requestAnimationFrame(tick);
   })();

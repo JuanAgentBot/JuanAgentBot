@@ -266,7 +266,8 @@
     let rewindSnaps = [];
     let deathDirX = 1, deathDirY = 0;
     const REWIND_DUR = 1000;
-    const TRANSITION_DUR = 400;
+    const ZOOM_DUR = 800;
+    const TRANSITION_DUR = 300;
     const FP_DUR = 3500;
     const TICK = 1000 / 10; // 10 ticks per second base
 
@@ -1084,6 +1085,36 @@
       ctx.restore();
     }
 
+    function drawCinematicZoom(t) {
+      // Zoom into the point where rewind ended (oldest snapshot)
+      const snap = rewindSnaps[0] || rewindSnaps[rewindSnaps.length - 1];
+      if (!snap) return;
+      const smoothT = t * t * (3 - 2 * t); // smoothstep ease
+      const scale = 1 + smoothT * 14;
+      const focusX = snap.px * TILE + TILE / 2;
+      const focusY = snap.py * TILE + TILE / 2;
+
+      ctx.fillStyle = VOID;
+      ctx.fillRect(0, 0, W, H);
+      ctx.save();
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(scale, scale);
+      ctx.translate(-focusX, -focusY);
+      renderMiniScene(snap);
+      ctx.restore();
+
+      // Scanlines persist from rewind
+      if (t < 0.5) {
+        ctx.fillStyle = `rgba(0,0,0,${0.2 * (1 - t * 2)})`;
+        for (let y = 0; y < H; y += 2) ctx.fillRect(0, y, W, 1);
+      }
+      // Fade to black at the end
+      if (t > 0.7) {
+        ctx.fillStyle = `rgba(10,10,15,${(t - 0.7) / 0.3})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+
     function drawCinematicTransition(t, toBlack) {
       const alpha = toBlack ? t : 1 - t;
       // Draw last known scene
@@ -1120,10 +1151,17 @@
         }
       }
       if (killerGhost) {
-        const la = path.length > 0 ? path[path.length - 1].a : 0;
-        path.push({ x: killerGhost.x + 0.5, y: killerGhost.y + 0.5, a: la });
+        path.push({ x: killerGhost.x + 0.5, y: killerGhost.y + 0.5, a: 0 });
       }
       if (path.length < 2) return;
+
+      // Recalculate angles from actual movement vectors (not stored dx/dy)
+      for (let i = 0; i < path.length - 1; i++) {
+        const dx = path[i + 1].x - path[i].x;
+        const dy = path[i + 1].y - path[i].y;
+        if (dx !== 0 || dy !== 0) path[i].a = Math.atan2(dy, dx);
+      }
+      path[path.length - 1].a = path[path.length - 2].a;
 
       // Use last ~12 unique positions
       const usePath = path.slice(Math.max(0, path.length - 12));
@@ -1420,13 +1458,13 @@
         const t = Math.min(1, elapsed / REWIND_DUR);
         drawCinematicRewind(t);
         if (elapsed >= REWIND_DUR) {
-          cinematicPhase = 'fadeToFP';
+          cinematicPhase = 'zoom';
           cinematicStart = now;
         }
-      } else if (cinematicPhase === 'fadeToFP') {
-        const t = Math.min(1, elapsed / TRANSITION_DUR);
-        drawCinematicTransition(t, true);
-        if (elapsed >= TRANSITION_DUR) {
+      } else if (cinematicPhase === 'zoom') {
+        const t = Math.min(1, elapsed / ZOOM_DUR);
+        drawCinematicZoom(t);
+        if (elapsed >= ZOOM_DUR) {
           cinematicPhase = 'fp';
           cinematicStart = now;
         }

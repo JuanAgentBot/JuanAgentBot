@@ -263,6 +263,7 @@
     let cinematicPhase = '';
     let cinematicStart = 0;
     let killerGhost = null;
+    let killerGhostIdx = -1;
     let rewindSnaps = [];
     let deathDirX = 1, deathDirY = 0;
     const REWIND_DUR = 1000;
@@ -573,6 +574,7 @@
             lives--;
             updateHUD();
             killerGhost = { x: g.x, y: g.y, color: g.color };
+            killerGhostIdx = i;
             rewindSnaps = positionHistory.slice();
             deathDirX = pacman.dx || 1;
             deathDirY = pacman.dy || 0;
@@ -1336,12 +1338,18 @@
         }
       }
 
-      // Ghost sprite — glides toward camera + floating bob
-      if (killerGhost) {
-        const ghostAdvance = t * 2.0; // ghost advances ~2 tiles toward camera
-        const ghostBob = Math.sin(Date.now() / 200) * 0.06;
-        const gx = killerGhost.x + 0.5 - deathDirX * ghostAdvance - camX;
-        const gy = killerGhost.y + 0.5 - deathDirY * ghostAdvance + ghostBob - camY;
+      // Ghost sprite — replayed from recorded snapshots
+      if (killerGhost && killerGhostIdx >= 0) {
+        // Map t to snapshot range (same time window as camera)
+        const gsStart = Math.max(0, len - 15);
+        const gsHistT = gsStart + (len - 1 - gsStart) * Math.min(t * 1.05, 1);
+        const gsIdx = Math.min(Math.floor(gsHistT), len - 2);
+        const gsFrac = gsHistT - gsIdx;
+        const gs1 = rewindSnaps[gsIdx].ghosts[killerGhostIdx];
+        const gs2 = rewindSnaps[Math.min(gsIdx + 1, len - 1)].ghosts[killerGhostIdx];
+        const ghostBob = Math.sin(Date.now() / 200) * 0.04;
+        const gx = lerp(gs1.x, gs2.x, gsFrac) + 0.5 - camX;
+        const gy = lerp(gs1.y, gs2.y, gsFrac) + 0.5 + ghostBob - camY;
         const invDet = 1 / (planeX * dirY - dirX * planeY);
         const tX = invDet * (dirY * gx - dirX * gy);
         const tY = invDet * (-planeY * gx + planeX * gy);

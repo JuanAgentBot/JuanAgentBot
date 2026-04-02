@@ -328,7 +328,8 @@
         prevX: 10, prevY: 15,
         dx: 0, dy: 0,
         nextDx: 0, nextDy: 0,
-        moving: false
+        moving: false,
+        invulnerable: true
       };
 
       ghosts = [
@@ -373,6 +374,7 @@
       pacman.nextDx = 0;
       pacman.nextDy = 0;
       pacman.moving = false;
+      pacman.invulnerable = true;
       frightenedTimer = 0;
       for (let g of ghosts) {
         if (g.mode === 'frightened') g.mode = 'scatter';
@@ -538,6 +540,7 @@
 
     // === COLLISION ===
     function checkCollisions() {
+      if (pacman.invulnerable) return false;
       for (let i = 0; i < ghosts.length; i++) {
         const g = ghosts[i];
         if (g.home || g.mode === 'eaten') continue;
@@ -808,6 +811,10 @@
         ctx.restore();
       } else {
         // Normal pac-man (interpolated)
+        // Blink while invulnerable
+        if (pacman.invulnerable && Math.floor(Date.now() / 120) % 2) {
+          // skip drawing on odd frames for blink effect
+        } else {
         const lerpPacX = lerpWrap(pacman.prevX, pacman.x, alpha, COLS);
         const lerpPacY = lerp(pacman.prevY, pacman.y, alpha);
         const px = lerpPacX * TILE + TILE / 2;
@@ -831,6 +838,7 @@
         ctx.closePath();
         ctx.fill();
         ctx.shadowBlur = 0;
+        } // end blink check
       }
 
       // Draw ghosts
@@ -1002,6 +1010,7 @@
       if (gameState === 'playing') {
         pacman.nextDx = dx;
         pacman.nextDy = dy;
+        pacman.invulnerable = false;
       }
     }
 

@@ -283,9 +283,40 @@
       updateHUD();
     }
 
+    // BFS flow field: for every tile, the direction to take toward (10,7)
+    let eatenFlowField = null;
+
+    function computeEatenFlowField() {
+      const rows = MAP_TEMPLATE.length;
+      const field = Array.from({length: rows}, () => new Array(COLS).fill(null));
+      const visited = Array.from({length: rows}, () => new Array(COLS).fill(false));
+      const queue = [[10, 7]];
+      visited[7][10] = true;
+      const dirs = [{dx:0,dy:-1},{dx:0,dy:1},{dx:-1,dy:0},{dx:1,dy:0}];
+
+      while (queue.length > 0) {
+        const [cx, cy] = queue.shift();
+        for (const d of dirs) {
+          let nx = cx + d.dx;
+          const ny = cy + d.dy;
+          if (ny < 0 || ny >= rows) continue;
+          if (nx < 0) nx = COLS - 1;
+          else if (nx >= COLS) nx = 0;
+          if (visited[ny][nx]) continue;
+          const tile = MAP_TEMPLATE[ny][nx];
+          if (tile === 1 || tile === 4) continue;
+          visited[ny][nx] = true;
+          field[ny][nx] = {dx: -d.dx, dy: -d.dy}; // direction FROM (nx,ny) TOWARD target
+          queue.push([nx, ny]);
+        }
+      }
+      eatenFlowField = field;
+    }
+
     function initLevel() {
       map = cloneMap();
       dotCount = countDots(map);
+      computeEatenFlowField();
       mouthAngle = 0.25;
       mouthDir = 1;
       frightenedTimer = 0;
@@ -435,7 +466,7 @@
         ghost.dy = -1;
       }
 
-      // Eaten ghost — walk into house, then regenerate
+      // Eaten ghost — BFS flow field to house entrance, then walk in
       if (ghost.mode === 'eaten') {
         if (ghost.x === 10 && ghost.y >= 7 && ghost.y < 9) {
           ghost.dx = 0; ghost.dy = 1;
@@ -448,7 +479,15 @@
           ghost.startDelay = 0;
           return;
         }
-        // Otherwise fall through to pathfinding toward house entrance
+        // Follow precomputed shortest path home
+        const dir = eatenFlowField[ghost.y] && eatenFlowField[ghost.y][ghost.x];
+        if (dir) {
+          ghost.dx = dir.dx;
+          ghost.dy = dir.dy;
+          ghost.x = wrapX(ghost.x + ghost.dx);
+          ghost.y = ghost.y + ghost.dy;
+        }
+        return;
       }
 
       const target = getGhostTarget(ghost, idx);
@@ -459,14 +498,14 @@
         { dx: 1, dy: 0 }
       ];
 
-      // Can't reverse direction (eaten ghosts exempt — they need to get home)
+      // Can't reverse direction
       const reverse = { dx: -ghost.dx, dy: -ghost.dy };
 
       let bestDir = null;
       let bestDist = Infinity;
 
       for (const d of dirs) {
-        if (ghost.mode !== 'eaten' && d.dx === reverse.dx && d.dy === reverse.dy) continue;
+        if (d.dx === reverse.dx && d.dy === reverse.dy) continue;
         const nx = wrapX(ghost.x + d.dx);
         const ny = ghost.y + d.dy;
 

@@ -526,7 +526,7 @@
     let modeTimer = 0;
 
     function tick() {
-      if (paused || gameState !== 'playing') return;
+      if (paused) return;
 
       tickCount++;
       modeTimer++;
@@ -534,46 +534,48 @@
       // Alternate scatter/chase
       const inChase = modeTimer > 70;
 
-      // Move pac-man
-      const tryX = wrapX(pacman.x + pacman.nextDx);
-      const tryY = pacman.y + pacman.nextDy;
-      if ((pacman.nextDx !== 0 || pacman.nextDy !== 0) && canMove(tryX, tryY)) {
-        pacman.dx = pacman.nextDx;
-        pacman.dy = pacman.nextDy;
-      }
-
-      if (pacman.dx !== 0 || pacman.dy !== 0) {
-        const nx = wrapX(pacman.x + pacman.dx);
-        const ny = pacman.y + pacman.dy;
-        if (canMove(nx, ny)) {
-          pacman.x = nx;
-          pacman.y = ny;
+      // Pac-man movement + dot eating only when playing
+      if (gameState === 'playing') {
+        const tryX = wrapX(pacman.x + pacman.nextDx);
+        const tryY = pacman.y + pacman.nextDy;
+        if ((pacman.nextDx !== 0 || pacman.nextDy !== 0) && canMove(tryX, tryY)) {
+          pacman.dx = pacman.nextDx;
+          pacman.dy = pacman.nextDy;
         }
-      }
 
-      // Eat dots
-      if (pacman.y >= 0 && pacman.y < map.length && pacman.x >= 0 && pacman.x < COLS) {
-        const tile = map[pacman.y][pacman.x];
-        if (tile === 2) {
-          map[pacman.y][pacman.x] = 0;
-          score += 10;
-          dotCount--;
-        } else if (tile === 3) {
-          map[pacman.y][pacman.x] = 0;
-          score += 50;
-          dotCount--;
-          frightenedTimer = 80; // ~8 seconds
-          for (let g of ghosts) {
-            if (!g.home) {
-              g.mode = 'frightened';
-              g.dx = -g.dx;
-              g.dy = -g.dy;
+        if (pacman.dx !== 0 || pacman.dy !== 0) {
+          const nx = wrapX(pacman.x + pacman.dx);
+          const ny = pacman.y + pacman.dy;
+          if (canMove(nx, ny)) {
+            pacman.x = nx;
+            pacman.y = ny;
+          }
+        }
+
+        // Eat dots
+        if (pacman.y >= 0 && pacman.y < map.length && pacman.x >= 0 && pacman.x < COLS) {
+          const tile = map[pacman.y][pacman.x];
+          if (tile === 2) {
+            map[pacman.y][pacman.x] = 0;
+            score += 10;
+            dotCount--;
+          } else if (tile === 3) {
+            map[pacman.y][pacman.x] = 0;
+            score += 50;
+            dotCount--;
+            frightenedTimer = 80; // ~8 seconds
+            for (let g of ghosts) {
+              if (!g.home) {
+                g.mode = 'frightened';
+                g.dx = -g.dx;
+                g.dy = -g.dy;
+              }
             }
           }
         }
       }
 
-      // Frightened timer
+      // Frightened timer always runs (ghosts recover even during death/spawn)
       if (frightenedTimer > 0) {
         frightenedTimer--;
         if (frightenedTimer === 0) {
@@ -583,10 +585,10 @@
         }
       }
 
-      // Collision check (before ghost movement — catches pac-man moving onto a ghost)
-      if (checkCollisions()) return;
+      // Collision check before ghost movement (only when playing)
+      if (gameState === 'playing' && checkCollisions()) return;
 
-      // Move ghosts (slower than pac-man; per-ghost prev tracking for smooth interpolation)
+      // Ghost movement always runs (ghosts keep moving during death/spawn)
       const ghostSpeed = level >= 3 ? 1 : 2;
       for (let i = 0; i < ghosts.length; i++) {
         const g = ghosts[i];
@@ -611,15 +613,16 @@
         }
       }
 
-      // Collision check (after ghost movement — catches ghost moving onto pac-man)
-      if (checkCollisions()) return;
+      // Collision + win check only when playing
+      if (gameState === 'playing') {
+        if (checkCollisions()) return;
 
-      // Win check
-      if (dotCount <= 0) {
-        gameState = 'win';
-        document.getElementById('win-score').textContent = score;
-        winOverlay.classList.remove('hidden');
-        return;
+        if (dotCount <= 0) {
+          gameState = 'win';
+          document.getElementById('win-score').textContent = score;
+          winOverlay.classList.remove('hidden');
+          return;
+        }
       }
 
       updateHUD();
@@ -876,10 +879,9 @@
     function gameLoop(time) {
       requestAnimationFrame(gameLoop);
 
-      // Death animation — freeze everything, then respawn or game over
+      // Handle animation state transitions
       if (gameState === 'dying') {
-        const elapsed = Date.now() - deathStartTime;
-        if (elapsed >= DEATH_DURATION) {
+        if (Date.now() - deathStartTime >= DEATH_DURATION) {
           if (lives <= 0) {
             gameState = 'gameover';
             document.getElementById('final-score').textContent = score;
@@ -891,44 +893,35 @@
             gameState = 'spawning';
           }
         }
-        draw(1);
-        return;
       }
-
-      // Spawn animation — freeze everything until pac-man materializes
       if (gameState === 'spawning') {
         if (Date.now() - spawnStartTime >= SPAWN_DURATION) {
           gameState = 'playing';
-          lastTime = 0;
-          accumulator = 0;
         }
+      }
+
+      // Tick logic runs for playing, dying, and spawning (ghosts keep moving)
+      const ticking = gameState === 'playing' || gameState === 'dying' || gameState === 'spawning';
+      if (ticking && !paused) {
+        if (!lastTime) lastTime = time;
+        const delta = time - lastTime;
+        lastTime = time;
+
+        accumulator += delta;
+        const tickRate = getTickRate();
+        if (accumulator > tickRate * 3) accumulator = tickRate;
+
+        while (accumulator >= tickRate) {
+          pacman.prevX = pacman.x;
+          pacman.prevY = pacman.y;
+          tick();
+          accumulator -= tickRate;
+        }
+
+        draw(accumulator / tickRate);
+      } else {
         draw(1);
-        return;
       }
-
-      if (gameState !== 'playing' || paused) {
-        draw(1);
-        return;
-      }
-
-      if (!lastTime) lastTime = time;
-      const delta = time - lastTime;
-      lastTime = time;
-
-      accumulator += delta;
-      const tickRate = getTickRate();
-      // Cap to prevent catch-up stutter after tab switch / lag
-      if (accumulator > tickRate * 3) accumulator = tickRate;
-
-      while (accumulator >= tickRate) {
-        // Store previous position for pac-man interpolation
-        pacman.prevX = pacman.x;
-        pacman.prevY = pacman.y;
-        tick();
-        accumulator -= tickRate;
-      }
-
-      draw(accumulator / tickRate);
     }
 
     // === INPUT ===

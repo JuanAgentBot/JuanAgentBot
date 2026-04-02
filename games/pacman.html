@@ -254,7 +254,7 @@
     const TICK = 1000 / 10; // 10 ticks per second base
 
     function getTickRate() {
-      return 1000 / (10 + level * 0.5);
+      return 1000 / (7 + level * 0.3);
     }
 
     function cloneMap() {
@@ -289,22 +289,25 @@
 
       pacman = {
         x: 10, y: 15,
+        prevX: 10, prevY: 15,
         dx: 0, dy: 0,
         nextDx: 0, nextDy: 0,
         moving: false
       };
 
       ghosts = [
-        { x: 9, y: 9, dx: 0, dy: -1, color: GHOST_COLORS[0], mode: 'scatter', startDelay: 0, home: true },
-        { x: 10, y: 9, dx: 0, dy: -1, color: GHOST_COLORS[1], mode: 'scatter', startDelay: 30, home: true },
-        { x: 11, y: 9, dx: 0, dy: -1, color: GHOST_COLORS[2], mode: 'scatter', startDelay: 60, home: true },
-        { x: 10, y: 10, dx: 0, dy: -1, color: GHOST_COLORS[3], mode: 'scatter', startDelay: 90, home: true }
+        { x: 9, y: 9, prevX: 9, prevY: 9, dx: 0, dy: -1, color: GHOST_COLORS[0], mode: 'scatter', startDelay: 0, home: true },
+        { x: 10, y: 9, prevX: 10, prevY: 9, dx: 0, dy: -1, color: GHOST_COLORS[1], mode: 'scatter', startDelay: 30, home: true },
+        { x: 11, y: 9, prevX: 11, prevY: 9, dx: 0, dy: -1, color: GHOST_COLORS[2], mode: 'scatter', startDelay: 60, home: true },
+        { x: 10, y: 10, prevX: 10, prevY: 10, dx: 0, dy: -1, color: GHOST_COLORS[3], mode: 'scatter', startDelay: 90, home: true }
       ];
     }
 
     function resetPositions() {
       pacman.x = 10;
       pacman.y = 15;
+      pacman.prevX = 10;
+      pacman.prevY = 15;
       pacman.dx = 0;
       pacman.dy = 0;
       pacman.nextDx = 0;
@@ -312,10 +315,10 @@
       pacman.moving = false;
       frightenedTimer = 0;
 
-      ghosts[0].x = 9; ghosts[0].y = 9; ghosts[0].home = true; ghosts[0].mode = 'scatter';
-      ghosts[1].x = 10; ghosts[1].y = 9; ghosts[1].home = true; ghosts[1].mode = 'scatter';
-      ghosts[2].x = 11; ghosts[2].y = 9; ghosts[2].home = true; ghosts[2].mode = 'scatter';
-      ghosts[3].x = 10; ghosts[3].y = 10; ghosts[3].home = true; ghosts[3].mode = 'scatter';
+      ghosts[0].x = 9; ghosts[0].y = 9; ghosts[0].prevX = 9; ghosts[0].prevY = 9; ghosts[0].home = true; ghosts[0].mode = 'scatter';
+      ghosts[1].x = 10; ghosts[1].y = 9; ghosts[1].prevX = 10; ghosts[1].prevY = 9; ghosts[1].home = true; ghosts[1].mode = 'scatter';
+      ghosts[2].x = 11; ghosts[2].y = 9; ghosts[2].prevX = 11; ghosts[2].prevY = 9; ghosts[2].home = true; ghosts[2].mode = 'scatter';
+      ghosts[3].x = 10; ghosts[3].y = 10; ghosts[3].prevX = 10; ghosts[3].prevY = 10; ghosts[3].home = true; ghosts[3].mode = 'scatter';
 
       for (let g of ghosts) {
         g.dx = 0;
@@ -389,6 +392,8 @@
       if (ghost.home) {
         ghost.x = 10;
         ghost.y = 7;
+        ghost.prevX = 10;
+        ghost.prevY = 7;
         ghost.home = false;
         ghost.dy = -1;
         ghost.dx = 0;
@@ -453,11 +458,6 @@
 
       // Alternate scatter/chase
       const inChase = modeTimer > 70;
-
-      // Mouth animation
-      mouthAngle += 0.06 * mouthDir;
-      if (mouthAngle > 0.35) mouthDir = -1;
-      if (mouthAngle < 0.05) mouthDir = 1;
 
       // Move pac-man
       const tryX = wrapX(pacman.x + pacman.nextDx);
@@ -532,6 +532,8 @@
             score += 200;
             g.x = 10;
             g.y = 9;
+            g.prevX = 10;
+            g.prevY = 9;
             g.home = true;
             g.startDelay = 30;
             g.mode = 'scatter';
@@ -565,7 +567,13 @@
     }
 
     // === RENDER ===
-    function draw() {
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function lerpWrap(a, b, t, max) {
+      if (Math.abs(b - a) > max / 2) return b; // tunnel wrap — snap
+      return lerp(a, b, t);
+    }
+
+    function draw(alpha) {
       ctx.fillStyle = VOID;
       ctx.fillRect(0, 0, W, H);
 
@@ -625,14 +633,21 @@
       ctx.fillRect(9 * TILE, 8 * TILE, 3 * TILE, 2);
       ctx.shadowBlur = 0;
 
-      // Draw pac-man
-      const px = pacman.x * TILE + TILE / 2;
-      const py = pacman.y * TILE + TILE / 2;
+      // Draw pac-man (interpolated)
+      const lerpPacX = lerpWrap(pacman.prevX, pacman.x, alpha, COLS);
+      const lerpPacY = lerp(pacman.prevY, pacman.y, alpha);
+      const px = lerpPacX * TILE + TILE / 2;
+      const py = lerpPacY * TILE + TILE / 2;
       let angle = 0;
       if (pacman.dx === 1) angle = 0;
       else if (pacman.dx === -1) angle = Math.PI;
       else if (pacman.dy === -1) angle = -Math.PI / 2;
       else if (pacman.dy === 1) angle = Math.PI / 2;
+
+      // Time-based mouth animation (smooth, independent of tick rate)
+      const mouthAngle = (pacman.dx === 0 && pacman.dy === 0)
+        ? 0.05
+        : 0.2 + Math.sin(Date.now() / 80) * 0.15;
 
       ctx.fillStyle = PAC_COLOR;
       ctx.shadowColor = PAC_COLOR;
@@ -648,8 +663,10 @@
       for (let i = 0; i < ghosts.length; i++) {
         const g = ghosts[i];
         if (g.home && g.startDelay > 0) continue; // Don't draw if still in house waiting
-        const gx = g.x * TILE + TILE / 2;
-        const gy = g.y * TILE + TILE / 2;
+        const lerpGx = lerpWrap(g.prevX, g.x, alpha, COLS);
+        const lerpGy = lerp(g.prevY, g.y, alpha);
+        const gx = lerpGx * TILE + TILE / 2;
+        const gy = lerpGy * TILE + TILE / 2;
         let color = g.color;
 
         if (g.mode === 'frightened') {
@@ -720,7 +737,7 @@
       requestAnimationFrame(gameLoop);
 
       if (gameState !== 'playing' || paused) {
-        draw();
+        draw(1);
         return;
       }
 
@@ -730,12 +747,19 @@
 
       accumulator += delta;
       const tickRate = getTickRate();
+      // Cap to prevent catch-up stutter after tab switch / lag
+      if (accumulator > tickRate * 3) accumulator = tickRate;
+
       while (accumulator >= tickRate) {
+        // Store previous positions for interpolation
+        pacman.prevX = pacman.x;
+        pacman.prevY = pacman.y;
+        for (let g of ghosts) { g.prevX = g.x; g.prevY = g.y; }
         tick();
         accumulator -= tickRate;
       }
 
-      draw();
+      draw(accumulator / tickRate);
     }
 
     // === INPUT ===

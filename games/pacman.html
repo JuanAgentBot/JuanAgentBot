@@ -256,6 +256,18 @@
     let eatEffects = [];
     const DEATH_DURATION = 1200;
     const SPAWN_DURATION = 600;
+
+    // Death cinematic
+    const HISTORY_SIZE = 25;
+    let positionHistory = [];
+    let cinematicPhase = '';
+    let cinematicStart = 0;
+    let killerGhost = null;
+    let rewindSnaps = [];
+    let deathDirX = 1, deathDirY = 0;
+    const REWIND_DUR = 1000;
+    const TRANSITION_DUR = 400;
+    const FP_DUR = 3500;
     const TICK = 1000 / 10; // 10 ticks per second base
 
     function getTickRate() {
@@ -556,18 +568,16 @@
             score += 200;
             g.mode = 'eaten';
           } else {
-            // Pac-man dies — start death animation
+            // Pac-man dies — start death cinematic
             lives--;
             updateHUD();
-            deathStartTime = Date.now();
-            deathX = pacman.x * TILE + TILE / 2;
-            deathY = pacman.y * TILE + TILE / 2;
-            if (pacman.dx === 1) deathAngle = 0;
-            else if (pacman.dx === -1) deathAngle = Math.PI;
-            else if (pacman.dy === -1) deathAngle = -Math.PI / 2;
-            else if (pacman.dy === 1) deathAngle = Math.PI / 2;
-            else deathAngle = 0;
-            gameState = 'dying';
+            killerGhost = { x: g.x, y: g.y, color: g.color };
+            rewindSnaps = positionHistory.slice();
+            deathDirX = pacman.dx || 1;
+            deathDirY = pacman.dy || 0;
+            cinematicPhase = 'rewind';
+            cinematicStart = Date.now();
+            gameState = 'deathCinematic';
             return true;
           }
         }
@@ -590,6 +600,13 @@
 
       // Pac-man movement + dot eating only when playing
       if (gameState === 'playing') {
+        // Record for death cinematic rewind
+        positionHistory.push({
+          px: pacman.x, py: pacman.y, pdx: pacman.dx, pdy: pacman.dy,
+          ghosts: ghosts.map(g => ({x:g.x,y:g.y,dx:g.dx,dy:g.dy,mode:g.mode,color:g.color,home:g.home}))
+        });
+        if (positionHistory.length > HISTORY_SIZE) positionHistory.shift();
+
         const tryX = wrapX(pacman.x + pacman.nextDx);
         const tryY = pacman.y + pacman.nextDy;
         if ((pacman.nextDx !== 0 || pacman.nextDy !== 0) && canMove(tryX, tryY)) {
@@ -956,9 +973,440 @@
       }
     }
 
+    // === DEATH CINEMATIC RENDERER ===
+    function renderMiniScene(snap) {
+      ctx.fillStyle = VOID;
+      ctx.fillRect(0, 0, W, H);
+      for (let r = 0; r < MAP_TEMPLATE.length; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const tile = MAP_TEMPLATE[r][c];
+          if (tile === 1) {
+            ctx.fillStyle = WALL_COLOR;
+            ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+          }
+          const mt = map[r] && map[r][c];
+          if (mt === 2) {
+            ctx.fillStyle = DOT_COLOR;
+            ctx.beginPath();
+            ctx.arc(c * TILE + TILE / 2, r * TILE + TILE / 2, 2, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (mt === 3) {
+            ctx.fillStyle = PELLET_COLOR;
+            ctx.beginPath();
+            ctx.arc(c * TILE + TILE / 2, r * TILE + TILE / 2, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+      ctx.fillStyle = '#ff2d7b';
+      ctx.fillRect(9 * TILE, 8 * TILE, 3 * TILE, 2);
+      // Pac-man
+      const pmx = snap.px * TILE + TILE / 2;
+      const pmy = snap.py * TILE + TILE / 2;
+      let pa = 0;
+      if (snap.pdx === 1) pa = 0;
+      else if (snap.pdx === -1) pa = Math.PI;
+      else if (snap.pdy === -1) pa = -Math.PI / 2;
+      else if (snap.pdy === 1) pa = Math.PI / 2;
+      const pm = 0.2 + Math.sin(Date.now() / 80) * 0.15;
+      ctx.fillStyle = PAC_COLOR;
+      ctx.shadowColor = PAC_COLOR;
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(pmx, pmy, TILE / 2 - 2, pa + pm * Math.PI, pa - pm * Math.PI, false);
+      ctx.lineTo(pmx, pmy);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      // Ghosts
+      for (const sg of snap.ghosts) {
+        if (sg.home) continue;
+        const gc = sg.mode === 'frightened' ? FRIGHTENED_COLOR : sg.color;
+        const gx = sg.x * TILE + TILE / 2;
+        const gy = sg.y * TILE + TILE / 2;
+        ctx.fillStyle = gc;
+        ctx.shadowColor = gc;
+        ctx.shadowBlur = 8;
+        const r = TILE / 2 - 2;
+        ctx.beginPath();
+        ctx.arc(gx, gy - 2, r, Math.PI, 0, false);
+        ctx.lineTo(gx + r, gy + r - 2);
+        for (let w = 0; w < 3; w++) {
+          const wx = gx + r - (w * 2 * r / 3);
+          ctx.quadraticCurveTo(wx - r / 3, gy + r - 2 + 3, wx - 2 * r / 3, gy + r - 2);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        if (sg.mode !== 'frightened') {
+          ctx.fillStyle = '#fff';
+          ctx.beginPath();
+          ctx.arc(gx - 3, gy - 3, 3, 0, Math.PI * 2);
+          ctx.arc(gx + 3, gy - 3, 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#111';
+          ctx.beginPath();
+          ctx.arc(gx - 3 + sg.dx * 1.5, gy - 3 + sg.dy * 1.5, 1.5, 0, Math.PI * 2);
+          ctx.arc(gx + 3 + sg.dx * 1.5, gy - 3 + sg.dy * 1.5, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    function drawCinematicRewind(t) {
+      const len = rewindSnaps.length;
+      if (len === 0) return;
+      const idx = Math.min(Math.floor((1 - t) * len), len - 1);
+      renderMiniScene(rewindSnaps[idx]);
+      // VHS overlay
+      ctx.fillStyle = 'rgba(0,240,255,0.04)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      for (let y = 0; y < H; y += 2) ctx.fillRect(0, y, W, 1);
+      // Tracking glitch
+      const glitchY = (Date.now() * 0.3) % H;
+      ctx.fillStyle = 'rgba(255,45,123,0.1)';
+      ctx.fillRect(0, glitchY, W, 3);
+      ctx.save();
+      ctx.font = 'bold 14px "JetBrains Mono"';
+      ctx.fillStyle = '#ff2d7b';
+      ctx.shadowColor = '#ff2d7b';
+      ctx.shadowBlur = 10;
+      ctx.textAlign = 'center';
+      ctx.fillText('\u25C4\u25C4 REWIND', W / 2, 25);
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+
+    function drawCinematicTransition(t, toBlack) {
+      const alpha = toBlack ? t : 1 - t;
+      // Draw last known scene
+      const snap = rewindSnaps[toBlack ? 0 : rewindSnaps.length - 1];
+      if (snap) renderMiniScene(snap);
+      ctx.fillStyle = `rgba(10,10,15,${alpha})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    function isWall3D(gx, gy) {
+      if (gx < 0 || gx >= COLS || gy < 0 || gy >= MAP_TEMPLATE.length) return true;
+      return MAP_TEMPLATE[gy][gx] === 1 || MAP_TEMPLATE[gy][gx] === 4;
+    }
+
+    function drawFirstPerson(t) {
+      const screenW = W, screenH = H;
+      const len = rewindSnaps.length;
+      if (len < 2) return;
+
+      // Camera follows recorded path toward death
+      const startIdx = Math.max(0, len - 15);
+      const endIdx = len - 1;
+      const range = endIdx - startIdx;
+      const fpT = Math.min(t * 1.1, 1); // reach ghost slightly before end
+      const histT = startIdx + range * fpT;
+      const idx = Math.min(Math.floor(histT), endIdx - 1);
+      const frac = histT - idx;
+      const s1 = rewindSnaps[idx];
+      const s2 = rewindSnaps[Math.min(idx + 1, endIdx)];
+
+      const camX = lerp(s1.px, s2.px, frac) + 0.5;
+      const camY = lerp(s1.py, s2.py, frac) + 0.5;
+
+      // Smooth direction from history
+      let d1x = s1.pdx || deathDirX, d1y = s1.pdy || deathDirY;
+      let d2x = s2.pdx || deathDirX, d2y = s2.pdy || deathDirY;
+      let dirX = lerp(d1x, d2x, frac);
+      let dirY = lerp(d1y, d2y, frac);
+      const dLen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
+      dirX /= dLen; dirY /= dLen;
+
+      const planeX = -dirY * 0.66;
+      const planeY = dirX * 0.66;
+
+      // Ceiling gradient
+      const cGrad = ctx.createLinearGradient(0, 0, 0, screenH / 2);
+      cGrad.addColorStop(0, '#030308');
+      cGrad.addColorStop(1, '#0a0a2a');
+      ctx.fillStyle = cGrad;
+      ctx.fillRect(0, 0, screenW, screenH / 2);
+
+      // Floor gradient
+      const fGrad = ctx.createLinearGradient(0, screenH / 2, 0, screenH);
+      fGrad.addColorStop(0, '#08081a');
+      fGrad.addColorStop(1, '#030306');
+      ctx.fillStyle = fGrad;
+      ctx.fillRect(0, screenH / 2, screenW, screenH / 2);
+
+      // Floor grid lines
+      ctx.strokeStyle = 'rgba(0,240,255,0.06)';
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 12; i++) {
+        const fy = screenH / 2 + (screenH / 2) * (i / 12);
+        ctx.beginPath();
+        ctx.moveTo(0, fy);
+        ctx.lineTo(screenW, fy);
+        ctx.stroke();
+      }
+
+      // Raycasting
+      const zBuffer = new Float64Array(screenW);
+
+      for (let x = 0; x < screenW; x++) {
+        const cameraX = 2 * x / screenW - 1;
+        const rayDirX = dirX + planeX * cameraX;
+        const rayDirY = dirY + planeY * cameraX;
+
+        let mapX = Math.floor(camX), mapY = Math.floor(camY);
+        const ddx = rayDirX === 0 ? 1e30 : Math.abs(1 / rayDirX);
+        const ddy = rayDirY === 0 ? 1e30 : Math.abs(1 / rayDirY);
+
+        let stepX, stepY, sdx, sdy;
+        if (rayDirX < 0) { stepX = -1; sdx = (camX - mapX) * ddx; }
+        else { stepX = 1; sdx = (mapX + 1 - camX) * ddx; }
+        if (rayDirY < 0) { stepY = -1; sdy = (camY - mapY) * ddy; }
+        else { stepY = 1; sdy = (mapY + 1 - camY) * ddy; }
+
+        let hit = false, side = 0, steps = 0;
+        while (!hit && steps < 30) {
+          if (sdx < sdy) { sdx += ddx; mapX += stepX; side = 0; }
+          else { sdy += ddy; mapY += stepY; side = 1; }
+          if (isWall3D(mapX, mapY)) hit = true;
+          steps++;
+        }
+        if (!hit) { zBuffer[x] = 1e30; continue; }
+
+        const perpDist = side === 0 ? (sdx - ddx) : (sdy - ddy);
+        zBuffer[x] = perpDist;
+        const lineH = Math.floor(screenH / perpDist);
+        const dStart = Math.max(0, Math.floor(screenH / 2 - lineH / 2));
+        const dEnd = Math.min(screenH, Math.floor(screenH / 2 + lineH / 2));
+
+        // Wall texture coord
+        let wallX = side === 0 ? camY + perpDist * rayDirY : camX + perpDist * rayDirX;
+        wallX -= Math.floor(wallX);
+
+        const fog = Math.max(0, 1 - perpDist / 12);
+        const br = side === 0 ? 0.6 : 1;
+
+        // Wall base
+        const wr = Math.floor(20 * fog * br);
+        const wg = Math.floor(10 * fog * br);
+        const wb = Math.floor(65 * fog * br);
+        ctx.fillStyle = `rgb(${wr},${wg},${wb})`;
+        ctx.fillRect(x, dStart, 1, dEnd - dStart);
+
+        // Neon edge lines
+        if (wallX < 0.04 || wallX > 0.96) {
+          const ec = side === 0 ? `rgba(0,240,255,${0.6 * fog})` : `rgba(255,45,123,${0.6 * fog})`;
+          ctx.fillStyle = ec;
+          ctx.fillRect(x, dStart, 1, dEnd - dStart);
+        }
+        // Top/bottom edge glow
+        if (dEnd - dStart > 6) {
+          const gc = side === 0 ? `rgba(0,240,255,${0.35 * fog})` : `rgba(255,45,123,${0.35 * fog})`;
+          ctx.fillStyle = gc;
+          ctx.fillRect(x, dStart, 1, 2);
+          ctx.fillRect(x, dEnd - 2, 1, 2);
+        }
+      }
+
+      // Dots on floor
+      for (let r = 0; r < MAP_TEMPLATE.length; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (map[r][c] !== 2 && map[r][c] !== 3) continue;
+          const dotX = c + 0.5 - camX;
+          const dotY = r + 0.5 - camY;
+          const tX = (dirY * dotX - dirX * dotY) / (planeX * dirY - dirX * planeY);
+          const tY = (-planeY * dotX + planeX * dotY) / (planeX * dirY - dirX * planeY);
+          if (tY < 0.3 || tY > 8) continue;
+          const sx = Math.floor((screenW / 2) * (1 + tX / tY));
+          const sy = Math.floor(screenH / 2 + screenH / (tY * 2.5));
+          if (sx < 0 || sx >= screenW || sy < 0 || sy >= screenH) continue;
+          if (tY > zBuffer[sx]) continue;
+          const ds = Math.max(1, Math.floor(3 / tY));
+          const da = Math.max(0, 1 - tY / 6);
+          ctx.save();
+          ctx.globalAlpha = da;
+          ctx.fillStyle = map[r][c] === 3 ? PELLET_COLOR : DOT_COLOR;
+          ctx.shadowColor = ctx.fillStyle;
+          ctx.shadowBlur = map[r][c] === 3 ? 8 : 3;
+          ctx.beginPath();
+          ctx.arc(sx, sy, ds, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.restore();
+        }
+      }
+
+      // Ghost sprite
+      if (killerGhost) {
+        const gx = killerGhost.x + 0.5 - camX;
+        const gy = killerGhost.y + 0.5 - camY;
+        const invDet = 1 / (planeX * dirY - dirX * planeY);
+        const tX = invDet * (dirY * gx - dirX * gy);
+        const tY = invDet * (-planeY * gx + planeX * gy);
+
+        if (tY > 0.2) {
+          const spScreenX = Math.floor((screenW / 2) * (1 + tX / tY));
+          const spSize = Math.abs(Math.floor(screenH / tY)) * 0.85;
+          const spStartX = spScreenX - spSize / 2;
+          const spStartY = screenH / 2 - spSize / 2;
+          const gFog = Math.max(0.2, 1 - tY / 8);
+
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, gFog + 0.3);
+          ctx.shadowColor = killerGhost.color;
+          ctx.shadowBlur = 25 * gFog;
+          ctx.fillStyle = killerGhost.color;
+
+          // Ghost body
+          const cx = spScreenX, cy = spStartY + spSize * 0.35;
+          const gr = spSize * 0.4;
+          ctx.beginPath();
+          ctx.arc(cx, cy, gr, Math.PI, 0, false);
+          ctx.lineTo(cx + gr, cy + gr * 0.8);
+          for (let w = 0; w < 4; w++) {
+            const wx = cx + gr - (w * gr * 0.5);
+            ctx.quadraticCurveTo(wx - gr * 0.12, cy + gr * 0.95, wx - gr * 0.25, cy + gr * 0.8);
+          }
+          ctx.closePath();
+          ctx.fill();
+
+          // Glow outline
+          ctx.strokeStyle = killerGhost.color;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          // Eyes
+          ctx.fillStyle = '#fff';
+          ctx.shadowColor = '#fff';
+          ctx.shadowBlur = 8;
+          const eyeR = gr * 0.18;
+          ctx.beginPath();
+          ctx.arc(cx - gr * 0.25, cy - gr * 0.1, eyeR, 0, Math.PI * 2);
+          ctx.arc(cx + gr * 0.25, cy - gr * 0.1, eyeR, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = '#0a0a1a';
+          ctx.beginPath();
+          ctx.arc(cx - gr * 0.25, cy - gr * 0.1, eyeR * 0.55, 0, Math.PI * 2);
+          ctx.arc(cx + gr * 0.25, cy - gr * 0.1, eyeR * 0.55, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.restore();
+        }
+      }
+
+      // FPS Arms
+      const bob = Math.sin(t * Math.PI * 12) * 10;
+      const sway = Math.cos(t * Math.PI * 6) * 4;
+      ctx.save();
+      ctx.fillStyle = PAC_COLOR;
+      ctx.shadowColor = PAC_COLOR;
+      ctx.shadowBlur = 6;
+      // Left arm
+      ctx.beginPath();
+      ctx.ellipse(screenW * 0.13 - sway, screenH - 20 + bob, 28, 50, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(screenW * 0.16 - sway, screenH - 65 + bob, 14, 0, Math.PI * 2);
+      ctx.fill();
+      // Right arm
+      ctx.beginPath();
+      ctx.ellipse(screenW * 0.87 + sway, screenH - 20 - bob, 28, 50, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(screenW * 0.84 + sway, screenH - 65 - bob, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+
+      // Scanlines
+      ctx.fillStyle = 'rgba(0,0,0,0.12)';
+      for (let y = 0; y < screenH; y += 3) ctx.fillRect(0, y, screenW, 1);
+
+      // Vignette
+      const vig = ctx.createRadialGradient(screenW / 2, screenH / 2, screenH * 0.3, screenW / 2, screenH / 2, screenH * 0.8);
+      vig.addColorStop(0, 'rgba(0,0,0,0)');
+      vig.addColorStop(1, 'rgba(0,0,0,0.5)');
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, screenW, screenH);
+
+      // Death flash at the end
+      if (t > 0.85) {
+        const dt = (t - 0.85) / 0.15;
+        // Red danger overlay
+        ctx.fillStyle = `rgba(255,20,20,${dt * 0.4})`;
+        ctx.fillRect(0, 0, screenW, screenH);
+        // Screen shake
+        if (dt > 0.5) {
+          const shake = (dt - 0.5) * 6;
+          ctx.translate(Math.sin(Date.now() * 0.05) * shake, Math.cos(Date.now() * 0.07) * shake);
+        }
+        // Final white flash
+        if (dt > 0.9) {
+          ctx.fillStyle = `rgba(255,255,255,${(dt - 0.9) / 0.1})`;
+          ctx.fillRect(-10, -10, screenW + 20, screenH + 20);
+        }
+      }
+    }
+
+    function drawCinematic() {
+      const now = Date.now();
+      const elapsed = now - cinematicStart;
+
+      if (cinematicPhase === 'rewind') {
+        const t = Math.min(1, elapsed / REWIND_DUR);
+        drawCinematicRewind(t);
+        if (elapsed >= REWIND_DUR) {
+          cinematicPhase = 'fadeToFP';
+          cinematicStart = now;
+        }
+      } else if (cinematicPhase === 'fadeToFP') {
+        const t = Math.min(1, elapsed / TRANSITION_DUR);
+        drawCinematicTransition(t, true);
+        if (elapsed >= TRANSITION_DUR) {
+          cinematicPhase = 'fp';
+          cinematicStart = now;
+        }
+      } else if (cinematicPhase === 'fp') {
+        const t = Math.min(1, elapsed / FP_DUR);
+        drawFirstPerson(t);
+        if (elapsed >= FP_DUR) {
+          cinematicPhase = 'fadeOut';
+          cinematicStart = now;
+        }
+      } else if (cinematicPhase === 'fadeOut') {
+        const t = Math.min(1, elapsed / TRANSITION_DUR);
+        ctx.fillStyle = VOID;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = `rgba(10,10,15,${1 - t * 0.3})`;
+        ctx.fillRect(0, 0, W, H);
+        if (elapsed >= TRANSITION_DUR) {
+          // Cinematic done
+          if (lives <= 0) {
+            gameState = 'gameover';
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('final-level').textContent = level;
+            gameoverOverlay.classList.remove('hidden');
+          } else {
+            resetPacman();
+            spawnStartTime = now;
+            gameState = 'spawning';
+          }
+        }
+      }
+    }
+
     // === GAME LOOP ===
     function gameLoop(time) {
       requestAnimationFrame(gameLoop);
+
+      // Death cinematic — runs its own renderer
+      if (gameState === 'deathCinematic') {
+        drawCinematic();
+        return;
+      }
 
       // Handle animation state transitions
       if (gameState === 'dying') {

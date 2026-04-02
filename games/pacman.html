@@ -251,6 +251,11 @@
     let frightenedTimer, mouthAngle, mouthDir;
     let lastTime, accumulator;
     let paused = false;
+    let deathStartTime = 0, spawnStartTime = 0;
+    let deathX = 0, deathY = 0, deathAngle = 0;
+    let eatEffects = [];
+    const DEATH_DURATION = 1200;
+    const SPAWN_DURATION = 600;
     const TICK = 1000 / 10; // 10 ticks per second base
 
     function getTickRate() {
@@ -324,6 +329,22 @@
         g.dx = 0;
         g.dy = -1;
         g.startDelay = ghosts.indexOf(g) * 30;
+      }
+    }
+
+    function resetPacman() {
+      pacman.x = 10;
+      pacman.y = 15;
+      pacman.prevX = 10;
+      pacman.prevY = 15;
+      pacman.dx = 0;
+      pacman.dy = 0;
+      pacman.nextDx = 0;
+      pacman.nextDy = 0;
+      pacman.moving = false;
+      frightenedTimer = 0;
+      for (let g of ghosts) {
+        if (g.mode === 'frightened') g.mode = 'scatter';
       }
     }
 
@@ -464,6 +485,13 @@
         if (g.home) continue;
         if (g.x === pacman.x && g.y === pacman.y) {
           if (g.mode === 'frightened') {
+            // Ghost eaten — score popup + send home
+            eatEffects.push({
+              x: g.x * TILE + TILE / 2,
+              y: g.y * TILE + TILE / 2,
+              score: 200,
+              startTime: Date.now()
+            });
             score += 200;
             g.x = 10;
             g.y = 9;
@@ -474,17 +502,18 @@
             g.mode = 'scatter';
             g.moveAge = 0;
           } else {
+            // Pac-man dies — start death animation
             lives--;
             updateHUD();
-            if (lives <= 0) {
-              gameState = 'gameover';
-              document.getElementById('final-score').textContent = score;
-              document.getElementById('final-level').textContent = level;
-              gameoverOverlay.classList.remove('hidden');
-              return true;
-            }
-            resetPositions();
-            modeTimer = 0;
+            deathStartTime = Date.now();
+            deathX = pacman.x * TILE + TILE / 2;
+            deathY = pacman.y * TILE + TILE / 2;
+            if (pacman.dx === 1) deathAngle = 0;
+            else if (pacman.dx === -1) deathAngle = Math.PI;
+            else if (pacman.dy === -1) deathAngle = -Math.PI / 2;
+            else if (pacman.dy === 1) deathAngle = Math.PI / 2;
+            else deathAngle = 0;
+            gameState = 'dying';
             return true;
           }
         }
@@ -663,31 +692,90 @@
       ctx.fillRect(9 * TILE, 8 * TILE, 3 * TILE, 2);
       ctx.shadowBlur = 0;
 
-      // Draw pac-man (interpolated)
-      const lerpPacX = lerpWrap(pacman.prevX, pacman.x, alpha, COLS);
-      const lerpPacY = lerp(pacman.prevY, pacman.y, alpha);
-      const px = lerpPacX * TILE + TILE / 2;
-      const py = lerpPacY * TILE + TILE / 2;
-      let angle = 0;
-      if (pacman.dx === 1) angle = 0;
-      else if (pacman.dx === -1) angle = Math.PI;
-      else if (pacman.dy === -1) angle = -Math.PI / 2;
-      else if (pacman.dy === 1) angle = Math.PI / 2;
+      // Draw pac-man
+      if (gameState === 'dying') {
+        // Death animation: mouth opens wide, body deflates and fades
+        const elapsed = Date.now() - deathStartTime;
+        const t = Math.min(1, elapsed / DEATH_DURATION);
 
-      // Time-based mouth animation (smooth, independent of tick rate)
-      const mouthAngle = (pacman.dx === 0 && pacman.dy === 0)
-        ? 0.05
-        : 0.2 + Math.sin(Date.now() / 80) * 0.15;
+        if (t < 0.7) {
+          // Phase 1: mouth opens wider
+          const phase = t / 0.7;
+          const mouth = 0.15 + phase * 0.85;
+          ctx.save();
+          ctx.fillStyle = PAC_COLOR;
+          ctx.shadowColor = PAC_COLOR;
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.arc(deathX, deathY, TILE / 2 - 2, deathAngle + mouth * Math.PI, deathAngle - mouth * Math.PI, false);
+          ctx.lineTo(deathX, deathY);
+          ctx.closePath();
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.restore();
+        } else {
+          // Phase 2: shrink and fade out
+          const phase = (t - 0.7) / 0.3;
+          const radius = (TILE / 2 - 2) * (1 - phase);
+          if (radius > 0.5) {
+            ctx.save();
+            ctx.globalAlpha = 1 - phase;
+            ctx.fillStyle = PAC_COLOR;
+            ctx.shadowColor = PAC_COLOR;
+            ctx.shadowBlur = 10 + phase * 20;
+            ctx.beginPath();
+            ctx.arc(deathX, deathY, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.restore();
+          }
+        }
+      } else if (gameState === 'spawning') {
+        // Spawn animation: scale up with glow pulse
+        const elapsed = Date.now() - spawnStartTime;
+        const t = Math.min(1, elapsed / SPAWN_DURATION);
+        const scale = t * t * (3 - 2 * t); // smoothstep ease
+        const glow = (1 - t) * 25;
+        const pulse = 1 + Math.sin(elapsed / 60) * 0.15 * (1 - t);
+        const spawnX = pacman.x * TILE + TILE / 2;
+        const spawnY = pacman.y * TILE + TILE / 2;
 
-      ctx.fillStyle = PAC_COLOR;
-      ctx.shadowColor = PAC_COLOR;
-      ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.arc(px, py, TILE / 2 - 2, angle + mouthAngle * Math.PI, angle - mouthAngle * Math.PI, false);
-      ctx.lineTo(px, py);
-      ctx.closePath();
-      ctx.fill();
-      ctx.shadowBlur = 0;
+        ctx.save();
+        ctx.globalAlpha = 0.3 + 0.7 * t;
+        ctx.fillStyle = PAC_COLOR;
+        ctx.shadowColor = PAC_COLOR;
+        ctx.shadowBlur = 10 + glow;
+        ctx.beginPath();
+        ctx.arc(spawnX, spawnY, (TILE / 2 - 2) * scale * pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      } else {
+        // Normal pac-man (interpolated)
+        const lerpPacX = lerpWrap(pacman.prevX, pacman.x, alpha, COLS);
+        const lerpPacY = lerp(pacman.prevY, pacman.y, alpha);
+        const px = lerpPacX * TILE + TILE / 2;
+        const py = lerpPacY * TILE + TILE / 2;
+        let angle = 0;
+        if (pacman.dx === 1) angle = 0;
+        else if (pacman.dx === -1) angle = Math.PI;
+        else if (pacman.dy === -1) angle = -Math.PI / 2;
+        else if (pacman.dy === 1) angle = Math.PI / 2;
+
+        const mouthAngle = (pacman.dx === 0 && pacman.dy === 0)
+          ? 0.05
+          : 0.2 + Math.sin(Date.now() / 80) * 0.15;
+
+        ctx.fillStyle = PAC_COLOR;
+        ctx.shadowColor = PAC_COLOR;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(px, py, TILE / 2 - 2, angle + mouthAngle * Math.PI, angle - mouthAngle * Math.PI, false);
+        ctx.lineTo(px, py);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
 
       // Draw ghosts
       for (let i = 0; i < ghosts.length; i++) {
@@ -750,6 +838,25 @@
         }
       }
 
+      // Draw eat effects (floating score popups)
+      const now = Date.now();
+      for (let i = eatEffects.length - 1; i >= 0; i--) {
+        const e = eatEffects[i];
+        const elapsed = now - e.startTime;
+        if (elapsed > 800) { eatEffects.splice(i, 1); continue; }
+        const t = elapsed / 800;
+        ctx.save();
+        ctx.globalAlpha = 1 - t;
+        ctx.fillStyle = '#00f0ff';
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 8;
+        ctx.font = 'bold 11px "JetBrains Mono"';
+        ctx.textAlign = 'center';
+        ctx.fillText('+' + e.score, e.x, e.y - t * 25);
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+
       // Draw lives indicator
       for (let i = 0; i < lives - 1; i++) {
         const lx = 20 + i * 22;
@@ -768,6 +875,36 @@
     // === GAME LOOP ===
     function gameLoop(time) {
       requestAnimationFrame(gameLoop);
+
+      // Death animation — freeze everything, then respawn or game over
+      if (gameState === 'dying') {
+        const elapsed = Date.now() - deathStartTime;
+        if (elapsed >= DEATH_DURATION) {
+          if (lives <= 0) {
+            gameState = 'gameover';
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('final-level').textContent = level;
+            gameoverOverlay.classList.remove('hidden');
+          } else {
+            resetPacman();
+            spawnStartTime = Date.now();
+            gameState = 'spawning';
+          }
+        }
+        draw(1);
+        return;
+      }
+
+      // Spawn animation — freeze everything until pac-man materializes
+      if (gameState === 'spawning') {
+        if (Date.now() - spawnStartTime >= SPAWN_DURATION) {
+          gameState = 'playing';
+          lastTime = 0;
+          accumulator = 0;
+        }
+        draw(1);
+        return;
+      }
 
       if (gameState !== 'playing' || paused) {
         draw(1);

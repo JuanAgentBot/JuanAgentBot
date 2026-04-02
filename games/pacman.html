@@ -1364,9 +1364,8 @@
         }
       }
 
-      // Ghost sprite — replayed from recorded snapshots
+      // Ghost sprite — 3D with wall occlusion and facing direction
       if (killerGhost && killerGhostIdx >= 0) {
-        // Map t to snapshot range (same time window as camera)
         const gsStart = Math.max(0, len - 15);
         const gsHistT = gsStart + (len - 1 - gsStart) * Math.min(t * 1.05, 1);
         const gsIdx = Math.min(Math.floor(gsHistT), len - 2);
@@ -1383,29 +1382,55 @@
         if (tY > 0.2) {
           const spScreenX = Math.floor((screenW / 2) * (1 + tX / tY));
           const spSize = Math.abs(Math.floor(screenH / tY)) * 0.55;
+          const ghostDist = tY;
           const gFog = Math.max(0.2, 1 - tY / 8);
 
-          // Smooth floating: slow sine + gentle secondary wave
+          // Ghost facing: compare ghost movement dir to camera-to-ghost vector
+          const gsDx = gs1.dx || 0, gsDy = gs1.dy || 0;
+          const ghostAngle = Math.atan2(gsDy, gsDx);
+          const camToGhostAngle = Math.atan2(-gy, -gx);
+          let relAngle = camToGhostAngle - ghostAngle;
+          while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+          while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+          const viewCos = Math.cos(relAngle);
+          const viewSin = Math.sin(relAngle);
+
+          // 3D perspective: narrow when viewed from side
+          const widthScale = 0.55 + 0.45 * Math.abs(viewCos);
+
           const floatY = Math.sin(Date.now() / 350) * spSize * 0.06
                        + Math.sin(Date.now() / 180) * spSize * 0.02;
-          // Wavy skirt animation
           const skirtPhase = Date.now() / 200;
 
           const cx = spScreenX;
           const cy = screenH / 2 - spSize * 0.15 + floatY;
-          const gr = spSize * 0.45;
+          const gr = spSize * 0.45 * widthScale;
 
+          // Clip to columns where ghost is in front of walls
           ctx.save();
+          ctx.beginPath();
+          const spLeft = Math.max(0, Math.floor(cx - spSize * 0.5));
+          const spRight = Math.min(screenW, Math.ceil(cx + spSize * 0.5));
+          let runStart = -1;
+          for (let sx = spLeft; sx <= spRight; sx++) {
+            const vis = sx < spRight && sx >= 0 && sx < screenW && zBuffer[sx] > ghostDist;
+            if (vis && runStart === -1) runStart = sx;
+            else if (!vis && runStart !== -1) {
+              ctx.rect(runStart, 0, sx - runStart, screenH);
+              runStart = -1;
+            }
+          }
+          ctx.clip();
+
           ctx.globalAlpha = Math.min(1, gFog + 0.3);
           ctx.shadowColor = killerGhost.color;
           ctx.shadowBlur = 15 * gFog;
           ctx.fillStyle = killerGhost.color;
 
-          // 2D-style ghost body: semicircle top + wavy skirt
+          // Ghost body: semicircle top + wavy skirt
           ctx.beginPath();
           ctx.arc(cx, cy, gr, Math.PI, 0, false);
           ctx.lineTo(cx + gr, cy + gr * 0.75);
-          // 3 wave segments like the 2D ghost
           for (let w = 0; w < 3; w++) {
             const wx1 = cx + gr - (w * 2 * gr / 3);
             const wAmp = 3 + Math.sin(skirtPhase + w * 2) * 2;
@@ -1418,21 +1443,28 @@
           ctx.fill();
           ctx.shadowBlur = 0;
 
-          // Eyes (2D style: white circles + dark pupils)
-          ctx.fillStyle = '#fff';
-          const eyeR = gr * 0.22;
-          const eyeSpread = gr * 0.28;
-          ctx.beginPath();
-          ctx.arc(cx - eyeSpread, cy - gr * 0.08, eyeR, 0, Math.PI * 2);
-          ctx.arc(cx + eyeSpread, cy - gr * 0.08, eyeR, 0, Math.PI * 2);
-          ctx.fill();
-          // Pupils look toward camera
-          ctx.fillStyle = '#111';
-          const pupilR = eyeR * 0.55;
-          ctx.beginPath();
-          ctx.arc(cx - eyeSpread, cy - gr * 0.08, pupilR, 0, Math.PI * 2);
-          ctx.arc(cx + eyeSpread, cy - gr * 0.08, pupilR, 0, Math.PI * 2);
-          ctx.fill();
+          // Eyes — only visible from front/side, shift with facing direction
+          if (viewCos > -0.2) {
+            const eyeR = gr * 0.22;
+            const eyeSpread = gr * 0.28;
+            const eyeShift = -viewSin * eyeSpread * 0.7;
+            const eyeY = cy - gr * 0.08;
+
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(cx - eyeSpread + eyeShift, eyeY, eyeR, 0, Math.PI * 2);
+            ctx.arc(cx + eyeSpread + eyeShift, eyeY, eyeR, 0, Math.PI * 2);
+            ctx.fill();
+            // Pupils face movement direction
+            const pupilR = eyeR * 0.55;
+            const pupilOffX = -viewSin * pupilR * 0.8;
+            const pupilOffY = viewCos > 0.5 ? 0 : pupilR * 0.3;
+            ctx.fillStyle = '#111';
+            ctx.beginPath();
+            ctx.arc(cx - eyeSpread + eyeShift + pupilOffX, eyeY + pupilOffY, pupilR, 0, Math.PI * 2);
+            ctx.arc(cx + eyeSpread + eyeShift + pupilOffX, eyeY + pupilOffY, pupilR, 0, Math.PI * 2);
+            ctx.fill();
+          }
 
           ctx.restore();
         }

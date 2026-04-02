@@ -605,8 +605,8 @@
       for (let i = 0; i < ghosts.length; i++) {
         const g = ghosts[i];
         let moves = false;
-        if (g.mode === 'eaten') {
-          moves = true; // Eyes always move at full speed
+        if (g.mode === 'eaten' || g.home) {
+          moves = true; // Eyes and house-walking always at full speed
         } else if (tickCount % ghostSpeed === 0) {
           if (g.mode !== 'frightened' && frightenedTimer === 0) {
             g.mode = inChase ? 'chase' : 'scatter';
@@ -799,7 +799,7 @@
         const g = ghosts[i];
         if (g.home && g.startDelay > 0) continue; // Don't draw ghosts still waiting
         const baseSpeed = level >= 3 ? 1 : 2;
-        const ghostPeriod = g.mode === 'eaten' ? 1 : (g.mode === 'frightened') ? baseSpeed * 3 : baseSpeed;
+        const ghostPeriod = (g.mode === 'eaten' || g.home) ? 1 : (g.mode === 'frightened') ? baseSpeed * 3 : baseSpeed;
         const ghostAlpha = Math.min(1, (g.moveAge + alpha) / ghostPeriod);
         const lerpGx = lerpWrap(g.prevX, g.x, ghostAlpha, COLS);
         const lerpGy = lerp(g.prevY, g.y, ghostAlpha);

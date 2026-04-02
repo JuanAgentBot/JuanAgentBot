@@ -385,7 +385,8 @@
     function moveGhost(ghost, idx) {
       if (ghost.startDelay > 0) {
         ghost.startDelay--;
-        return;
+        if (ghost.startDelay > 0) return;
+        // Fall through to exit house immediately when delay ends
       }
 
       // Exit ghost house
@@ -681,7 +682,7 @@
       // Draw ghosts
       for (let i = 0; i < ghosts.length; i++) {
         const g = ghosts[i];
-        if (g.home && g.startDelay > 0) continue; // Don't draw if still in house waiting
+        if (g.home) continue; // Don't draw ghosts still in the house
         const baseSpeed = level >= 3 ? 1 : 2;
         const ghostPeriod = (g.mode === 'frightened') ? baseSpeed * 3 : baseSpeed;
         const ghostAlpha = Math.min(1, (g.moveAge + alpha) / ghostPeriod);

@@ -385,20 +385,30 @@
     function moveGhost(ghost, idx) {
       if (ghost.startDelay > 0) {
         ghost.startDelay--;
-        if (ghost.startDelay > 0) return;
-        // Fall through to exit house immediately when delay ends
+        return;
       }
 
-      // Exit ghost house
+      // Walk out of ghost house step by step
       if (ghost.home) {
-        ghost.x = 10;
-        ghost.y = 7;
-        ghost.prevX = 10;
-        ghost.prevY = 7;
+        if (ghost.x < 10) {
+          ghost.dx = 1; ghost.dy = 0;
+          ghost.x++;
+          return;
+        }
+        if (ghost.x > 10) {
+          ghost.dx = -1; ghost.dy = 0;
+          ghost.x--;
+          return;
+        }
+        if (ghost.y > 7) {
+          ghost.dx = 0; ghost.dy = -1;
+          ghost.y--;
+          return;
+        }
+        // Reached exit — switch to normal AI and move immediately
         ghost.home = false;
-        ghost.dy = -1;
         ghost.dx = 0;
-        return;
+        ghost.dy = -1;
       }
 
       const target = getGhostTarget(ghost, idx);
@@ -682,7 +692,7 @@
       // Draw ghosts
       for (let i = 0; i < ghosts.length; i++) {
         const g = ghosts[i];
-        if (g.home) continue; // Don't draw ghosts still in the house
+        if (g.home && g.startDelay > 0) continue; // Don't draw ghosts still waiting
         const baseSpeed = level >= 3 ? 1 : 2;
         const ghostPeriod = (g.mode === 'frightened') ? baseSpeed * 3 : baseSpeed;
         const ghostAlpha = Math.min(1, (g.moveAge + alpha) / ghostPeriod);

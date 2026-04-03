@@ -51,10 +51,38 @@
       margin-bottom: 1.5rem;
     }
 
+    .game-area {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+      max-width: 480px;
+      border: 1px solid var(--border);
+      margin-bottom: 1rem;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
     #game-canvas {
       display: block;
-      margin: 0 auto 1rem;
-      border: 1px solid var(--border);
+      background: var(--bg);
+      width: 100%;
+      height: auto;
+    }
+
+    .touch-hint {
+      display: none;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+      margin-top: 0.5rem;
+      letter-spacing: 0.06em;
+    }
+
+    @media (pointer: coarse) {
+      .touch-hint { display: block; }
+      .controls { display: none; }
     }
 
     .hud {
@@ -118,7 +146,9 @@
       <span class="hud-high" id="high">HI: 0</span>
     </div>
 
-    <canvas id="game-canvas" width="480" height="520"></canvas>
+    <div class="game-area">
+      <canvas id="game-canvas" width="480" height="520"></canvas>
+    </div>
 
     <div class="controls">
       <kbd>←</kbd> <kbd>→</kbd> MOVE &nbsp;&nbsp;
@@ -126,6 +156,7 @@
       <kbd>P</kbd> PAUSE &nbsp;&nbsp;
       <kbd>R</kbd> RESTART
     </div>
+    <div class="touch-hint">DRAG LEFT/RIGHT → MOVE &nbsp; ◆ &nbsp; AUTO-FIRES WHILE TOUCHING</div>
   </main>
 
   <script src="../theme-toggle.js"></script>
@@ -135,6 +166,34 @@
   const ctx = canvas.getContext('2d');
   const W = canvas.width;
   const H = canvas.height;
+
+  // Responsive scaling
+  function scaleCanvas() {
+    const ga = document.querySelector('.game-area');
+    const cw = ga.clientWidth;
+    canvas.style.width = cw + 'px';
+    canvas.style.height = (cw * H / W) + 'px';
+  }
+  scaleCanvas();
+  window.addEventListener('resize', scaleCanvas);
+
+  // Touch → canvas coordinate mapping
+  function touchToCanvas(t) {
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: (t.clientX - r.left) * W / r.width,
+      y: (t.clientY - r.top) * H / r.height
+    };
+  }
+
+  // Touch state
+  let touching = false;
+  let touchX = W / 2;
+
+  // Prevent scroll/zoom while playing
+  document.addEventListener('touchmove', function(e) {
+    if (gameStarted && !gameOver) e.preventDefault();
+  }, { passive: false });
 
   // Colors
   const MAGENTA = '#ff2d7b';
@@ -232,6 +291,36 @@
   document.addEventListener('keyup', function(e) {
     keys[e.code] = false;
   });
+
+  // Touch controls
+  canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    const t = e.touches[0];
+    const pos = touchToCanvas(t);
+    touching = true;
+    touchX = pos.x;
+
+    if (!gameStarted) {
+      gameStarted = true;
+    } else if (gameOver) {
+      resetGame();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    if (e.touches.length > 0) {
+      const pos = touchToCanvas(e.touches[0]);
+      touchX = pos.x;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    if (e.touches.length === 0) {
+      touching = false;
+    }
+  }, { passive: false });
 
   // Invader shapes (pixel art as arrays)
   // Type 0: top rows (squid) - magenta
@@ -542,7 +631,8 @@
     ctx.fillStyle = DIM;
     ctx.font = '400 12px "JetBrains Mono", monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('PRESS SPACE TO START', W / 2, H / 2 + 80);
+    const isMobile = matchMedia('(pointer: coarse)').matches;
+    ctx.fillText(isMobile ? 'TAP TO START' : 'PRESS SPACE TO START', W / 2, H / 2 + 80);
   }
 
   function drawGameOver() {
@@ -573,7 +663,8 @@
 
     ctx.fillStyle = DIM;
     ctx.font = '400 11px "JetBrains Mono", monospace';
-    ctx.fillText('PRESS SPACE OR R TO RESTART', W / 2, H / 2 + 70);
+    const isMobileGO = matchMedia('(pointer: coarse)').matches;
+    ctx.fillText(isMobileGO ? 'TAP TO RESTART' : 'PRESS SPACE OR R TO RESTART', W / 2, H / 2 + 70);
   }
 
   function drawPaused() {
@@ -651,18 +742,25 @@
   function update() {
     if (paused || gameOver || !gameStarted) return;
 
-    // Player movement
+    // Player movement (keyboard)
     if (keys['ArrowLeft'] || keys['KeyA']) {
       playerX -= playerSpeed;
     }
     if (keys['ArrowRight'] || keys['KeyD']) {
       playerX += playerSpeed;
     }
+    // Touch movement: ship follows touch X
+    if (touching) {
+      const targetX = touchX - PLAYER_W / 2;
+      const dx = targetX - playerX;
+      const touchSpeed = Math.min(Math.abs(dx), playerSpeed * 2);
+      playerX += Math.sign(dx) * touchSpeed;
+    }
     playerX = Math.max(0, Math.min(W - PLAYER_W, playerX));
 
-    // Shooting
+    // Shooting (keyboard or auto-fire while touching)
     if (shootCooldown > 0) shootCooldown--;
-    if ((keys['Space']) && shootCooldown <= 0) {
+    if ((keys['Space'] || touching) && shootCooldown <= 0) {
       bullets.push({
         x: playerX + PLAYER_W / 2 - BULLET_W / 2,
         y: playerY - BULLET_H

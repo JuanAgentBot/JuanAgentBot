@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>MINESWEEPER / ZERO game lab</title>
   <meta name="theme-color" content="#14102a">
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -13,11 +13,22 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    html, body {
+      overflow: hidden;
+      overscroll-behavior: none;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
+
     main {
       max-width: 640px;
       margin: 0 auto;
       padding: 2rem 1.5rem 4rem;
       text-align: center;
+      height: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .back {
@@ -111,6 +122,8 @@
       padding: 2px;
       margin-bottom: 1rem;
       line-height: 0;
+      max-width: 100%;
+      touch-action: none;
     }
 
     #grid {
@@ -120,17 +133,18 @@
     }
 
     .cell {
-      width: 28px;
-      height: 28px;
+      width: var(--cell-size, 28px);
+      height: var(--cell-size, 28px);
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
+      font-size: var(--cell-font, 0.75rem);
       font-weight: 700;
       cursor: pointer;
       user-select: none;
       -webkit-user-select: none;
+      -webkit-touch-callout: none;
       transition: background 0.1s;
       line-height: 1;
     }
@@ -184,6 +198,17 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.6rem;
       color: var(--accent-cyan);
+    }
+
+    .touch-hint {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      margin-top: 0.5rem;
+    }
+
+    @media (pointer: fine) {
+      .touch-hint { display: none; }
     }
 
     .msg-overlay {
@@ -248,10 +273,8 @@
     }
 
     @media (max-width: 480px) {
-      .cell {
-        width: 24px;
-        height: 24px;
-        font-size: 0.65rem;
+      main {
+        padding: 1rem 0.5rem 2rem;
       }
     }
   </style>
@@ -282,9 +305,9 @@
     <div class="controls">
       <kbd>LEFT CLICK</kbd> REVEAL &nbsp;&middot;&nbsp;
       <kbd>RIGHT CLICK</kbd> FLAG &nbsp;&middot;&nbsp;
-      <kbd>R</kbd> RESTART<br>
-      ON MOBILE: TAP TO REVEAL &middot; LONG PRESS TO FLAG
+      <kbd>R</kbd> RESTART
     </div>
+    <div class="touch-hint">TAP TO REVEAL &middot; LONG PRESS TO FLAG</div>
   </main>
 
   <div class="msg-overlay" id="overlay">
@@ -304,6 +327,15 @@
       medium: { rows: 16, cols: 16, mines: 40 },
       hard:   { rows: 16, cols: 30, mines: 99 }
     };
+
+    // On narrow screens, swap hard to portrait (30 rows x 16 cols)
+    function getDifficulty(name) {
+      var diff = DIFFICULTIES[name];
+      if (name === 'hard' && window.innerWidth <= 480) {
+        return { rows: diff.cols, cols: diff.rows, mines: diff.mines };
+      }
+      return diff;
+    }
 
     var currentDiff = 'easy';
     var rows, cols, totalMines;
@@ -346,7 +378,7 @@
     });
 
     function init() {
-      var diff = DIFFICULTIES[currentDiff];
+      var diff = getDifficulty(currentDiff);
       rows = diff.rows;
       cols = diff.cols;
       totalMines = diff.mines;
@@ -408,13 +440,30 @@
       }
     }
 
+    var longPressed = false;
+
+    function computeCellSize() {
+      // Available width = viewport - padding - grid border/padding
+      var pad = window.innerWidth <= 480 ? 16 : 48; // main padding
+      var available = Math.min(window.innerWidth - pad, 636); // max-width - padding
+      var gapTotal = (cols - 1) * 1 + 4; // 1px gaps + 2px padding each side
+      var size = Math.floor((available - gapTotal) / cols);
+      size = Math.max(size, 16); // minimum 16px
+      size = Math.min(size, 32); // maximum 32px
+      return size;
+    }
+
+    function applyCellSize() {
+      var size = computeCellSize();
+      var fontSize = size >= 24 ? '0.75rem' : (size >= 20 ? '0.65rem' : '0.55rem');
+      gridEl.parentElement.style.setProperty('--cell-size', size + 'px');
+      gridEl.parentElement.style.setProperty('--cell-font', fontSize);
+      gridEl.style.gridTemplateColumns = 'repeat(' + cols + ', var(--cell-size))';
+    }
+
     function renderGrid() {
-      gridEl.style.gridTemplateColumns = 'repeat(' + cols + ', 28px)';
-      // Check for mobile
-      if (window.innerWidth <= 480) {
-        gridEl.style.gridTemplateColumns = 'repeat(' + cols + ', 24px)';
-      }
       gridEl.innerHTML = '';
+      applyCellSize();
       for (var r = 0; r < rows; r++) {
         for (var c = 0; c < cols; c++) {
           var cell = document.createElement('div');
@@ -427,17 +476,18 @@
           (function(el, cr, cc) {
             var timer = null;
             el.addEventListener('touchstart', function(e) {
+              longPressed = false;
               timer = setTimeout(function() {
-                e.preventDefault();
+                longPressed = true;
                 toggleFlag(cr, cc);
                 timer = null;
               }, 400);
-            }, { passive: false });
+            }, { passive: true });
             el.addEventListener('touchend', function() {
-              if (timer) clearTimeout(timer);
+              if (timer) { clearTimeout(timer); timer = null; }
             });
             el.addEventListener('touchmove', function() {
-              if (timer) clearTimeout(timer);
+              if (timer) { clearTimeout(timer); timer = null; }
             });
           })(cell, r, c);
           gridEl.appendChild(cell);
@@ -450,6 +500,7 @@
     }
 
     function onCellClick(e) {
+      if (longPressed) { longPressed = false; return; }
       if (gameOver) return;
       var r = parseInt(this.getAttribute('data-r'));
       var c = parseInt(this.getAttribute('data-c'));
@@ -623,6 +674,16 @@
       var remaining = totalMines - flagCount;
       mineCountEl.innerHTML = '&#9881; ' + remaining;
     }
+
+    // Prevent scroll/zoom while interacting with grid
+    document.getElementById('grid-wrap').addEventListener('touchmove', function(e) {
+      e.preventDefault();
+    }, { passive: false });
+
+    // Resize handler
+    window.addEventListener('resize', function() {
+      applyCellSize();
+    });
 
     // Start
     init();

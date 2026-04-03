@@ -20,6 +20,10 @@
       text-align: center;
     }
 
+    @media (max-width: 640px) {
+      main { padding: 0.8rem 0.5rem 1rem; }
+    }
+
     .back {
       display: inline-block;
       color: var(--text-dim);
@@ -56,11 +60,33 @@
       display: inline-block;
       border: 1px solid var(--border);
       margin-bottom: 1rem;
+      width: 100%;
+      max-width: 600px;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     canvas {
       display: block;
       background: var(--bg);
+      width: 100%;
+      height: auto;
+    }
+
+    .touch-hint {
+      display: none;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+      margin-top: 0.5rem;
+      letter-spacing: 0.06em;
+    }
+
+    @media (pointer: coarse) {
+      .touch-hint { display: block; }
+      .controls { display: none; }
     }
 
     .hud {
@@ -160,12 +186,12 @@
       <canvas id="game" width="600" height="480"></canvas>
       <div class="overlay" id="start-overlay">
         <div class="overlay-title">ASTEROIDS</div>
-        <div class="overlay-sub">PRESS ENTER TO LAUNCH</div>
+        <div class="overlay-sub start-sub">PRESS ENTER TO LAUNCH</div>
       </div>
       <div class="overlay hidden" id="death-overlay">
         <div class="overlay-title">DESTROYED</div>
         <div class="overlay-score" id="death-score"></div>
-        <div class="overlay-sub">PRESS ENTER TO RETRY</div>
+        <div class="overlay-sub death-sub">PRESS ENTER TO RETRY</div>
       </div>
     </div>
 
@@ -173,6 +199,9 @@
       <kbd>←</kbd> <kbd>→</kbd> rotate &nbsp;
       <kbd>↑</kbd> thrust &nbsp;
       <kbd>SPACE</kbd> fire
+    </div>
+    <div class="touch-hint">
+      TOUCH &amp; HOLD → AIM + THRUST &nbsp; ◆ &nbsp; TAP → FIRE
     </div>
   </main>
 
@@ -182,6 +211,30 @@
     const ctx = canvas.getContext('2d');
     const W = canvas.width;
     const H = canvas.height;
+
+    // Responsive scaling
+    function scaleCanvas() {
+      const ga = document.querySelector('.game-area');
+      const cw = ga.clientWidth;
+      canvas.style.width = cw + 'px';
+      canvas.style.height = (cw * H / W) + 'px';
+    }
+    scaleCanvas();
+    window.addEventListener('resize', scaleCanvas);
+
+    // Touch → canvas coordinate mapping
+    function touchToCanvas(t) {
+      const r = canvas.getBoundingClientRect();
+      return {
+        x: (t.clientX - r.left) * W / r.width,
+        y: (t.clientY - r.top) * H / r.height
+      };
+    }
+
+    // Prevent scroll/zoom while playing
+    document.addEventListener('touchmove', function(e) {
+      if (gameState === 'playing') e.preventDefault();
+    }, { passive: false });
 
     // Colors
     const MAGENTA = '#ff2d7b';
@@ -323,8 +376,31 @@
       if (keys['ArrowLeft'] || keys['KeyA']) ship.angle -= 4.5 * dt;
       if (keys['ArrowRight'] || keys['KeyD']) ship.angle += 4.5 * dt;
 
+      // Touch aim: rotate toward touch point and thrust
+      let touchThrusting = false;
+      if (touchTarget !== null) {
+        const dx = touchTarget.x - ship.x;
+        const dy = touchTarget.y - ship.y;
+        const targetAngle = Math.atan2(dy, dx);
+        let diff = targetAngle - ship.angle;
+        // Normalize to [-PI, PI]
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        // Smooth rotation toward target
+        const rotSpeed = 6.0 * dt;
+        if (Math.abs(diff) < rotSpeed) {
+          ship.angle = targetAngle;
+        } else {
+          ship.angle += Math.sign(diff) * rotSpeed;
+        }
+        // Thrust if touch held long enough (not a tap)
+        if (performance.now() - touchStartTime > TAP_THRESHOLD_MS) {
+          touchThrusting = true;
+        }
+      }
+
       // Thrust
-      ship.thrusting = keys['ArrowUp'] || keys['KeyW'];
+      ship.thrusting = keys['ArrowUp'] || keys['KeyW'] || touchThrusting;
       if (ship.thrusting) {
         ship.vx += Math.cos(ship.angle) * 200 * dt;
         ship.vy += Math.sin(ship.angle) * 200 * dt;
@@ -626,6 +702,85 @@
     document.addEventListener('keyup', function(e) {
       keys[e.code] = false;
     });
+
+    // Touch controls
+    // Hold = aim toward touch + thrust; quick tap = fire
+    let touchId = null;
+    let touchTarget = null;    // {x, y} in canvas coords
+    let touchStartTime = 0;
+    let touchStartPos = null;
+    const TAP_THRESHOLD_MS = 200;
+    const TAP_THRESHOLD_PX = 15;
+
+    canvas.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      const t = e.changedTouches[0];
+
+      // Start/restart on tap
+      if (gameState === 'waiting' || gameState === 'dead') {
+        startGame();
+        return;
+      }
+
+      if (touchId === null) {
+        touchId = t.identifier;
+        touchTarget = touchToCanvas(t);
+        touchStartTime = performance.now();
+        touchStartPos = { x: t.clientX, y: t.clientY };
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        if (t.identifier === touchId) {
+          touchTarget = touchToCanvas(t);
+        }
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        if (t.identifier === touchId) {
+          const elapsed = performance.now() - touchStartTime;
+          const dx = t.clientX - touchStartPos.x;
+          const dy = t.clientY - touchStartPos.y;
+          const moved = Math.sqrt(dx * dx + dy * dy);
+
+          // Quick tap with little movement = fire
+          if (elapsed < TAP_THRESHOLD_MS && moved < TAP_THRESHOLD_PX && gameState === 'playing') {
+            if (shootCooldown <= 0) {
+              shootCooldown = 0.18;
+              const bx = ship.x + Math.cos(ship.angle) * 16;
+              const by = ship.y + Math.sin(ship.angle) * 16;
+              bullets.push({
+                x: bx, y: by,
+                vx: Math.cos(ship.angle) * 400 + ship.vx * 0.3,
+                vy: Math.sin(ship.angle) * 400 + ship.vy * 0.3,
+                life: 1.2
+              });
+            }
+          }
+
+          touchId = null;
+          touchTarget = null;
+        }
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchcancel', function(e) {
+      touchId = null;
+      touchTarget = null;
+    });
+
+    // Show tap-friendly text on touch devices
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      document.querySelector('.start-sub').textContent = 'TAP TO LAUNCH';
+      document.querySelector('.death-sub').textContent = 'TAP TO RETRY';
+    }
 
     // Init
     gameState = 'waiting';

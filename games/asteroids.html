@@ -263,6 +263,15 @@
     let invincibleTimer = 0;
     let shootCooldown = 0;
 
+    // Destroy / spawn animation state
+    let destroyTimer = 0;
+    let destroyDebris = [];
+    let destroyShockwave = null;
+    let spawnAnimTimer = 0;
+    let pendingDeath = false;
+    const DESTROY_DUR = 1.2;
+    const SPAWN_ANIM_DUR = 0.8;
+
     // Background stars
     function createStars() {
       stars = [];
@@ -351,6 +360,96 @@
       }
     }
 
+    function triggerDestroy() {
+      destroyTimer = DESTROY_DUR;
+
+      // Create debris from ship's line segments
+      const cos = Math.cos(ship.angle), sin = Math.sin(ship.angle);
+      const local = [[16,0], [-10,-9], [-6,0], [-10,9]];
+      const world = local.map(([lx,ly]) => ({
+        x: ship.x + lx*cos - ly*sin,
+        y: ship.y + lx*sin + ly*cos
+      }));
+      destroyDebris = [];
+      for (let i = 0; i < world.length; i++) {
+        const a = world[i], b = world[(i+1) % world.length];
+        const mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+        const ang = Math.atan2(my-ship.y, mx-ship.x) + (Math.random()-0.5)*0.4;
+        const spd = 40 + Math.random()*60;
+        destroyDebris.push({
+          x1: a.x-mx, y1: a.y-my, x2: b.x-mx, y2: b.y-my,
+          x: mx, y: my,
+          vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd,
+          rot: 0, rotSpeed: (Math.random()-0.5)*6
+        });
+      }
+
+      // Shockwave ring
+      destroyShockwave = { x: ship.x, y: ship.y, radius: 5, speed: 120, life: 0.8, maxLife: 0.8 };
+
+      // Fast explosion particles
+      for (let i = 0; i < 30; i++) {
+        const ang = Math.random()*Math.PI*2;
+        const spd = 30 + Math.random()*80;
+        particles.push({
+          x: ship.x, y: ship.y,
+          vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd,
+          life: 0.4+Math.random()*0.6, maxLife: 0.8,
+          color: Math.random()>0.4 ? MAGENTA : CYAN,
+          size: 1+Math.random()*2.5
+        });
+      }
+
+      gameState = 'destroying';
+    }
+
+    function updateDestroy(dt) {
+      destroyTimer -= dt;
+
+      // Drift and spin debris
+      for (const d of destroyDebris) {
+        d.x += d.vx*dt; d.y += d.vy*dt;
+        d.rot += d.rotSpeed*dt;
+        d.vx *= 0.97; d.vy *= 0.97;
+      }
+
+      // Expand shockwave
+      if (destroyShockwave) {
+        destroyShockwave.radius += destroyShockwave.speed*dt;
+        destroyShockwave.life -= dt;
+        if (destroyShockwave.life <= 0) destroyShockwave = null;
+      }
+
+      // Keep particles alive
+      for (let i = particles.length-1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx*dt; p.y += p.vy*dt;
+        p.life -= dt;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      // Keep asteroids drifting
+      for (const a of asteroids) {
+        a.x += a.vx*dt*40; a.y += a.vy*dt*40;
+        a.rot += a.rotSpeed; wrap(a);
+      }
+
+      if (destroyTimer <= 0) {
+        if (pendingDeath) {
+          gameState = 'dead';
+          deathScore.textContent = 'SCORE: ' + score;
+          deathOverlay.classList.remove('hidden');
+        } else {
+          ship.x = W/2; ship.y = H/2;
+          ship.vx = 0; ship.vy = 0;
+          ship.angle = -Math.PI/2;
+          invincibleTimer = 2;
+          spawnAnimTimer = SPAWN_ANIM_DUR;
+          gameState = 'playing';
+        }
+      }
+    }
+
     function init() {
       score = 0;
       lives = 3;
@@ -359,6 +458,9 @@
       asteroids = [];
       bullets = [];
       particles = [];
+      destroyDebris = [];
+      destroyShockwave = null;
+      spawnAnimTimer = 0;
       invincibleTimer = 2;
       shootCooldown = 0;
       createStars();
@@ -373,6 +475,8 @@
     }
 
     function update(dt) {
+      if (spawnAnimTimer > 0) spawnAnimTimer -= dt;
+
       // Ship rotation
       if (keys['ArrowLeft'] || keys['KeyA']) ship.angle -= 4.5 * dt;
       if (keys['ArrowRight'] || keys['KeyD']) ship.angle += 4.5 * dt;
@@ -508,23 +612,9 @@
           if (dist(ship.x, ship.y, a.x, a.y) < a.radius + ship.radius - 4) {
             lives--;
             updateHUD();
-            spawnParticles(ship.x, ship.y, MAGENTA, 20);
-
-            if (lives <= 0) {
-              gameState = 'dead';
-              deathScore.textContent = 'SCORE: ' + score;
-              deathOverlay.classList.remove('hidden');
-              return;
-            }
-
-            // Reset ship
-            ship.x = W / 2;
-            ship.y = H / 2;
-            ship.vx = 0;
-            ship.vy = 0;
-            ship.angle = -Math.PI / 2;
-            invincibleTimer = 2;
-            break;
+            pendingDeath = lives <= 0;
+            triggerDestroy();
+            return;
           }
         }
       }
@@ -554,6 +644,7 @@
       if (flicker) return;
 
       ctx.save();
+      if (spawnAnimTimer > 0) ctx.globalAlpha = 1 - spawnAnimTimer / SPAWN_ANIM_DUR;
       ctx.translate(ship.x, ship.y);
       ctx.rotate(ship.angle);
 
@@ -649,6 +740,74 @@
       }
     }
 
+    function drawDestroyEffect() {
+      const alpha = Math.max(0, destroyTimer / DESTROY_DUR);
+
+      // Debris lines
+      ctx.strokeStyle = CYAN;
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = CYAN;
+      ctx.shadowBlur = 6;
+      ctx.globalAlpha = alpha;
+      for (const d of destroyDebris) {
+        ctx.save();
+        ctx.translate(d.x, d.y);
+        ctx.rotate(d.rot);
+        ctx.beginPath();
+        ctx.moveTo(d.x1, d.y1);
+        ctx.lineTo(d.x2, d.y2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+
+      // Shockwave ring
+      if (destroyShockwave) {
+        const sw = destroyShockwave;
+        const a = sw.life / sw.maxLife;
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = MAGENTA;
+        ctx.lineWidth = 2 * a;
+        ctx.globalAlpha = a * 0.6;
+        ctx.shadowColor = MAGENTA;
+        ctx.shadowBlur = 15 * a;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function drawSpawnEffect() {
+      if (spawnAnimTimer <= 0) return;
+      const t = 1 - spawnAnimTimer / SPAWN_ANIM_DUR; // 0→1
+
+      // Converging warp ring
+      const r = 50 * (1 - t);
+      ctx.strokeStyle = CYAN;
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.5 * (1 - t);
+      ctx.shadowColor = CYAN;
+      ctx.shadowBlur = 10;
+
+      ctx.beginPath();
+      ctx.arc(ship.x, ship.y, r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Converging radial lines
+      for (let i = 0; i < 8; i++) {
+        const ang = (i / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(ship.x + Math.cos(ang) * (r + 8), ship.y + Math.sin(ang) * (r + 8));
+        ctx.lineTo(ship.x + Math.cos(ang) * Math.max(0, r - 12), ship.y + Math.sin(ang) * Math.max(0, r - 12));
+        ctx.stroke();
+      }
+
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    }
+
     function draw() {
       // Clear
       const style = getComputedStyle(document.documentElement);
@@ -662,16 +821,19 @@
       for (const b of bullets) drawBullet(b);
       for (const p of particles) drawParticle(p);
 
-      if (gameState === 'playing') drawShip();
+      if (gameState === 'destroying') drawDestroyEffect();
+      if (gameState === 'playing') {
+        drawSpawnEffect();
+        drawShip();
+      }
     }
 
     function gameLoop(time) {
       const dt = Math.min((time - lastTime) / 1000, 0.05);
       lastTime = time;
 
-      if (gameState === 'playing') {
-        update(dt);
-      }
+      if (gameState === 'playing') update(dt);
+      else if (gameState === 'destroying') updateDestroy(dt);
 
       draw();
       requestAnimationFrame(gameLoop);

@@ -13,6 +13,10 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    html {
+      overscroll-behavior: none;
+    }
+
     main {
       max-width: 480px;
       margin: 0 auto;
@@ -164,6 +168,7 @@
       align-items: center;
       gap: 6px;
       margin-bottom: 1.5rem;
+      touch-action: none;
     }
 
     .kb-row {
@@ -257,6 +262,25 @@
         min-width: 44px;
       }
     }
+
+    .touch-hint {
+      display: none;
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (pointer: coarse) {
+      .touch-hint { display: block; }
+      .controls-info { display: none; }
+      .key {
+        min-height: 44px;
+      }
+      .key.wide {
+        min-height: 44px;
+      }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -265,6 +289,7 @@
     <a href="./" class="back">&lt; GAME LAB</a>
     <h1>WORDLE</h1>
     <div class="controls-info">TYPE A 5-LETTER WORD &bull; ENTER TO SUBMIT &bull; BACKSPACE TO DELETE</div>
+    <div class="touch-hint">TAP LETTERS BELOW &middot; <span style="color:var(--accent-cyan)">ENTER</span> TO SUBMIT &middot; <span style="color:var(--accent-cyan)">⌫</span> TO DELETE</div>
     <div id="message">&nbsp;</div>
     <div id="stats">
       <span>PLAYED: <b id="stat-played">0</b></span>
@@ -723,6 +748,10 @@
       updateGrid();
       updateStats();
     });
+
+    // Prevent scroll/zoom on touch devices
+    document.getElementById('grid').addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+    document.getElementById('keyboard').addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
     // Init
     answer = pickWord();

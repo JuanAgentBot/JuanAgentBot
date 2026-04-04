@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>FROGGER / ZERO game lab</title>
   <meta name="theme-color" content="#14102a">
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -13,6 +13,9 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    * { touch-action: none; -webkit-touch-callout: none; }
+    html, body { overscroll-behavior: none; overflow: hidden; height: 100%; }
+
     main {
       max-width: 520px;
       margin: 0 auto;
@@ -31,9 +34,7 @@
       width: 100%;
     }
 
-    .back:hover {
-      color: var(--accent-cyan);
-    }
+    .back:hover { color: var(--accent-cyan); }
 
     h1 {
       font-size: 1.6rem;
@@ -60,29 +61,11 @@
       letter-spacing: 0.08em;
     }
 
-    .hud-item {
-      color: var(--text-dim);
-    }
-
-    .hud-value {
-      color: var(--text-bright);
-      font-weight: 700;
-    }
-
-    .hud-value.lives {
-      color: #ff2d7b;
-      text-shadow: 0 0 8px rgba(255, 45, 123, 0.4);
-    }
-
-    .hud-value.score {
-      color: #00f0ff;
-      text-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
-    }
-
-    .hud-value.level {
-      color: #39ff14;
-      text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
-    }
+    .hud-item { color: var(--text-dim); }
+    .hud-value { color: var(--text-bright); font-weight: 700; }
+    .hud-value.lives { color: #ff2d7b; text-shadow: 0 0 8px rgba(255,45,123,0.4); }
+    .hud-value.score { color: #00f0ff; text-shadow: 0 0 8px rgba(0,240,255,0.4); }
+    .hud-value.level { color: #39ff14; text-shadow: 0 0 8px rgba(57,255,20,0.4); }
 
     .canvas-wrap {
       border: 1px solid var(--border);
@@ -90,11 +73,7 @@
       position: relative;
     }
 
-    canvas {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
+    canvas { width: 100%; height: auto; display: block; }
 
     .overlay {
       position: absolute;
@@ -107,16 +86,14 @@
       z-index: 10;
     }
 
-    .overlay.hidden {
-      display: none;
-    }
+    .overlay.hidden { display: none; }
 
     .overlay-title {
       font-size: 1.6rem;
       font-weight: 800;
       color: #ff2d7b;
       letter-spacing: 0.1em;
-      text-shadow: 0 0 20px rgba(255, 45, 123, 0.5);
+      text-shadow: 0 0 20px rgba(255,45,123,0.5);
       margin-bottom: 0.5rem;
     }
 
@@ -131,7 +108,7 @@
       font-size: 1.2rem;
       font-weight: 700;
       color: #00f0ff;
-      text-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+      text-shadow: 0 0 15px rgba(0,240,255,0.5);
       margin-bottom: 0.5rem;
     }
 
@@ -147,11 +124,13 @@
       cursor: pointer;
       text-shadow: none;
       transition: background 0.2s, box-shadow 0.2s;
+      min-height: 44px;
+      min-width: 44px;
     }
 
     .overlay-btn:hover {
       background: #50ff30;
-      box-shadow: 0 0 20px rgba(57, 255, 20, 0.5);
+      box-shadow: 0 0 20px rgba(57,255,20,0.5);
     }
 
     .goals-display {
@@ -174,7 +153,7 @@
     .goal-slot.filled {
       border-color: #39ff14;
       color: #39ff14;
-      text-shadow: 0 0 6px rgba(57, 255, 20, 0.4);
+      text-shadow: 0 0 6px rgba(57,255,20,0.4);
     }
 
     .controls {
@@ -194,47 +173,18 @@
       color: var(--text-muted);
     }
 
-    .mobile-controls {
+    .touch-hint {
       display: none;
       margin-top: 1rem;
-      gap: 0.5rem;
-    }
-
-    .mobile-row {
-      display: flex;
-      justify-content: center;
-      gap: 0.5rem;
-    }
-
-    .mobile-btn {
-      width: 54px;
-      height: 54px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text-muted);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.2rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    .mobile-btn:active {
-      border-color: var(--accent-cyan);
-      color: var(--accent-cyan);
-      background: rgba(0, 240, 255, 0.05);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      line-height: 1.8;
     }
 
     @media (hover: none) and (pointer: coarse) {
-      .mobile-controls {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
+      .controls { display: none; }
+      .touch-hint { display: block; }
     }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
@@ -267,15 +217,8 @@
       <kbd>&#8593;</kbd> <kbd>&#8595;</kbd> <kbd>&#8592;</kbd> <kbd>&#8594;</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to move
     </div>
 
-    <div class="mobile-controls" id="mobile-controls">
-      <div class="mobile-row">
-        <button class="mobile-btn" data-dir="up">&#8593;</button>
-      </div>
-      <div class="mobile-row">
-        <button class="mobile-btn" data-dir="left">&#8592;</button>
-        <button class="mobile-btn" data-dir="down">&#8595;</button>
-        <button class="mobile-btn" data-dir="right">&#8594;</button>
-      </div>
+    <div class="touch-hint" id="touch-hint">
+      SWIPE to move &middot; TAP to start
     </div>
   </main>
 
@@ -286,7 +229,7 @@
       var W = 480, H = 560;
       var COLS = 12;
       var ROWS = 14;
-      var CELL = W / COLS; // 40
+      var CELL = W / COLS;
 
       // Colors
       var VOID = '#0a0a0f';
@@ -300,8 +243,143 @@
       var WATER = '#061825';
       var SAFE = '#0d1a0d';
 
+      // Particles
+      var particles = [];
+
+      function spawnParticles(x, y, color, count, opts) {
+        opts = opts || {};
+        var speed = opts.speed || 3;
+        var life = opts.life || 1.0;
+        var size = opts.size || 3;
+        var gravity = opts.gravity || 0;
+        for (var i = 0; i < count; i++) {
+          var angle = Math.random() * Math.PI * 2;
+          var spd = (0.5 + Math.random()) * speed;
+          particles.push({
+            x: x, y: y,
+            vx: Math.cos(angle) * spd,
+            vy: Math.sin(angle) * spd,
+            life: life,
+            maxLife: life,
+            size: size * (0.5 + Math.random()),
+            color: color,
+            gravity: gravity
+          });
+        }
+      }
+
+      function spawnRing(x, y, color, radius) {
+        particles.push({
+          x: x, y: y, vx: 0, vy: 0,
+          life: 0.6, maxLife: 0.6,
+          size: 0, color: color,
+          ring: true, radius: radius || 30,
+          gravity: 0
+        });
+      }
+
+      function updateParticles() {
+        for (var i = particles.length - 1; i >= 0; i--) {
+          var p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += p.gravity;
+          p.life -= 0.02;
+          if (p.life <= 0) particles.splice(i, 1);
+        }
+      }
+
+      function drawParticles() {
+        for (var i = 0; i < particles.length; i++) {
+          var p = particles[i];
+          var alpha = Math.max(0, p.life / p.maxLife);
+          ctx.globalAlpha = alpha;
+
+          if (p.ring) {
+            var progress = 1 - (p.life / p.maxLife);
+            var r = p.radius * progress;
+            ctx.strokeStyle = p.color;
+            ctx.lineWidth = 2 * alpha;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+          } else {
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 6;
+            ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+            ctx.shadowBlur = 0;
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      // Screen shake
+      var shake = { x: 0, y: 0, intensity: 0 };
+
+      function triggerShake(intensity) {
+        shake.intensity = intensity;
+      }
+
+      function updateShake() {
+        if (shake.intensity > 0) {
+          shake.x = (Math.random() - 0.5) * shake.intensity;
+          shake.y = (Math.random() - 0.5) * shake.intensity;
+          shake.intensity *= 0.88;
+          if (shake.intensity < 0.3) {
+            shake.intensity = 0;
+            shake.x = 0;
+            shake.y = 0;
+          }
+        }
+      }
+
+      // Hop animation
+      var hopAnim = { active: false, t: 0, dx: 0, dy: 0, fromX: 0, fromY: 0 };
+
+      function startHop(fromX, fromY, dx, dy) {
+        hopAnim.active = true;
+        hopAnim.t = 0;
+        hopAnim.dx = dx * CELL;
+        hopAnim.dy = dy * CELL;
+        hopAnim.fromX = fromX;
+        hopAnim.fromY = fromY;
+      }
+
+      function updateHop() {
+        if (!hopAnim.active) return;
+        hopAnim.t += 0.15;
+        if (hopAnim.t >= 1) {
+          hopAnim.active = false;
+          hopAnim.t = 1;
+        }
+      }
+
+      function getHopOffset() {
+        if (!hopAnim.active) return { x: 0, y: 0, scaleX: 1, scaleY: 1 };
+        var t = hopAnim.t;
+        // Smooth ease
+        var ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        // Arc for jump height
+        var arc = Math.sin(t * Math.PI) * -8;
+        // Squash/stretch
+        var squash = 1 + Math.sin(t * Math.PI) * 0.15;
+        return {
+          x: (1 - ease) * -hopAnim.dx,
+          y: (1 - ease) * -hopAnim.dy + arc,
+          scaleX: 1 / squash,
+          scaleY: squash
+        };
+      }
+
+      // Goal celebration flash
+      var goalFlash = { active: false, t: 0 };
+
       // Game state
-      var state = 'menu'; // menu, playing, dead, gameover, levelup
+      var state = 'menu';
       var score = 0;
       var lives = 3;
       var level = 1;
@@ -312,9 +390,7 @@
       var deathTimer = 0;
       var levelUpTimer = 0;
       var animFrame = 0;
-      var moveQueue = [];
 
-      // Lanes - each row has a type and objects
       var lanes = [];
 
       function initGoalPositions() {
@@ -332,24 +408,19 @@
       function initLanes() {
         lanes = [];
         var sm = speedMult();
-        // Row 0 (top): goal row
         lanes.push({ type: 'goal', objects: [] });
-        // Rows 1-5: water with logs/turtles
         lanes.push({ type: 'water', dir: -1, speed: 0.6 * sm, objects: makeLog(3, 3) });
         lanes.push({ type: 'water', dir: 1, speed: 0.9 * sm, objects: makeLog(2, 3) });
         lanes.push({ type: 'water', dir: -1, speed: 0.5 * sm, objects: makeLog(4, 2) });
         lanes.push({ type: 'water', dir: 1, speed: 1.0 * sm, objects: makeLog(2, 4) });
         lanes.push({ type: 'water', dir: -1, speed: 0.7 * sm, objects: makeLog(3, 3) });
-        // Row 6: safe zone
         lanes.push({ type: 'safe', objects: [] });
-        // Rows 7-12: road with vehicles
         lanes.push({ type: 'road', dir: 1, speed: 0.8 * sm, objects: makeCars(2, 3) });
         lanes.push({ type: 'road', dir: -1, speed: 1.2 * sm, objects: makeCars(1, 4) });
         lanes.push({ type: 'road', dir: 1, speed: 0.6 * sm, objects: makeCars(3, 2) });
         lanes.push({ type: 'road', dir: -1, speed: 1.0 * sm, objects: makeCars(2, 3) });
         lanes.push({ type: 'road', dir: 1, speed: 0.7 * sm, objects: makeCars(1, 2) });
         lanes.push({ type: 'road', dir: -1, speed: 1.1 * sm, objects: makeCars(2, 3) });
-        // Row 13 (bottom): start zone
         lanes.push({ type: 'safe', objects: [] });
       }
 
@@ -375,7 +446,10 @@
       function resetFrog() {
         frog.x = Math.floor(COLS / 2) * CELL;
         frog.y = (ROWS - 1) * CELL;
-        moveQueue = [];
+        hopAnim.active = false;
+        // Spawn-in warp effect
+        spawnRing(frog.x + CELL / 2, frog.y + CELL / 2, GREEN, 25);
+        spawnParticles(frog.x + CELL / 2, frog.y + CELL / 2, GREEN, 8, { speed: 1.5, life: 0.6, size: 2 });
       }
 
       function startGame() {
@@ -383,6 +457,7 @@
         lives = 3;
         level = 1;
         goalSlots = [false, false, false, false, false];
+        particles = [];
         initGoalPositions();
         initLanes();
         resetFrog();
@@ -402,7 +477,30 @@
         updateGoalDisplay();
       }
 
-      function die() {
+      function die(deathType) {
+        var cx = frog.x + CELL / 2;
+        var cy = frog.y + CELL / 2;
+
+        // Death effects based on type
+        if (deathType === 'water') {
+          // Splash effect - blue particles spreading out
+          spawnParticles(cx, cy, CYAN, 20, { speed: 4, life: 0.8, size: 3 });
+          spawnParticles(cx, cy, '#0088aa', 12, { speed: 2, life: 1.0, size: 2 });
+          spawnRing(cx, cy, CYAN, 35);
+        } else if (deathType === 'car') {
+          // Impact effect - sparks and debris
+          spawnParticles(cx, cy, MAGENTA, 15, { speed: 5, life: 0.7, size: 4 });
+          spawnParticles(cx, cy, '#ffff80', 10, { speed: 6, life: 0.5, size: 2 });
+          spawnParticles(cx, cy, '#ff6600', 8, { speed: 3, life: 0.9, size: 3 });
+          spawnRing(cx, cy, MAGENTA, 40);
+          triggerShake(8);
+        } else {
+          // Generic death
+          spawnParticles(cx, cy, MAGENTA, 15, { speed: 3, life: 0.8, size: 3 });
+          spawnRing(cx, cy, MAGENTA, 30);
+          triggerShake(5);
+        }
+
         lives--;
         updateHUD();
         if (lives <= 0) {
@@ -419,11 +517,12 @@
         var nx = frog.x + dx * CELL;
         var ny = frog.y + dy * CELL;
         if (nx < 0 || nx >= W || ny < 0 || ny >= H) return;
+        startHop(frog.x, frog.y, dx, dy);
         frog.x = nx;
         frog.y = ny;
       }
 
-      // Input
+      // Keyboard input
       document.addEventListener('keydown', function(e) {
         if (state === 'menu' || state === 'gameover') {
           if (e.code === 'Enter' || e.code === 'Space') {
@@ -440,35 +539,58 @@
         }
       });
 
-      // Mobile controls
-      var mobileControls = document.getElementById('mobile-controls');
-      var mobileBtns = mobileControls.querySelectorAll('.mobile-btn');
-      for (var i = 0; i < mobileBtns.length; i++) {
-        (function(btn) {
-          btn.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-            var dir = btn.getAttribute('data-dir');
-            if (state === 'menu' || state === 'gameover') { startGame(); return; }
-            switch (dir) {
-              case 'up': moveFrog(0, -1); break;
-              case 'down': moveFrog(0, 1); break;
-              case 'left': moveFrog(-1, 0); break;
-              case 'right': moveFrog(1, 0); break;
-            }
-          });
-          btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            var dir = btn.getAttribute('data-dir');
-            if (state === 'menu' || state === 'gameover') { startGame(); return; }
-            switch (dir) {
-              case 'up': moveFrog(0, -1); break;
-              case 'down': moveFrog(0, 1); break;
-              case 'left': moveFrog(-1, 0); break;
-              case 'right': moveFrog(1, 0); break;
-            }
-          });
-        })(mobileBtns[i]);
-      }
+      // Touch: swipe gestures
+      var touchStartX = 0, touchStartY = 0, touchStartTime = 0, touchActive = false;
+      var SWIPE_THRESHOLD = 20;
+      var TAP_MAX = 200; // ms
+
+      document.addEventListener('touchstart', function(e) {
+        // Allow the back link
+        if (e.target.closest('.back')) return;
+        e.preventDefault();
+        var t = e.touches[0];
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        touchStartTime = Date.now();
+        touchActive = true;
+      }, { passive: false });
+
+      document.addEventListener('touchmove', function(e) {
+        if (!touchActive) return;
+        e.preventDefault();
+      }, { passive: false });
+
+      document.addEventListener('touchend', function(e) {
+        if (!touchActive) return;
+        touchActive = false;
+
+        var t = e.changedTouches[0];
+        var dx = t.clientX - touchStartX;
+        var dy = t.clientY - touchStartY;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var elapsed = Date.now() - touchStartTime;
+
+        // Tap to start
+        if (dist < SWIPE_THRESHOLD && elapsed < TAP_MAX) {
+          if (state === 'menu' || state === 'gameover') {
+            startGame();
+          }
+          return;
+        }
+
+        // Swipe
+        if (dist >= SWIPE_THRESHOLD) {
+          if (state === 'menu' || state === 'gameover') {
+            startGame();
+            return;
+          }
+          if (Math.abs(dx) > Math.abs(dy)) {
+            moveFrog(dx > 0 ? 1 : -1, 0);
+          } else {
+            moveFrog(0, dy > 0 ? 1 : -1);
+          }
+        }
+      }, { passive: false });
 
       // Overlay
       var overlay = document.getElementById('overlay');
@@ -519,6 +641,14 @@
       // Update
       function update() {
         animFrame++;
+        updateParticles();
+        updateShake();
+        updateHop();
+
+        if (goalFlash.active) {
+          goalFlash.t -= 0.03;
+          if (goalFlash.t <= 0) goalFlash.active = false;
+        }
 
         if (state === 'dead') {
           deathTimer--;
@@ -554,7 +684,6 @@
           for (var j = 0; j < lane.objects.length; j++) {
             var obj = lane.objects[j];
             obj.x += lane.dir * lane.speed;
-            // Wrap
             if (lane.dir > 0 && obj.x > W + 20) obj.x = -obj.w - 20;
             if (lane.dir < 0 && obj.x + obj.w < -20) obj.x = W + 20;
           }
@@ -576,10 +705,19 @@
               goalSlots[g] = true;
               score += 50 + level * 10;
               landed = true;
+
+              // Goal celebration!
+              var gcx = gx + CELL / 2;
+              var gcy = frog.y + CELL / 2;
+              spawnParticles(gcx, gcy, GREEN, 20, { speed: 3, life: 1.0, size: 3 });
+              spawnParticles(gcx, gcy, '#80ff60', 10, { speed: 2, life: 0.8, size: 2 });
+              spawnRing(gcx, gcy, GREEN, 35);
+              goalFlash.active = true;
+              goalFlash.t = 0.5;
+
               updateHUD();
               updateGoalDisplay();
 
-              // Check if all goals filled
               var allFilled = true;
               for (var k = 0; k < goalSlots.length; k++) {
                 if (!goalSlots[k]) allFilled = false;
@@ -589,6 +727,11 @@
                 updateHUD();
                 state = 'levelup';
                 levelUpTimer = 60;
+                // Big level-up celebration
+                for (var p = 0; p < 5; p++) {
+                  var px = goalPositions[p] * CELL + CELL / 2;
+                  spawnParticles(px, CELL / 2, GREEN, 12, { speed: 4, life: 1.2, size: 3 });
+                }
               } else {
                 resetFrog();
               }
@@ -596,40 +739,38 @@
             }
           }
           if (!landed) {
-            die();
+            die('water');
           }
           return;
         }
 
-        // Water row - must be on a log
+        // Water row
         if (lane.type === 'water') {
           var onLog = false;
           for (var j = 0; j < lane.objects.length; j++) {
             var obj = lane.objects[j];
             if (frog.x + CELL * 0.7 > obj.x && frog.x + CELL * 0.3 < obj.x + obj.w) {
               onLog = true;
-              // Move frog with log
               frog.x += lane.dir * lane.speed;
               break;
             }
           }
           if (!onLog) {
-            die();
+            die('water');
             return;
           }
-          // Check if frog drifted off screen
           if (frog.x < -CELL * 0.5 || frog.x > W - CELL * 0.5) {
-            die();
+            die('water');
             return;
           }
         }
 
-        // Road row - check car collision
+        // Road row
         if (lane.type === 'road') {
           for (var j = 0; j < lane.objects.length; j++) {
             var obj = lane.objects[j];
             if (frog.x + CELL * 0.7 > obj.x && frog.x + CELL * 0.3 < obj.x + obj.w) {
-              die();
+              die('car');
               return;
             }
           }
@@ -638,19 +779,20 @@
 
       // Draw
       function draw() {
+        ctx.save();
+        ctx.translate(shake.x, shake.y);
+
         ctx.fillStyle = VOID;
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillRect(-5, -5, W + 10, H + 10);
 
         // Draw lanes
         for (var r = 0; r < ROWS; r++) {
           var lane = lanes[r];
           var y = r * CELL;
 
-          // Lane background
           if (lane.type === 'water') {
             ctx.fillStyle = WATER;
             ctx.fillRect(0, y, W, CELL);
-            // Subtle water lines
             ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
             ctx.lineWidth = 1;
             for (var wl = 0; wl < 3; wl++) {
@@ -667,7 +809,6 @@
           } else if (lane.type === 'road') {
             ctx.fillStyle = ROAD;
             ctx.fillRect(0, y, W, CELL);
-            // Road dashes
             ctx.fillStyle = 'rgba(122, 122, 144, 0.2)';
             for (var d = 0; d < COLS; d += 2) {
               ctx.fillRect(d * CELL + 10, y + CELL / 2 - 1, CELL - 20, 2);
@@ -675,7 +816,6 @@
           } else if (lane.type === 'safe') {
             ctx.fillStyle = SAFE;
             ctx.fillRect(0, y, W, CELL);
-            // Subtle safe zone pattern
             ctx.fillStyle = 'rgba(57, 255, 20, 0.03)';
             for (var sx = 0; sx < COLS; sx += 2) {
               ctx.fillRect(sx * CELL, y, CELL, CELL);
@@ -683,14 +823,12 @@
           } else if (lane.type === 'goal') {
             ctx.fillStyle = WATER;
             ctx.fillRect(0, y, W, CELL);
-            // Goal slots
             for (var g = 0; g < goalPositions.length; g++) {
               var gx = goalPositions[g] * CELL;
               if (goalSlots[g]) {
                 ctx.fillStyle = 'rgba(57, 255, 20, 0.15)';
                 ctx.fillRect(gx, y, CELL, CELL);
-                // Draw a small frog icon
-                drawFrog(gx, y, GREEN, 0.6);
+                drawFrog(gx, y, GREEN, 0.6, null);
               } else {
                 ctx.fillStyle = 'rgba(57, 255, 20, 0.06)';
                 ctx.fillRect(gx + 4, y + 4, CELL - 8, CELL - 8);
@@ -707,12 +845,10 @@
             var oy = y;
 
             if (lane.type === 'water') {
-              // Logs
               ctx.fillStyle = '#1a4a12';
               ctx.fillRect(obj.x, oy + 4, obj.w, CELL - 8);
               ctx.fillStyle = '#2a6a1a';
               ctx.fillRect(obj.x + 2, oy + 6, obj.w - 4, CELL - 12);
-              // Log texture lines
               ctx.strokeStyle = 'rgba(57, 255, 20, 0.15)';
               ctx.lineWidth = 1;
               for (var lx = obj.x + 15; lx < obj.x + obj.w - 10; lx += 20) {
@@ -721,30 +857,24 @@
                 ctx.lineTo(lx, oy + CELL - 8);
                 ctx.stroke();
               }
-              // Log ends
               ctx.fillStyle = '#3a8a2a';
               ctx.fillRect(obj.x, oy + 6, 6, CELL - 12);
               ctx.fillRect(obj.x + obj.w - 6, oy + 6, 6, CELL - 12);
             } else if (lane.type === 'road') {
-              // Cars
               var carH = CELL - 10;
               var carY = oy + 5;
-              // Body
               ctx.fillStyle = obj.color;
               ctx.fillRect(obj.x + 3, carY, obj.w - 6, carH);
-              // Glow
               ctx.shadowColor = obj.color;
               ctx.shadowBlur = 8;
               ctx.fillRect(obj.x + 3, carY, obj.w - 6, carH);
               ctx.shadowBlur = 0;
-              // Windshield
               ctx.fillStyle = 'rgba(0, 240, 255, 0.3)';
               if (lane.dir > 0) {
                 ctx.fillRect(obj.x + obj.w - 18, carY + 4, 12, carH - 8);
               } else {
                 ctx.fillRect(obj.x + 6, carY + 4, 12, carH - 8);
               }
-              // Headlights
               ctx.fillStyle = '#ffff80';
               if (lane.dir > 0) {
                 ctx.fillRect(obj.x + obj.w - 6, carY + 4, 4, 5);
@@ -759,15 +889,15 @@
 
         // Draw frog
         if (state === 'playing' || state === 'levelup') {
-          drawFrog(frog.x, frog.y, GREEN, 1.0);
+          var hop = getHopOffset();
+          drawFrog(frog.x + hop.x, frog.y + hop.y, GREEN, 1.0, hop);
         } else if (state === 'dead' || state === 'gameover') {
-          // Death flash
           if (deathTimer % 6 < 3) {
             drawDeathX(frog.x, frog.y);
           }
         }
 
-        // Grid lines (very subtle)
+        // Grid lines
         ctx.strokeStyle = 'rgba(122, 122, 144, 0.06)';
         ctx.lineWidth = 1;
         for (var r = 1; r < ROWS; r++) {
@@ -775,6 +905,12 @@
           ctx.moveTo(0, r * CELL);
           ctx.lineTo(W, r * CELL);
           ctx.stroke();
+        }
+
+        // Goal flash overlay
+        if (goalFlash.active) {
+          ctx.fillStyle = 'rgba(57, 255, 20, ' + (goalFlash.t * 0.15) + ')';
+          ctx.fillRect(0, 0, W, H);
         }
 
         // Level up text
@@ -785,21 +921,37 @@
           ctx.font = '800 28px "JetBrains Mono"';
           ctx.fillStyle = GREEN;
           ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
           ctx.shadowColor = GREEN;
           ctx.shadowBlur = 20;
-          ctx.fillText('LEVEL ' + (level + 1), W / 2, H / 2 + 10);
+          var pulse = 1 + Math.sin(animFrame * 0.15) * 0.05;
+          ctx.setTransform(pulse, 0, 0, pulse, W / 2 * (1 - pulse), H / 2 * (1 - pulse));
+          ctx.fillText('LEVEL ' + (level + 1), W / 2, H / 2);
           ctx.shadowBlur = 0;
           ctx.restore();
         }
+
+        // Particles on top
+        drawParticles();
+
+        ctx.restore();
       }
 
-      function drawFrog(x, y, color, scale) {
+      function drawFrog(x, y, color, scale, hop) {
         var s = CELL * scale;
         var cx = x + CELL / 2;
         var cy = y + CELL / 2;
         var hs = s * 0.4;
 
         ctx.save();
+
+        // Apply squash/stretch from hop
+        if (hop && hop.scaleX !== undefined) {
+          ctx.translate(cx, cy);
+          ctx.scale(hop.scaleX, hop.scaleY);
+          ctx.translate(-cx, -cy);
+        }
+
         ctx.shadowColor = color;
         ctx.shadowBlur = 10;
 
@@ -819,7 +971,6 @@
         ctx.fillStyle = color;
         ctx.fillRect(cx - hs, cy + hs * 0.3, hs * 0.3, hs * 0.5);
         ctx.fillRect(cx + hs * 0.7, cy + hs * 0.3, hs * 0.3, hs * 0.5);
-        // Front legs
         ctx.fillRect(cx - hs, cy - hs * 0.3, hs * 0.25, hs * 0.4);
         ctx.fillRect(cx + hs * 0.75, cy - hs * 0.3, hs * 0.25, hs * 0.4);
 

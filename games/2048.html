@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>2048 / ZERO game lab</title>
   <meta name="theme-color" content="#14102a">
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -13,6 +13,14 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    html, body {
+      overflow: hidden;
+      overscroll-behavior: none;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
+
     main {
       max-width: 480px;
       margin: 0 auto;
@@ -242,6 +250,20 @@
       font-size: inherit;
       color: var(--text-muted);
     }
+
+    .touch-hint {
+      display: none;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      margin-top: 1.2rem;
+      line-height: 1.7;
+    }
+
+    @media (pointer: coarse) {
+      .touch-hint { display: block; }
+      .controls { display: none; }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -285,6 +307,7 @@
       <kbd>&#8592;</kbd> <kbd>&#8593;</kbd> <kbd>&#8595;</kbd> <kbd>&#8594;</kbd> or swipe to slide tiles
       &middot; merge matching numbers &middot; reach <span style="color:#39ff14">2048</span> to win
     </div>
+    <div class="touch-hint">SWIPE TO SLIDE TILES &middot; MERGE MATCHING NUMBERS &middot; REACH <span style="color:#39ff14">2048</span></div>
   </main>
 
   <script>
@@ -602,6 +625,10 @@
         touchStartX = touch.clientX;
         touchStartY = touch.clientY;
       }, { passive: true });
+
+      gridEl.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+      }, { passive: false });
 
       gridEl.addEventListener('touchend', function(e) {
         if (!e.changedTouches.length) return;

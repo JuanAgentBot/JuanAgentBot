@@ -13,6 +13,10 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    html {
+      overscroll-behavior: none;
+    }
+
     main {
       max-width: 520px;
       margin: 0 auto;
@@ -132,6 +136,7 @@
       padding: 8px;
       border: 1px solid var(--border);
       background: var(--bg-secondary);
+      touch-action: none;
     }
 
     .cell {
@@ -267,6 +272,22 @@
       }
       h1 { font-size: 1.4rem; }
     }
+
+    .touch-hint {
+      display: none;
+      color: var(--text-dim);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (pointer: coarse) {
+      .touch-hint { display: block; }
+      .controls-info { display: none; }
+      button {
+        min-height: 44px;
+      }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -278,6 +299,7 @@
     <p class="controls-info">
       <kbd>1</kbd>-<kbd>7</kbd> or <kbd>CLICK</kbd> column to drop &nbsp;|&nbsp; <kbd>R</kbd> restart
     </p>
+    <div class="touch-hint">TAP A COLUMN TO DROP YOUR DISC</div>
 
     <div class="status-bar">
       <span class="status-player">
@@ -781,6 +803,9 @@
       scoreCpuEl.textContent = '0';
       init();
     }
+
+    // Prevent scroll/zoom on touch devices
+    boardEl.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
     // ── Start ──
 

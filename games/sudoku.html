@@ -13,11 +13,22 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    html, body {
+      overflow: hidden;
+      overscroll-behavior: none;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
+
     main {
       max-width: 540px;
       margin: 0 auto;
       padding: 2rem 1rem 4rem;
       text-align: center;
+      overflow-y: auto;
+      height: 100%;
+      -webkit-overflow-scrolling: touch;
     }
 
     .back {
@@ -205,6 +216,38 @@
       border-top: 1px solid var(--border);
       padding-top: 1rem;
     }
+
+    .touch-hint {
+      display: none;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      margin-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+      line-height: 1.7;
+    }
+
+    @media (pointer: coarse) {
+      .touch-hint { display: block; }
+      .instructions { display: none; }
+
+      .num-btn {
+        min-height: 44px;
+        font-size: 1.2rem;
+      }
+
+      .ctrl-btn {
+        min-height: 44px;
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
+      }
+
+      .diff-btn {
+        min-height: 40px;
+        padding: 0.5rem 1rem;
+      }
+    }
   </style>
   <script>(function(){var t=localStorage.getItem('zero-theme');if(!t&&window.matchMedia('(prefers-color-scheme:light)').matches)t='light';if(t==='light')document.documentElement.setAttribute('data-theme','light')})()</script>
 </head>
@@ -240,6 +283,8 @@
       CLICK CELL + NUMBER KEY (1-9) &bull; N = TOGGLE NOTES<br>
       BACKSPACE = ERASE &bull; CTRL+Z = UNDO &bull; ARROW KEYS = NAVIGATE
     </div>
+
+    <div class="touch-hint">TAP CELL &middot; TAP NUMBER TO FILL &middot; TAP <span style="color:var(--accent-purple)">NOTES</span> TO TOGGLE PENCIL MARKS</div>
   </main>
 
   <script>
@@ -582,6 +627,10 @@
         e.preventDefault();
       }
     });
+
+    // Prevent scroll/zoom on game elements
+    boardEl.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+    numPadEl.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
     // Start
     startGame();

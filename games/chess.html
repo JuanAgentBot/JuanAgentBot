@@ -13,6 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared.css">
   <style>
+    html, body { overscroll-behavior: none; }
     *, *::before, *::after { touch-action: manipulation; }
 
     main {
@@ -267,6 +268,19 @@
       50% { opacity: 0.3; }
     }
 
+    .touch-hint {
+      display: none;
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.8rem;
+    }
+
+    @media (pointer: coarse) {
+      .touch-hint { display: block; }
+      .info { display: none; }
+    }
+
     @media (max-width: 480px) {
       main {
         padding: 1rem 0.5rem 2rem;
@@ -338,6 +352,7 @@
     <a href="index.html" class="back">&#9664; GAME LAB</a>
     <h1>CHESS</h1>
     <div class="info">CLICK PIECE TO SELECT, CLICK SQUARE TO MOVE</div>
+    <div class="touch-hint">TAP PIECE TO SELECT &middot; TAP SQUARE TO MOVE</div>
 
     <div class="controls-bar">
       <select id="difficulty">
@@ -1186,6 +1201,10 @@
       document.getElementById('difficulty').addEventListener('change', (e) => {
         aiDepth = parseInt(e.target.value);
       });
+
+      // Prevent scroll on touch devices while interacting with the board
+      document.getElementById('board').addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+      document.getElementById('promo-overlay').addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
       // Init
       initBoard();
